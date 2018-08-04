@@ -1,0 +1,8 @@
+results/
+tests/
+.vscode/
+.idea/
+__pycache__/
+*.pyc
+[._]*.sw[a-p]
+
