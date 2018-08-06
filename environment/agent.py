@@ -25,7 +25,7 @@ class Agent(Worker):
         self.lr = lr
         self.batch_size = batch_size
         self.n_act = n_act
-        self.dim_act = n_act
+        self.dim_act = int(n_act)
         self.dim_ob = dim_ob
         self.discount = discount
 
@@ -37,6 +37,7 @@ class Agent(Worker):
         self.summary_writter = SummaryWriter(self.event_path)
 
         self.eprewards = []
+        self.cnt = 1
 
     def _get_estimator(self):
         if self.model_name == "dqn":
@@ -46,7 +47,7 @@ class Agent(Worker):
         elif self.model_name == "doubledqn":
             model = DoubleDQN(self.dim_ob, self.n_act, self.lr, self.discount)
         elif self.model_name == "avedqn":
-            model = AveDQN(self.dim_ob, self.n_act, self.lr, self.discount)
+            model = AveDQN(self.dim_ob, self.n_act, self.lr, self.discount, 2)
         elif self.model_name == "distdqn":
             model = DistDQN(self.dim_ob, self.n_act, self.lr, self.discount)
         elif self.model_name == "pg":
@@ -101,6 +102,7 @@ class Agent(Worker):
         if len(self.buffer.mem) >= self.batch_size:
             logger.debug("buffer size: {}".format(len(self.buffer.mem)))
             logger.debug("batch size: {}".format(self.batch_size))
+
             total_t, result = self.estimator.update(
                 self.buffer.sample(self.batch_size))
 
@@ -113,7 +115,8 @@ class Agent(Worker):
                 self.summary_writter.add_scalar("episode_reward/id_{}".format(
                     self.recv_id.decode("ascii")), self.recv_episode_reward, self.recv_nstep)
 
-            if total_t % 100 == 0:
+            if total_t > self.cnt * 100:
+                self.cnt += 1
                 logger.info("step: {}\t Loss: {}".format(
                     total_t, result["loss"]))
                 logger.info("mean ep reward: {}".format(

@@ -20,7 +20,7 @@ class PG(TFEstimator):
         # Build net.
         with tf.variable_scope("gauss_net"):
             self.mu = Networker.build_pg_net(
-                self.input, [64, 64, self.n_act])
+                self.input, [64, 64, self.dim_ac])
 
         trainable_variables = tf.trainable_variables("gauss_net")
 

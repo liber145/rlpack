@@ -7,6 +7,7 @@ from middleware.log import logger
 
 class DQN(TFEstimator):
     def __init__(self, dim_ob, n_act, lr=1e-4, discount=0.99):
+        self.cnt = 1
         super().__init__(dim_ob, n_act, lr, discount)
         self._update_target()
 
@@ -54,27 +55,60 @@ class DQN(TFEstimator):
             update_ops.append(param2.assign(param1))
         return update_ops
 
-    def update(self, state_batch, action_batch, reward_batch, next_state_batch, done_batch):
-        target_next_q_vals = self.sess.run(self.target_qvals, feed_dict={
-                                           self.input: next_state_batch})
+    def update(self, trajectories):
+        sarsd = []
+        for traj in trajectories:
+            sarsd.extend(traj)
 
-        target = reward_batch + (1 - done_batch) * \
-            self.discount * target_next_q_vals.max(axis=1)
+        (state_batch,
+         action_batch,
+         reward_batch,
+         next_state_batch,
+         done_batch) = map(np.array, zip(*sarsd))
 
-        _, total_t, loss, max_q_value = self.sess.run(
-            [self.train_op,
-             tf.train.get_global_step(),
-             self.loss,
-             self.max_qval],
-            feed_dict={
-                self.input: state_batch,
-                self.actions: action_batch,
-                self.target: target
-            }
-        )
+        assert action_batch.ndim == 1, "Unrecognized action dimension."
+
+        batch_size = 64
+        n_sample = state_batch.shape[0]
+        index = np.arange(n_sample)
+        np.random.shuffle(index)
+
+        # print("state batch shape:", state_batch.shape)
+        # print("action batch shape:", action_batch.shape)
+        # print("reward batch shape:", reward_batch.shape)
+        # print("next state batch shape:", next_state_batch.shape)
+        # print("done batch shape:", done_batch.shape)
+
+        state_batch = state_batch[index, :]
+        action_batch = action_batch[index]
+        reward_batch = reward_batch[index]
+        next_state_batch = next_state_batch[index, :]
+        done_batch = done_batch[index]
+
+        for i in range(int(np.ceil(n_sample/batch_size))):
+            span_index = slice(i*batch_size, min((i+1)*batch_size, n_sample))
+
+            target_next_q_vals = self.sess.run(self.target_qvals, feed_dict={
+                                               self.input: next_state_batch[span_index, :]})
+
+            target = reward_batch[span_index] + (
+                1 - done_batch[span_index]) * self.discount * target_next_q_vals.max(axis=1)
+
+            _, total_t, loss, max_q_value = self.sess.run(
+                [self.train_op,
+                 tf.train.get_global_step(),
+                 self.loss,
+                 self.max_qval],
+                feed_dict={
+                    self.input: state_batch[span_index, :],
+                    self.actions: action_batch[span_index],
+                    self.target: target
+                }
+            )
 
         # Update target model.
-        if total_t % 100 == 0:
+        if total_t > 100 * self.cnt:
+            self.cnt += 1
             self._update_target()
 
         return total_t, {"loss": loss, "max_q_value": max_q_value}

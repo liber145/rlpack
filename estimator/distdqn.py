@@ -18,6 +18,7 @@ class DistDQN(TFEstimator):
         self.vmin = vmin
         self.delta = (vmax - vmin) / (n_atoms - 1)
         self.split_points = np.linspace(vmin, vmax, n_atoms)
+        self.cnt = 1
         super(DistDQN, self).__init__(dim_ob, n_ac, lr, discount)
         self._update_target()
 
@@ -41,10 +42,10 @@ class DistDQN(TFEstimator):
         self.trainable_variables = tf.trainable_variables('qnet')
         batch_size = tf.shape(self.input)[0]
         self.probs = tf.nn.softmax(
-            tf.reshape(self.logits, [-1, self.n_ac, self.n_atoms]))
+            tf.reshape(self.logits, [-1, self.n_act, self.n_atoms]))
         self.probs_target = tf.nn.softmax(
-            tf.reshape(self.target_logits, [-1, self.n_ac, self.n_atoms]))
-        gather_indices = tf.range(batch_size) * self.n_ac + self.actions
+            tf.reshape(self.target_logits, [-1, self.n_act, self.n_atoms]))
+        gather_indices = tf.range(batch_size) * self.n_act + self.actions
         self.action_probs = tf.gather(
             tf.reshape(self.probs, [-1, self.n_atoms]), gather_indices)
         self.action_probs_clip = tf.clip_by_value(self.action_probs, 0.00001,
@@ -73,34 +74,58 @@ class DistDQN(TFEstimator):
         qvals = np.sum(probs * self.split_points, axis=-1)
         return qvals
 
-    def update(self, state_batch, action_batch, reward_batch, next_state_batch,
-               done_batch):
-        batch_size = state_batch.shape[0]
-        next_q_probs = self.sess.run(
-            self.probs_target, feed_dict={
-                self.input: next_state_batch
-            })
-        next_q_vals = np.sum(next_q_probs * self.split_points, axis=-1)
-        best_action = np.argmax(next_q_vals, axis=1)
+    def _process_trajectories(self, trajectories):
+        sarsd = []
+        for traj in trajectories:
+            sarsd.extend(traj)
 
-        targets = []
-        for reward, probs, done in zip(
-                reward_batch, next_q_probs[np.arange(batch_size), best_action],
-                done_batch):
-            targets.append(
-                self._calc_dist(reward, self.discount * (1 - done), probs))
-        targets = np.array(targets)
-        _, total_t, loss = self.sess.run(
-            [self.train_op,
-             tf.train.get_global_step(), self.loss],
-            feed_dict={
-                self.input: state_batch,
-                self.actions: action_batch,
-                self.next_input: targets
-            })
+        return map(np.array, zip(*sarsd))
+
+    def update(self, trajectories):
+        state_batch, action_batch, reward_batch, next_state_batch, done_batch = self._process_trajectories(
+            trajectories)
+
+        batch_size = 64
+        n_sample = state_batch.shape[0]
+        index = np.arange(n_sample)
+        np.random.shuffle(index)
+
+        state_batch = state_batch[index, :]
+        action_batch = action_batch[index]
+        reward_batch = reward_batch[index]
+        next_state_batch = next_state_batch[index, :]
+        done_batch = done_batch[index]
+
+        for i in range(int(np.ceil(n_sample / batch_size))):
+            span_index = slice(i*batch_size, min((i+1)*batch_size, n_sample))
+
+            next_q_probs = self.sess.run(
+                self.probs_target, feed_dict={
+                    self.input: next_state_batch[span_index, :]
+                })
+            next_q_vals = np.sum(next_q_probs * self.split_points, axis=-1)
+            best_action = np.argmax(next_q_vals, axis=1)
+
+            targets = []
+            for reward, probs, done in zip(
+                    reward_batch, next_q_probs[np.arange(
+                        best_action.shape[0]), best_action],
+                    done_batch[span_index]):
+                targets.append(
+                    self._calc_dist(reward, self.discount * (1 - done), probs))
+            targets = np.array(targets)
+            _, total_t, loss = self.sess.run(
+                [self.train_op,
+                 tf.train.get_global_step(), self.loss],
+                feed_dict={
+                    self.input: state_batch[span_index, :],
+                    self.actions: action_batch[span_index],
+                    self.next_input: targets
+                })
 
         # Update target model.
-        if total_t % 100 == 0:
+        if total_t > 100 * self.cnt:
+            self.cnt += 1
             self._update_target()
 
         return total_t, {"loss": loss}
@@ -109,7 +134,7 @@ class DistDQN(TFEstimator):
         qvals = self._get_qvals(obs)
         best_action = np.argmax(qvals, axis=1)
         batch_size = obs.shape[0]
-        actions = np.random.randint(self.n_ac, size=batch_size)
+        actions = np.random.randint(self.n_act, size=batch_size)
         idx = np.random.uniform(size=batch_size) > epsilon
         actions[idx] = best_action[idx]
         return actions

@@ -27,8 +27,8 @@ class Memory(object):
 
     def sample(self, batch_size):
         samples = random.sample(self.mem, batch_size)
-        return map(np.array, zip(*samples))
+        # return map(np.array, zip(*samples))
+        return samples
 
     def clear(self):
         self.mem = []
-
