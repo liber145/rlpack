@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 from estimator.tfestimator import TFEstimator
 from estimator.networker import Networker
+from estimator.utils import gen_batch
 from middleware.log import logger
 
 
@@ -58,48 +59,39 @@ class SoftDQN(TFEstimator):
                 param2.assign(self.tau * (param1 - param2) + param2))
         return update_ops
 
-    def _process_trajectories(self, trajectories):
-        sarsd = []
-        for traj in trajectories:
-            sarsd.extend(traj)
-        return map(np.array, zip(*sarsd))
-
     def update(self, trajectories):
-        state_batch, action_batch, reward_batch, next_state_batch, done_batch = self._process_trajectories(
-            trajectories)
 
         batch_size = 64
-        n_sample = state_batch.shape[0]
-        index = np.arange(n_sample)
-        np.random.shuffle(index)
+        batch_generator = gen_batch(trajectories, batch_size)
 
-        state_batch = state_batch[index, :]
-        action_batch = action_batch[index]
-        reward_batch = reward_batch[index]
-        next_state_batch = next_state_batch[index, :]
-        done_batch = done_batch[index]
+        while True:
+            try:
+                state_batch, action_batch, reward_batch, next_state_batch, done_batch = next(
+                    batch_generator)
 
-        for i in range(int(np.ceil(n_sample / batch_size))):
-            span_index = slice(i*batch_size, min((i+1)*batch_size, n_sample))
+                target_next_q_vals = self.sess.run(
+                    self.target_qvals, feed_dict={
+                        self.input: next_state_batch
+                    })
 
-            target_next_q_vals = self.sess.run(
-                self.target_qvals, feed_dict={
-                    self.input: next_state_batch[span_index, :]
-                })
+                targets = reward_batch + \
+                    (1 - done_batch) * self.discount * \
+                    target_next_q_vals.max(axis=1)
 
-            targets = reward_batch[span_index] + (
-                1 - done_batch[span_index]) * self.discount * target_next_q_vals.max(axis=1)
+                _, total_t, loss, max_q_value = self.sess.run(
+                    [
+                        self.train_op,
+                        tf.train.get_global_step(), self.loss, self.max_qval
+                    ],
+                    feed_dict={
+                        self.input: state_batch,
+                        self.actions: action_batch,
+                        self.target: targets
+                    })
+            except StopIteration:
+                del batch_generator
+                break
 
-            _, total_t, loss, max_q_value = self.sess.run(
-                [
-                    self.train_op,
-                    tf.train.get_global_step(), self.loss, self.max_qval
-                ],
-                feed_dict={
-                    self.input: state_batch[span_index, :],
-                    self.actions: action_batch[span_index],
-                    self.target: targets
-                })
         return total_t, {'loss': loss, 'max_q_value': max_q_value}
 
     def get_action(self, obs, epsilon):

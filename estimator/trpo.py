@@ -3,6 +3,7 @@ import copy
 import tensorflow as tf
 from estimator.tfestimator import TFEstimator
 from estimator.networker import Networker
+import estimator.utils as utils
 from middleware.log import logger
 
 
@@ -17,12 +18,14 @@ class TRPO(TFEstimator):
     def _build_model(self):
         # Build inputs.
         self.input = tf.placeholder(tf.float32, [None, self.dim_ob], "inputs")
-        self.action = tf.placeholder(tf.float32, [None, self.dim_act], "action")
+        self.action = tf.placeholder(
+            tf.float32, [None, self.dim_act], "action")
         self.span_reward = tf.placeholder(tf.float32, [None, 1], "span_reward")
         self.advantage = tf.placeholder(tf.float32, [None, 1], "advantages")
 
         self.old_log_var = tf.placeholder(tf.float32, [self.dim_act], "olvar")
-        self.old_mu = tf.placeholder(tf.float32, [None, self.dim_act], "old_mu")
+        self.old_mu = tf.placeholder(
+            tf.float32, [None, self.dim_act], "old_mu")
 
         # Build Nets.
         with tf.variable_scope("gauss_net"):
@@ -90,7 +93,9 @@ class TRPO(TFEstimator):
                             tf.exp(self.log_var / 2.0) * tf.random_normal(shape=[self.dim_act], dtype=tf.float32))
 
     def update(self, trajectories):
-        data_batch = self._trajectories_to_batch(trajectories)
+        batch_size = 64
+        data_batch = utils.trajectories_to_batch(
+            trajectories, batch_size, self.discount)
 
         self.feeddict = {self.input: data_batch["state"],
                          self.action: data_batch["action"],
@@ -116,7 +121,7 @@ class TRPO(TFEstimator):
 
         # Compute update direction.
         g_obj = self.sess.run(self.g, feed_dict=self.feeddict)
-        step_dir = self._conjugate_gradient(-g_obj)
+        step_dir = self._conjugate_gradient(-g_obj)  # pylint: disable=E1130
 
         # Compute max step length.
         self.feeddict[self.vec] = step_dir
@@ -125,7 +130,7 @@ class TRPO(TFEstimator):
 
         # Line search to update theta.
         old_theta = self.sess.run(self._flat_param_list(self.actor_vars))
-        theta, is_improved = self._line_search(
+        theta, _ = self._line_search(
             old_theta, step_dir, max_step_len, self._target_func, max_backtrack=5)
 
         # Assign theta to actor parameters.
@@ -148,11 +153,11 @@ class TRPO(TFEstimator):
         critic_loss = self.sess.run(self.critic_loss, feed_dict=self.feeddict)
 
         print("old critic loss:", critic_loss)
-        for _ in range(20):
+        for _ in range(10):
             _, total_t, critic_loss = self.sess.run(
                 [self.train_critic_op, tf.train.get_global_step(), self.critic_loss], feed_dict=self.feeddict)
 
-        print("new critic loss:", critic_loss)
+        print("new critic loss:", critic_loss, "\n", "-"*20)
 
         return total_t, {"loss": critic_loss}
 
@@ -175,52 +180,6 @@ class TRPO(TFEstimator):
                 print("step frac:", step_frac)
                 return theta, True
         return old_theta, False
-
-    def _process_traj(self, traj):
-        # traj 的构成: sarsd
-        res = []
-        # span_reward 表示从traj中最后一个state到当前state之间的discount reward总和。
-        span_reward = 0
-        laststate = traj[-1][3]
-        lastdone = traj[-1][4]
-        for transition in reversed(traj):
-            span_reward = transition[2] + span_reward * self.discount
-            res.append([transition[0], transition[1], transition[2],
-                        transition[3], transition[4], span_reward, laststate, lastdone])
-
-            # print("transition done:", transition[4])
-        return res
-
-    def _trajectories_to_batch(self, trajectories):
-        sarsdts = []
-        for traj in trajectories:
-            sarsdts.extend(self._process_traj(traj))
-
-        (state_batch,
-         action_batch,
-         reward_batch,
-         nextstate_batch,
-         done_batch,
-         return_batch,
-         laststate_batch,
-         lastdone_batch) = map(np.array, zip(*sarsdts))
-
-        reward_batch = reward_batch[:, np.newaxis]
-        return_batch = return_batch[:, np.newaxis]
-        done_batch = done_batch[:, np.newaxis]
-        lastdone_batch = lastdone_batch[:, np.newaxis]
-
-        logger.debug("return batch shape: {}".format(return_batch.shape))
-
-        return {"state": state_batch,
-                "action": action_batch,
-                "reward": reward_batch,
-                "nextstate": nextstate_batch,
-                "done": done_batch,
-                "spanreward": return_batch,
-                "laststate": laststate_batch,
-                "lastdone": lastdone_batch
-                }
 
     def _flat_param_list(self, ts):
         return tf.concat([tf.reshape(t, [-1]) for t in ts], axis=0)

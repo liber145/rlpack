@@ -6,7 +6,7 @@ from tensorboardX import SummaryWriter
 import os
 from middleware.mq import Worker
 from middleware.memory import Memory
-from estimator import DQN, SoftDQN, DoubleDQN, AveDQN, DistDQN, PG, TRPO, A2C, PPO, DDPG
+from estimator import DQN, SoftDQN, DoubleDQN, AveDQN, DistDQN, PG, TRPO, A2C, PPO, PPO, DDPG
 from middleware.log import logger
 from environment.scaler import Scaler
 
@@ -115,7 +115,7 @@ class Agent(Worker):
                 self.summary_writter.add_scalar("episode_reward/id_{}".format(
                     self.recv_id.decode("ascii")), self.recv_episode_reward, self.recv_nstep)
 
-            if total_t > self.cnt * 100:
+            if total_t >= self.cnt * 100:
                 self.cnt += 1
                 logger.info("step: {}\t Loss: {}".format(
                     total_t, result["loss"]))

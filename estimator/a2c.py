@@ -3,6 +3,7 @@ import copy
 import tensorflow as tf
 from estimator.tfestimator import TFEstimator
 from estimator.networker import Networker
+import estimator.utils as utils
 from middleware.log import logger
 
 
@@ -70,90 +71,82 @@ class A2C(TFEstimator):
                             * tf.random_normal(shape=[self.dim_ac], dtype=tf.float32))
 
     def update(self, trajectories):
-        data_batch = self._trajectories_to_batch(trajectories)
+        batch_size = 64
+        data_batch = utils.trajectories_to_batch(
+            trajectories, batch_size, self.discount)
 
-        self.feeddict = {self.observation: data_batch["state"],
-                         self.action: data_batch["action"],
-                         self.span_reward: data_batch["spanreward"],
-                         }
+        # Shuffle data batch.
+        n_sample = data_batch["state"].shape[0]
+        index = np.arange(n_sample)
+        np.random.shuffle(index)
+
+        data_batch["state"] = data_batch["state"][index, :]
+        data_batch["action"] = data_batch["action"][index, :]
+        data_batch["reward"] = data_batch["reward"][index, :]
+        data_batch["nextstate"] = data_batch["nextstate"][index, :]
+        data_batch["done"] = data_batch["done"][index, :]
+        data_batch["spanreward"] = data_batch["spanreward"][index, :]
 
         old_mu_val, old_log_var_val = self.sess.run(
-            [self.mu, self.log_var], feed_dict=self.feeddict)
+            [self.mu, self.log_var], feed_dict={self.observation: data_batch["state"]})
 
-        self.feeddict[self.old_mu] = old_mu_val
-        self.feeddict[self.old_log_var] = old_log_var_val
+        data_batch["oldmu"] = old_mu_val
 
         # ---------- Update actor ----------
-        # Compute advantage.
-        nextstate_val = self.sess.run(
-            self.val, feed_dict={self.observation: data_batch["nextstate"]})
-        state_val = self.sess.run(
-            self.val, feed_dict={self.observation: data_batch["state"]})
-
-        advantage = (data_batch["reward"] + self.discount *
-                     (1 - data_batch["done"]) * nextstate_val) - state_val
-        self.feeddict[self.advantage] = advantage
 
         # Update actor.
-        for _ in range(20):
-            self.sess.run(self.train_actor_op, feed_dict=self.feeddict)
+        for _ in range(10):
+            batch_generator = utils.generator(data_batch, batch_size)
+
+            while True:
+                try:
+                    sample_batch = next(batch_generator)
+
+                    # Compute advantage.
+                    nextstate_val = self.sess.run(
+                        self.val, feed_dict={self.observation: sample_batch["nextstate"]})
+                    state_val = self.sess.run(
+                        self.val, feed_dict={self.observation: sample_batch["state"]})
+
+                    advantage = (sample_batch["reward"] + self.discount *
+                                 (1 - sample_batch["done"]) * nextstate_val) - state_val
+
+                    self.feeddict = {self.observation: sample_batch["state"],
+                                     self.action: sample_batch["action"],
+                                     self.span_reward: sample_batch["spanreward"],
+                                     self.old_mu: sample_batch["oldmu"],
+                                     self.old_log_var: old_log_var_val,
+                                     self.advantage: advantage
+                                     }
+
+                    self.sess.run(self.train_actor_op, feed_dict=self.feeddict)
+                except StopIteration:
+                    del batch_generator
+                    break
 
         # ---------- Update critic ----------
         critic_loss = self.sess.run(self.critic_loss, feed_dict=self.feeddict)
         print("old critic loss:", critic_loss)
 
-        for _ in range(20):
-            _, total_t, critic_loss = self.sess.run(
-                [self.train_critic_op, tf.train.get_global_step(), self.critic_loss], feed_dict=self.feeddict)
+        for _ in range(10):
+            batch_generator = utils.generator(data_batch)
+
+            while True:
+                try:
+                    sample_batch = next(batch_generator)
+
+                    self.feeddict[self.observation] = sample_batch["state"]
+                    self.feeddict[self.span_reward] = sample_batch["spanreward"]
+
+                    _, total_t, critic_loss = self.sess.run(
+                        [self.train_critic_op, tf.train.get_global_step(), self.critic_loss], feed_dict=self.feeddict)
+                except StopIteration:
+                    del batch_generator
+                    break
 
         print("new critic loss:", critic_loss)
 
         return total_t, {"loss": critic_loss}
-
-    def _process_traj(self, traj):
-        # traj 的构成: sarsd
-        res = []
-        # span_reward 表示从traj中最后一个state到当前state之间的discount reward总和。
-        span_reward = 0
-        laststate = traj[-1][3]
-        lastdone = traj[-1][4]
-        for transition in reversed(traj):
-            span_reward = transition[2] + span_reward * self.discount
-            res.append([transition[0], transition[1], transition[2],
-                        transition[3], transition[4], span_reward, laststate, lastdone])
-
-        return res
-
-    def _trajectories_to_batch(self, trajectories):
-        sarsdts = []
-        for traj in trajectories:
-            sarsdts.extend(self._process_traj(traj))
-
-        (state_batch,
-         action_batch,
-         reward_batch,
-         nextstate_batch,
-         done_batch,
-         return_batch,
-         laststate_batch,
-         lastdone_batch) = map(np.array, zip(*sarsdts))
-
-        reward_batch = reward_batch[:, np.newaxis]
-        return_batch = return_batch[:, np.newaxis]
-        done_batch = done_batch[:, np.newaxis]
-        lastdone_batch = lastdone_batch[:, np.newaxis]
-
-        logger.debug("return batch shape: {}".format(return_batch.shape))
-
-        return {"state": state_batch,
-                "action": action_batch,
-                "reward": reward_batch,
-                "nextstate": nextstate_batch,
-                "done": done_batch,
-                "spanreward": return_batch,
-                "laststate": laststate_batch,
-                "lastdone": lastdone_batch
-                }
 
     def get_action(self, ob, epsilon=None):
         action = self.sess.run(self.sampled_act, feed_dict={
