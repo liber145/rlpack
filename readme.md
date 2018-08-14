@@ -1,7 +1,16 @@
 # RL-Algo
+<!-- TOC depthFrom:1 depthTo:6 withLinks:1 updateOnSave:1 orderedList:0 -->
 
-[toc]
+- [RL-Algo](#rl-algo)
+	- [交互框架](#交互框架)
+		- [环境和Agent](#环境和agent)
+	- [算法涵盖](#算法涵盖)
+		- [代码组成](#代码组成)
+	- [代码主要部分](#代码主要部分)
+	- [Estimator主要部分](#estimator主要部分)
+	- [信息传递流程图](#信息传递流程图)
 
+<!-- /TOC -->
 ## 交互框架
 ### 环境和Agent
 一个玩家同时和多个环境进行交互，从多个环境处收集数据进行训练。
