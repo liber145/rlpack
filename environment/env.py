@@ -9,7 +9,7 @@ from middleware.log import logger
 
 
 class Packet(object):
-    def __init__(self, state, reward, done, trajectory, episode_reward, identity, nstep):
+    def __init__(self, identity, state, reward, done, trajectory, episode_reward, nstep):
         self.state = state
         self.reward = reward
         self.done = done
@@ -56,11 +56,11 @@ class AtariEnv(Client):
     def _get_packet(self):
         if self._check() is True:
             if self._is_done() is True:
-                return Packet(self.state, self.reward, self.done, self.trajectory, self.episode_reward, self.id, self.nstep)
+                return Packet(self.id, self.state, self.reward, self.done, self.trajectory, self.episode_reward, self.nstep)
             else:
-                return Packet(self.state, self.reward, self.done, self.trajectory, None, None, self.nstep)
+                return Packet(self.id, self.state, self.reward, self.done, self.trajectory, None, self.nstep)
         else:
-            return Packet(self.state, self.reward, self.done, None, None, None, None)
+            return Packet(self.id, self.state, self.reward, self.done, None, None, None)
 
     def _is_done(self):
         return self.done
@@ -90,11 +90,11 @@ class MujocoEnv(AtariEnv):
         if self._check() is True:
 
             if self._is_done() is True:
-                return Packet(self.state, self.reward, self.done, self.trajectory, self.episode_reward, self.id, self.nstep)
+                return Packet(self.id, self.state, self.reward, self.done, self.trajectory, self.episode_reward,  self.nstep)
             else:
-                return Packet(self.state, self.reward, self.done, self.trajectory, None, None, self.nstep)
+                return Packet(self.id, self.state, self.reward, self.done, self.trajectory, None, self.nstep)
         else:
-            return Packet(self.state, self.reward, self.done, None, None, None, None)
+            return Packet(self.id, self.state, self.reward, self.done, None, None, None)
 
 
 class SimpleEnv(Client):
@@ -102,8 +102,8 @@ class SimpleEnv(Client):
         super().__init__(spec)
 
         self.done = True
-
         self.nstep = 0
+        self.episode_reward = 0
 
     def startsend(self, msg=None):
         if self._is_done() is True:
@@ -129,6 +129,7 @@ class SimpleEnv(Client):
         self.trajectory.append((self.laststate, action,
                                 self.reward, self.state, self.done))
         self.laststate = self.state
+        self.episode_reward += self.reward
 
     def _is_done(self):
         return self.done
@@ -136,11 +137,11 @@ class SimpleEnv(Client):
     def _get_packet(self):
         if self._check() is True:
             if self._is_done() is True:
-                return Packet(self.state, self.reward, self.done, self.trajectory, self.episode_reward, self.id, self.nstep)
+                return Packet(self.id, self.state, self.reward, self.done, self.trajectory, self.episode_reward, self.nstep)
             else:
-                return Packet(self.state, self.reward, self.done, self.trajectory, None, None, self.nstep)
+                return Packet(self.id, self.state, self.reward, self.done, self.trajectory, None, self.nstep)
         else:
-            return Packet(self.state, self.reward, self.done, None, None, None, None)
+            return Packet(self.id, self.state, self.reward, self.done, None, None, None)
 
     def _check(self):
         if self._is_done() is True:

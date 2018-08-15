@@ -33,7 +33,7 @@ class Networker(object):
         return fc
 
     @staticmethod
-    def build_cnn_net(x, trainable=True):
+    def build_cnn_net(x, n_action, trainable=True):
         """构建卷积网络。"""
 
         conv1 = tf.layers.conv2d(
@@ -102,23 +102,30 @@ class Networker(object):
 
     @staticmethod
     def build_qvalue_net(s, a, trainable=True):
-        x = tf.layers.dense(s, 64, activation=tf.nn.tanh, kernel_initializer=tf.random_normal_initializer(stddev=np.sqrt(1/11)), trainable=trainable)
-        x = tf.layers.dense(x, 64, activation=tf.nn.tanh, kernel_initializer=tf.random_normal_initializer(stddev=np.sqrt(1/64)), trainable=trainable)
-        
-        y = tf.layers.dense(a, 64, activation=tf.nn.tanh, kernel_initializer=tf.random_normal_initializer(stddev=np.sqrt(1/2)), trainable=trainable)
+        x = tf.layers.dense(s, 64, activation=tf.nn.tanh, kernel_initializer=tf.random_normal_initializer(
+            stddev=np.sqrt(1/11)), trainable=trainable)
+        x = tf.layers.dense(x, 64, activation=tf.nn.tanh, kernel_initializer=tf.random_normal_initializer(
+            stddev=np.sqrt(1/64)), trainable=trainable)
+
+        y = tf.layers.dense(a, 64, activation=tf.nn.tanh, kernel_initializer=tf.random_normal_initializer(
+            stddev=np.sqrt(1/2)), trainable=trainable)
 
         z = tf.concat([x, y], axis=1)
-        z = tf.layers.dense(z, 64, activation=tf.nn.tanh, kernel_initializer=tf.random_normal_initializer(stddev=np.sqrt(1/128)), trainable=trainable)
-        val = tf.layers.dense(z, 1, activation=None, kernel_initializer=tf.random_normal_initializer(stddev=np.sqrt(1/64)), trainable=trainable)
+        z = tf.layers.dense(z, 64, activation=tf.nn.tanh, kernel_initializer=tf.random_normal_initializer(
+            stddev=np.sqrt(1/128)), trainable=trainable)
+        val = tf.layers.dense(z, 1, activation=None, kernel_initializer=tf.random_normal_initializer(
+            stddev=np.sqrt(1/64)), trainable=trainable)
 
-        return val 
-        
+        return val
+
     @staticmethod
     def build_action_net(x, hidden_units, trainable=True):
         init_size = 11
         for n_unit in hidden_units[:-1]:
-            x = tf.layers.dense(x, n_unit, activation=tf.nn.tanh, kernel_initializer=tf.random_normal_initializer(stddev=np.sqrt(1/init_size)), trainable=trainable)
+            x = tf.layers.dense(x, n_unit, activation=tf.nn.tanh, kernel_initializer=tf.random_normal_initializer(
+                stddev=np.sqrt(1/init_size)), trainable=trainable)
             init_size = n_unit
 
-        act = tf.layers.dense(x, hidden_units[-1], activation=tf.nn.tanh, kernel_initializer=tf.random_normal_initializer(stddev=np.sqrt(1/hidden_units[-1])), trainable=trainable)
+        act = tf.layers.dense(x, hidden_units[-1], activation=tf.nn.tanh, kernel_initializer=tf.random_normal_initializer(
+            stddev=np.sqrt(1/hidden_units[-1])), trainable=trainable)
         return act

@@ -1,6 +1,8 @@
 # RL-Algo
 
-[toc]
+[TOC]
+
+工作流程文档：[链接](https://docs.google.com/document/d/1JHuQaDlghXzIX-O2iSxKlCoToozOPBYTZrWt8PbxY98/edit?usp=sharing)
 
 ## 交互框架
 ### 环境和Agent
@@ -37,13 +39,13 @@ python main.py --env "Reacher-v2" --model ppo
 - `save_model_every`：多久保存一次模型。
 - `update_target_every`：多久更新一次target模型。
 
-### 代码组成
-## 代码主要部分
+## 代码组成
+### 代码主要部分
 - Estimator：构建算法，包括搭建网络，更新策略。
 - Middleware：存取交互数据；负责通信。
 - Environment：包装游戏环境（主要是gym），即step-reset这种离散模式。
 
-## Estimator主要部分
+### Estimator主要部分
 - `build_model`
 构建算法迭代更新中的基本tensorflow操作：loss；state_value；等等。
 

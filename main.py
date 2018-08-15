@@ -3,7 +3,7 @@ import argparse
 import logging
 import gym
 from environment.agent import Agent
-from environment.env import MujocoEnv
+from environment.env import MujocoEnv, AtariEnv, PoleEnv
 from middleware.log import logger
 
 logger.setLevel(logging.INFO)
@@ -31,12 +31,12 @@ args.result_path = os.path.join(
 
 def main():
     for i in range(args.n_env):
-        env = MujocoEnv("{}".format(i).encode(
+        env = AtariEnv("{}".format(i).encode(
             "ascii"), args.n_step, args.env)
         env.start()
 
     game = gym.make(args.env)
-    args.dim_ob = game.observation_space.shape[0]
+    args.dim_ob = (84, 84, 4)
     if game.action_space.shape == ():
         args.n_action = game.action_space.n
     else:

@@ -43,7 +43,6 @@ class Client(Process):
 
         try:
             while True:
-
                 if self._check() is True:
 
                     msg = self._get_packet()
@@ -105,9 +104,11 @@ class Worker(object):
     """Agent是Worker，处理来自Env发过来的信息，回复动作。"""
     __metaclass__ = ABCMeta
 
-    def __init__(self, n_client=32):
+    def __init__(self, n_client=32, n_handle=None):
         self.n_client = n_client
         self.addrs = []
+        self.received_msg = []
+        self.n_handle = n_client if n_handle is None else n_handle
 
     def run(self):
         context = zmq.Context()
@@ -128,7 +129,6 @@ class Worker(object):
             while True:
 
                 if self.getup is True:
-                    logger.debug("---------------------------")
                     for addr in self.addrs:
                         router2_socket.send_multipart([addr, b"", b"Get up."])
                     for addr in self.addrs:
@@ -138,10 +138,22 @@ class Worker(object):
 
                 addr, _, msg = router1_socket.recv_multipart()
                 msg = msgpack.unpackb(msg)
+                self.received_msg.append((addr, msg))
 
-                action = self._get_action(msg)
-                router1_socket.send_multipart(
-                    [addr, b"", msgpack.packb(action)])
+                if len(self.received_msg) == self.n_handle:
+                    client_addr, action = self._get_action(self.received_msg)
+
+                    for i in range(len(client_addr)):
+                        addr = client_addr[i]
+                        act = action[i]
+                        router1_socket.send_multipart(
+                            [addr, b"", msgpack.packb(act)])
+
+                    self.received_msg = []
+
+                # action = self._get_action(msg)
+                # router1_socket.send_multipart(
+                #     [addr, b"", msgpack.packb(action)])
 
                 # 收集游戏数据。
                 self._collect_data(msg)

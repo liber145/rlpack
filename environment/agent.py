@@ -3,7 +3,6 @@ import os
 import argparse
 import numpy as np
 from tensorboardX import SummaryWriter
-import os
 from middleware.mq import Worker
 from middleware.memory import Memory
 from estimator import DQN, SoftDQN, DoubleDQN, AveDQN, DistDQN, PG, TRPO, A2C, PPO, PPO, DDPG
@@ -68,14 +67,17 @@ class Agent(Worker):
         return model
 
     def _get_action(self, msg):
-        obs = msg[b"state"]
-        if obs.ndim == 3:   # 图片
-            obs = obs[np.newaxis, :]
-        if obs.ndim == 1:   # 向量特征
-            obs = obs[np.newaxis, :]
+        addr_batch = [x for x, y in msg]
+        state_batch = np.array([y[b"state"] for x, y in msg])
 
-        actions = self.estimator.get_action(obs, 0.1)
-        return actions[0]
+        # obs = msg[b"state"]
+        # if obs.ndim == 3:   # 图片
+        #     obs = obs[np.newaxis, :]
+        # if obs.ndim == 1:   # 向量特征
+        #     obs = obs[np.newaxis, :]
+
+        actions = self.estimator.get_action(state_batch, 0.1)
+        return addr_batch, actions
 
     def _collect_data(self, msg):
         if msg[b"trajectory"] is not None:
@@ -107,7 +109,7 @@ class Agent(Worker):
                 self.buffer.sample(self.batch_size))
 
             # 每次使用最新policy采样的样本。
-            self.buffer.clear()
+            # self.buffer.clear()
 
             self.summary_writter.add_scalar("loss", result["loss"], total_t)
 
