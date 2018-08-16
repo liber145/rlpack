@@ -14,19 +14,41 @@ class DQN(TFEstimator):
 
     def _build_model(self):
 
-        self.input = tf.placeholder(
-            shape=[None, self.dim_ob], dtype=tf.float32, name="inputs")
+        assert len(self.dim_ob) == 1 or len(self.dim_ob) == 3, "Wrong observation dimension: {}".format(
+            self.dim_ob)
+
+        if len(self.dim_ob) == 1:
+            self.input = tf.placeholder(
+                shape=[None, self.dim_ob], dtype=tf.float32, name="inputs")
+        elif len(self.dim_ob) == 3:
+            self.input = tf.placeholder(
+                shape=[None] + list(self.dim_ob), dtype=tf.float32, name="inputs")
+
         self.actions = tf.placeholder(
             shape=[None], dtype=tf.int32, name="actions")
         self.target = tf.placeholder(
             shape=[None], dtype=tf.float32, name="target")
 
         # Build net.
-        with tf.variable_scope("qnet"):
-            self.qvals = Networker.build_dense_net(self.input, [512, 256, 2])
-        with tf.variable_scope("target_qnet"):
-            self.target_qvals = Networker.build_dense_net(
-                self.input, [512, 256, 2], trainable=False)
+        if len(self.dim_ob) == 1:
+            with tf.variable_scope("qnet"):
+                self.qvals = Networker.build_dense_net(
+                    self.input, [512, 256, self.n_act])
+            with tf.variable_scope("target_qnet"):
+                self.target_qvals = Networker.build_dense_net(
+                    self.input, [512, 256, self.n_act], trainable=False)
+        elif len(self.dim_ob) == 3:
+            with tf.variable_scope("qnet"):
+                self.qvals = Networker.build_cnn_net(self.input, self.n_act)
+            with tf.variable_scope("target_qnet"):
+                self.target_qvals = Networker.build_cnn_net(
+                    self.input, self.n_act, trainable=False)
+        # with tf.variable_scope("qnet"):
+        #     self.qvals=Networker.build_dense_net(
+        #         self.input, [512, 256, self.n_act])
+        # with tf.variable_scope("target_qnet"):
+        #     self.target_qvals=Networker.build_dense_net(
+        #         self.input, [512, 256, self.n_act], trainable=False)
 
         trainable_variables = tf.trainable_variables("qnet")
 
@@ -88,7 +110,8 @@ class DQN(TFEstimator):
                 break
 
         # Update target model.
-        if total_t > 100 * self.cnt:
+        if total_t > 1000 * self.cnt:
+            logger.debug("self.cnt: {}".format(self.cnt))
             self.cnt += 1
             self._update_target()
 

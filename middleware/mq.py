@@ -37,7 +37,7 @@ class Client(Process):
         req2_socket.connect("tcp://localhost:5559")
 
         req2_socket.send(b"Ready.")
-        req2_socket.recv()
+        req2_socket.recv()   # Means this client go to sleep.
         req2_socket.send(b"I get awake.")
         self.startsend()
 
@@ -50,7 +50,7 @@ class Client(Process):
                         msg.__dict__))  # 发送整个游戏过程的大礼包
                     msg = req1_socket.recv()                       # 接受信息，不做任何处理
 
-                    logger.debug("Client({}): {}".format(self.id, self.cnt))
+                    # logger.debug("Client({}): {}".format(self.id, self.cnt))
 
                     req2_socket.recv()
                     req2_socket.send(b"I get awake.")
@@ -97,7 +97,7 @@ class Client(Process):
 
     @abstractmethod
     def _check(self):
-        """检查是否发送大礼包。"""
+        """检查是否发送n_step的数据。"""
 
 
 class Worker(object):
@@ -160,8 +160,8 @@ class Worker(object):
 
                 if self._check(msg) is True:
                     n_received += 1
-                    logger.debug("trajectory: {}".format(
-                        len(msg[b"trajectory"])))
+                    # logger.debug("trajectory: {}".format(
+                    #     len(msg[b"trajectory"])))
 
                     if n_received == self.n_client:
                         n_received = 0

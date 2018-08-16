@@ -3,6 +3,7 @@ import argparse
 import gym
 import numpy as np
 from environment.atari_wrappers import make_deepmind_atari
+from environment.wrapper import atari_env
 from environment.scaler import Scaler
 from middleware.mq import Client
 from middleware.log import logger
@@ -22,7 +23,8 @@ class Packet(object):
 class AtariEnv(Client):
     def __init__(self, identity, n_step, envname):
         super().__init__(identity, n_step)
-        self.env = make_deepmind_atari(envname)
+        # self.env = make_deepmind_atari(envname)
+        self.env = atari_env(envname)
 
         print("In AtariEnv.")
 
@@ -48,7 +50,7 @@ class AtariEnv(Client):
         self.state, self.reward, self.done, _ = self.env.step(action)
         self.state = np.array(self.state)
         self.trajectory.append(
-            [self.laststate, action, self.reward, self.state, self.done])
+            [self.laststate, action, np.sign(self.reward), self.state, self.done])
         self.laststate = self.state
 
         self.episode_reward += self.reward
@@ -56,6 +58,7 @@ class AtariEnv(Client):
     def _get_packet(self):
         if self._check() is True:
             if self._is_done() is True:
+                logger.debug("episode reward: {}".format(self.episode_reward))
                 return Packet(self.id, self.state, self.reward, self.done, self.trajectory, self.episode_reward, self.nstep)
             else:
                 return Packet(self.id, self.state, self.reward, self.done, self.trajectory, None, self.nstep)

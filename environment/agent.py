@@ -76,7 +76,7 @@ class Agent(Worker):
         # if obs.ndim == 1:   # 向量特征
         #     obs = obs[np.newaxis, :]
 
-        actions = self.estimator.get_action(state_batch, 0.1)
+        actions = self.estimator.get_action(state_batch, 0.01)
         return addr_batch, actions
 
     def _collect_data(self, msg):
@@ -91,6 +91,7 @@ class Agent(Worker):
 
         if msg[b"episode_reward"] is not None:
             # logger.info("episode_reward: {}".format(msg[b"episode_reward"]))
+            logger.debug("episode_reward: {}".format(msg[b"episode_reward"]))
             self.eprewards.append(msg[b"episode_reward"])
 
     def _check(self, msg):
@@ -102,8 +103,6 @@ class Agent(Worker):
     def _update_policy(self):
 
         if len(self.buffer.mem) >= self.batch_size:
-            logger.debug("buffer size: {}".format(len(self.buffer.mem)))
-            logger.debug("batch size: {}".format(self.batch_size))
 
             total_t, result = self.estimator.update(
                 self.buffer.sample(self.batch_size))

@@ -6,7 +6,7 @@ from environment.agent import Agent
 from environment.env import MujocoEnv, AtariEnv, PoleEnv
 from middleware.log import logger
 
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 parser = argparse.ArgumentParser(description="Process parameters.")
 parser.add_argument("--env", default="Reacher-v2", type=str)
