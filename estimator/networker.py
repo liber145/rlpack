@@ -46,7 +46,7 @@ class Networker(object):
         fc1 = tf.layers.dense(
             flattened, 512, activation=tf.nn.relu, trainable=trainable)
         fc2 = tf.layers.dense(
-            fc1, 2, activation=None, trainable=trainable)
+            fc1, n_action, activation=None, trainable=trainable)
         return fc2
 
     @staticmethod

@@ -11,27 +11,28 @@ from environment.scaler import Scaler
 
 
 class Agent(Worker):
-    def __init__(self, base_path, model_name, lr, n_client, discount, batch_size, memory_size, n_act, dim_ob):
-        super().__init__(n_client)
-        self.model_path = os.path.join(base_path, "models")
-        self.event_path = os.path.join(base_path, "events")
+    # base_path, model_name, lr, n_client, discount, batch_size, memory_size, n_act, dim_ob):
+    def __init__(self, config):
+        super().__init__(config.n_env)
+        self.model_path = os.path.join(config.result_path, "models")
+        self.event_path = os.path.join(config.result_path, "events")
         if not os.path.exists(self.event_path):
             os.makedirs(self.event_path)
         if not os.path.exists(self.model_path):
             os.makedirs(self.model_path)
 
-        self.model_name = model_name
-        self.lr = lr
-        self.batch_size = batch_size
-        self.n_act = n_act
-        self.dim_act = int(n_act)
-        self.dim_ob = dim_ob
-        self.discount = discount
+        self.model_name = config.model
+        self.lr = config.lr
+        self.batch_size = config.batch_size
+        self.n_act = config.n_action
+        self.dim_act = config.dim_action
+        self.dim_ob = config.dim_observation
+        self.discount = config.discount
 
         self.starttime = time.time()
 
         self.estimator = self._get_estimator()
-        self.buffer = Memory(memory_size)
+        self.buffer = Memory(config.memory_size)
 
         self.summary_writter = SummaryWriter(self.event_path)
 
