@@ -10,14 +10,13 @@ from middleware.log import logger
 class TRPO(TFEstimator):
     """Trust Region Policy Optimization."""
 
-    def __init__(self, dim_ob, dim_act, lr=1e-4, discount=0.99):
-        self.dim_act = dim_act
+    def __init__(self, config):
         self.delta = 0.01
-        super().__init__(dim_ob, None, lr, discount)
+        super().__init__(config)
 
     def _build_model(self):
         # Build inputs.
-        self.input = tf.placeholder(tf.float32, [None, self.dim_ob], "inputs")
+        self.input = tf.placeholder(tf.float32, [None]+list(self.dim_ob), "inputs")
         self.action = tf.placeholder(
             tf.float32, [None, self.dim_act], "action")
         self.span_reward = tf.placeholder(tf.float32, [None, 1], "span_reward")
@@ -93,9 +92,7 @@ class TRPO(TFEstimator):
                             tf.exp(self.log_var / 2.0) * tf.random_normal(shape=[self.dim_act], dtype=tf.float32))
 
     def update(self, trajectories):
-        batch_size = 64
-        data_batch = utils.trajectories_to_batch(
-            trajectories, batch_size, self.discount)
+        data_batch = utils.trajectories_to_batch(trajectories, self.batch_size, self.discount)
 
         self.feeddict = {self.input: data_batch["state"],
                          self.action: data_batch["action"],

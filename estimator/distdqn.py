@@ -2,15 +2,15 @@ import numpy as np
 import tensorflow as tf
 from estimator.tfestimator import TFEstimator
 from estimator.networker import Networker
-from estimator.utils import gen_batch
+import estimator.utils as utils
 
 
 class DistDQN(TFEstimator):
-    def __init__(self,
-                 dim_ob,
-                 n_ac,
-                 lr=1e-4,
-                 discount=0.99,
+    def __init__(self, config,
+                 #dim_ob,
+                 #n_ac,
+                 #lr=1e-4,
+                 #discount=0.99,
                  vmax=10,
                  vmin=-10,
                  n_atoms=51):
@@ -19,26 +19,41 @@ class DistDQN(TFEstimator):
         self.vmin = vmin
         self.delta = (vmax - vmin) / (n_atoms - 1)
         self.split_points = np.linspace(vmin, vmax, n_atoms)
-        self.cnt = 1
-        super(DistDQN, self).__init__(dim_ob, n_ac, lr, discount)
+        super(DistDQN, self).__init__(config) #dim_ob, n_ac, lr, discount)
         self._update_target()
+        self.cnt = None
 
     def _build_model(self):
+
+        assert len(self.dim_ob) == 1 or len(self.dim_ob) == 3, "Wrong observation dimension: {}".format(self.dim_ob)
+
         # placeholders
-        self.input = tf.placeholder(
-            shape=[None, self.dim_ob], dtype=tf.float32, name='inputs')
+        if len(self.dim_ob) == 1:
+            self.input = tf.placeholder(
+                    shape=[None, self.dim_ob], dtype=tf.float32, name="inputs")
+        elif len(self.dim_ob) == 3:
+            self.input = tf.placeholder(
+                    shape=[None] + list(self.dim_ob), dtype=tf.float32, name="inputs")
+
         self.actions = tf.placeholder(
             shape=[None], dtype=tf.int32, name='actions')
         self.next_input = tf.placeholder(
             shape=[None, self.n_atoms], dtype=tf.float32, name='next_inputs')
-        # network
-        with tf.variable_scope('qnet'):
-            self.logits = Networker.build_distdqn_net(
-                self.input, [512, 256, self.n_act*self.n_atoms])
 
-        with tf.variable_scope('target'):
-            self.target_logits = Networker.build_distdqn_net(
-                self.input, [512, 256, self.n_act*self.n_atoms], trainable=False)
+
+        # Build net.
+        if len(self.dim_ob) == 1:
+            with tf.variable_scope("qnet"):
+                self.logits = Networker.build_dense_net(self.input, [512, 256, self.n_act*self.n_atoms])
+
+            with tf.variable_scope("target"):
+                self.target_logits = Networker.build_dense_net(self.input, [512, 256, self.n_act*self.n_atoms], trainable=False)
+        elif len(self.dim_ob) == 3:
+            with tf.variable_scope("qnet"):
+                self.logits = Networker.build_cnn_net(self.input, self.n_act*self.n_atoms)
+            
+            with tf.variable_scope("target"):
+                self.target_logits = Networker.build_cnn_net(self.input, self.n_act*self.n_atoms, trainable=False)
 
         self.trainable_variables = tf.trainable_variables('qnet')
         batch_size = tf.shape(self.input)[0]
@@ -77,17 +92,24 @@ class DistDQN(TFEstimator):
 
     def update(self, trajectories):
 
-        batch_size = 64
-        batch_generator = gen_batch(trajectories, batch_size)
+        self.cnt = self.sess.run(tf.train.get_global_step()) // self.update_target_every + 1 \
+                if self.cnt is None else self.cnt
+
+        data_batch = utils.trajectories_to_batch(trajectories, self.batch_size, self.discount)
+        batch_generator = utils.generator(data_batch, self.batch_size)
 
         while True:
             try:
-                state_batch, action_batch, reward_batch, next_state_batch, done_batch = next(
-                    batch_generator)
+                sample_batch = next(batch_generator)
+                state_batch = sample_batch["state"]
+                action_batch = sample_batch["action"].flatten()
+                reward_batch = sample_batch["spanreward"].flatten()
+                next_state_batch = sample_batch["laststate"]
+                done_batch = sample_batch["lastdone"].flatten()
 
                 next_q_probs = self.sess.run(
-                    self.probs_target, feed_dict={
-                        self.input: next_state_batch
+                        self.probs_target, feed_dict={
+                            self.input: next_state_batch
                     })
                 next_q_vals = np.sum(next_q_probs * self.split_points, axis=-1)
                 best_action = np.argmax(next_q_vals, axis=1)
@@ -114,7 +136,7 @@ class DistDQN(TFEstimator):
                 break
 
         # Update target model.
-        if total_t > 100 * self.cnt:
+        if total_t > self.update_target_every * self.cnt:
             self.cnt += 1
             self._update_target()
 

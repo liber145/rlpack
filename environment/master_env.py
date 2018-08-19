@@ -34,7 +34,7 @@ class EnvMaker:
         self._redefine_space(env)
         env.close()
 
-        base_path = './.ipc'
+        base_path = "./.ipc"
         if not os.path.exists(base_path):
             os.mkdir(base_path)
 

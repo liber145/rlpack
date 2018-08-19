@@ -12,7 +12,6 @@ class DQN(TFEstimator):
         super().__init__(config)  # dim_ob, n_act, lr, discount)
         self._update_target()
         self.cnt = None
-        logger.debug("cnt: {}".format(self.cnt))
 
     def _build_model(self):
 
@@ -78,20 +77,16 @@ class DQN(TFEstimator):
 
     def update(self, trajectories):
 
-        self.cnt = self.sess.run(tf.train.get_global_step(
-        )) // 1000 + 1 if self.cnt is None else self.cnt
+        self.cnt = self.sess.run(tf.train.get_global_step()) // self.update_target_every + 1 \
+                   if self.cnt is None else self.cnt
 
         batch_size = self.batch_size
         data_batch = utils.trajectories_to_batch(
             trajectories, batch_size, self.discount)
         batch_generator = utils.generator(data_batch, batch_size)
 
-        # batch_size = 64
-        # batch_generator = gen_batch(trajectories, batch_size)
-
         while True:
             try:
-                # state_batch, action_batch, reward_batch, next_state_batch, done_batch
                 sample_batch = next(batch_generator)
                 state_batch = sample_batch["state"]
                 action_batch = sample_batch["action"]
@@ -133,7 +128,7 @@ class DQN(TFEstimator):
                 break
 
         # Update target model.
-        if total_t > 1000 * self.cnt:
+        if total_t > self.update_target_every * self.cnt:
             logger.debug("self.cnt: {}".format(self.cnt))
             self.cnt += 1
             self._update_target()

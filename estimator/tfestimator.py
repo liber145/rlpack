@@ -8,10 +8,15 @@ class TFEstimator(object):
     def __init__(self, config):  # dim_ob, n_act, lr = 1e-4, discount = 0.99):
         self.dim_ob = config.dim_observation
         self.n_act = config.n_action
+        self.dim_act = config.dim_action
         self.discount = config.discount
+        self.batch_size = config.batch_size
+        self.epsilon = config.epsilon
+        self.update_target_every = config.update_target_every
+        self.n_dqn = config.n_dqn
+
         self.optimizer = tf.train.AdamOptimizer(config.lr, epsilon=1.5e-8)
         self.critic_optimizer = tf.train.AdamOptimizer(config.critic_lr)
-        self.batch_size = config.batch_size
         self._prepare()
 
     def _prepare(self):

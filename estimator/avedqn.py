@@ -2,22 +2,27 @@ import numpy as np
 import tensorflow as tf
 from estimator.tfestimator import TFEstimator
 from estimator.networker import Networker
-from estimator.utils import gen_batch
+import estimator.utils as utils
 from middleware.log import logger
 
 
 class AveDQN(TFEstimator):
-    def __init__(self, dim_ob, n_act, lr=1e-4, discount=0.99, k=2):
+    def __init__(self, config): # dim_ob, n_act, lr=1e-4, discount=0.99, k=2):
 
-        self.k = k
-        self.cnt = 1
-        super().__init__(dim_ob, n_act, lr, discount)
+        self.k = config.n_dqn
+        super().__init__(config)  #dim_ob, n_act, lr, discount)
         self._update_target()
+        self.cnt = None
 
     def _build_model(self):
+        assert len(self.dim_ob) == 1 or len(self.dim_ob) == 3, "Wrong observation dimension: {}".format(self.dim_ob)
+        
+        if len(self.dim_ob) == 1:
+            self.input = tf.placeholder(shape=[None, self.dim_ob], dtype=tf.float32, name="inputs")
+        elif len(self.dim_ob) == 3:
+            self.input = tf.placeholder(shape=[None]+list(self.dim_ob), dtype=tf.float32, name="inputs")
+
         # placeholders
-        self.input = tf.placeholder(
-            shape=[None, self.dim_ob], dtype=tf.float32, name='inputs')
         self.actions = tf.placeholder(
             shape=[None], dtype=tf.int32, name='actions')
         self.next_input = tf.placeholder(
@@ -25,9 +30,15 @@ class AveDQN(TFEstimator):
 
         qvals = []
         for i in range(int(self.k + 1)):
-            with tf.variable_scope('qnet-{}'.format(i)):
-                qvals.append(Networker.build_dense_net(
-                    self.input, [512, 256, self.n_act], i == 0))
+
+            if len(self.dim_ob) == 1:
+                with tf.variable_scope('qnet-{}'.format(i)):
+                    qvals.append(Networker.build_dense_net(
+                        self.input, [512, 256, self.n_act], i == 0))
+            elif len(self.dim_ob) == 3:
+                with tf.variable_scope('qnet-{}'.format(i)):
+                    qvals.append(Networker.build_cnn_net(
+                        self.input, self.n_act, i == 0))
 
         self.qvals = qvals[0]
         self.target_qvals = tf.stack(qvals[1:])
@@ -72,13 +83,20 @@ class AveDQN(TFEstimator):
 
     def update(self, trajectories):
 
-        batch_size = 64
-        batch_generator = gen_batch(trajectories, batch_size)
+        self.cnt = self.sess.run(tf.train.get_global_step()) // self.update_target_every + 1 \
+                   if self.cnt is None else self.cnt
+
+        data_batch = utils.trajectories_to_batch(trajectories, self.batch_size, self.discount)
+        batch_generator = utils.generator(data_batch, self.batch_size)
 
         while True:
             try:
-                state_batch, action_batch, reward_batch, next_state_batch, done_batch = next(
-                    batch_generator)
+                sample_batch = next(batch_generator)
+                state_batch = sample_batch["state"]
+                action_batch = sample_batch["action"].flatten()
+                reward_batch = sample_batch["spanreward"].flatten()
+                next_state_batch = sample_batch["laststate"]
+                done_batch = sample_batch["lastdone"].flatten()
 
                 target_next_q_vals = self.sess.run(
                     self.target_qvals, feed_dict={
@@ -106,7 +124,7 @@ class AveDQN(TFEstimator):
                 break
 
         # Update target model.
-        if total_t > 100 * self.cnt:
+        if total_t > self.update_target_every * self.cnt:
             self.cnt += 1
             self._update_target()
 

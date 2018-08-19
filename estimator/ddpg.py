@@ -3,22 +3,21 @@ import numpy as np
 import tensorflow as tf
 from estimator.tfestimator import TFEstimator
 from estimator.networker import Networker
+import estimator.utils as utils
 from middleware.log import logger
 
 
 class DDPG(TFEstimator):
     """Deep Deterministic Policy Gradient."""
 
-    def __init__(self, dim_ob, dim_act, lr=1e-4, discount=0.99):
-        self.dim_act = dim_act
-        self.update_dummy_freq = 100
-        self.batch_size = 32
-        super().__init__(dim_ob, None, 1e-3, discount)
+    def __init__(self, config):
+        super().__init__(config)
+        self.cnt = None
 
     def _build_model(self):
         # Build placeholders.
         self.observation_ph = tf.placeholder(
-            tf.float32, (None, self.dim_ob), "observation")
+            tf.float32, [None]+list(self.dim_ob), "observation")
         self.action_ph = tf.placeholder(
             tf.float32, (None, self.dim_act), "action")
         self.target_qval_ph = tf.placeholder(
@@ -66,38 +65,65 @@ class DDPG(TFEstimator):
             self.value_loss, var_list=critic_vars)
 
     def update(self, trajectories):
+        self.cnt = self.sess.run(tf.train.get_global_step()) // self.update_target_every + 1 \
+                   if self.cnt is None else self.cnt
 
-        data_batch = self._trajectories_to_batch(trajectories)
+        data_batch = utils.trajectories_to_batch(trajectories, self.batch_size, self.discount)
+        logger.debug("data_batch[state]: {}".format(data_batch["state"].shape))
+        
 
-        # ---------- Update Actor ----------
-        feeddict = {self.observation_ph: data_batch["state"],
-                    self.action_ph: data_batch["action"]}
+        batch_generator = utils.generator(data_batch, self.batch_size)
+        while True:
+            try:
+                sample_batch = next(batch_generator)
 
-        grad = self.sess.run(self.grad_q_a, feed_dict=feeddict)
-        feeddict[self.grad_q_act_ph] = grad[0]
+                logger.debug("sample_batch shape: {}".format(sample_batch.shape))
 
-        _, tot_step = self.sess.run(
-            [self.train_actor_op, tf.train.get_global_step()], feed_dict=feeddict)
+                # ---------- Update Actor ----------
+                feeddict = {self.observation_ph: sample_batch["state"],
+                            self.action_ph: sample_batch["action"]}
 
-        # ---------- Update Critic ----------
-        # Compute taget Q-value.
-        next_act = self.sess.run(self.dummy_action, feed_dict={
-                                 self.observation_ph: data_batch["nextstate"]})
-        next_qval = self.sess.run(self.dummy_qval, feed_dict={self.observation_ph: data_batch["nextstate"],
-                                                              self.action_ph: next_act})
+                grad = self.sess.run(self.grad_q_a, feed_dict=feeddict)
+                feeddict[self.grad_q_act_ph] = grad[0]
 
-        target_qval = data_batch["reward"] + \
-            (1 - data_batch["done"]) * self.discount * next_qval
+                _, tot_step = self.sess.run(
+                    [self.train_actor_op, tf.train.get_global_step()], feed_dict=feeddict)
+            except StopIteration:
+                del batch_generator
+                break
 
-        # Update critic.
-        feeddict[self.target_qval_ph] = target_qval
+        batch_generator = utils.generator(data_batch, self.batch_size)
+        while True:
+            try: 
+                sampe_batch = next(batch_generator)
+                
+                # ---------- Update Critic ----------
+                # Compute taget Q-value.
+                next_act = self.sess.run(self.dummy_action, feed_dict={
+                                         self.observation_ph: sample_batch["nextstate"]})
+                next_qval = self.sess.run(self.dummy_qval, 
+                                          feed_dict={self.observation_ph: sample_batch["nextstate"],
+                                                     self.action_ph: next_act})
 
-        _, loss = self.sess.run(
-            [self.train_critic_op, self.value_loss], feed_dict=feeddict)
+                target_qval = sample_batch["reward"] + \
+                    (1 - sample_batch["done"]) * self.discount * next_qval
 
-        if tot_step % self.update_dummy_freq == 0:
+                # Update critic.
+                feeddict[self.target_qval_ph] = target_qval
+
+                _, loss = self.sess.run([self.train_critic_op, self.value_loss], 
+                                        feed_dict={
+                                            self.observation_ph: sample_batch["state"],
+                                            self.action_ph: sample_batch["action"]
+                                            })
+            except StopIteration:
+                del batch_generator
+                break
+
+        if tot_step > self.cnt * self.update_target_every:
             self._copy_parameters("qval_net", "dummy_qval_net")
             self._copy_parameters("act_net", "dummy_act_net")
+            self.cnt += 1
 
         return tot_step, {"loss": loss}
 
@@ -137,6 +163,7 @@ class DDPG(TFEstimator):
                 }
 
     def get_action(self, ob, epsilon=0.1):
+        logger.debug("ge action: {}".format(ob.shape))
         if np.random.uniform() < epsilon:
             return np.random.uniform(-1, 1, size=(1, self.dim_act))
         else:

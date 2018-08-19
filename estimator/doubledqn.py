@@ -3,14 +3,15 @@ import tensorflow as tf
 from estimator.tfestimator import TFEstimator
 from estimator.networker import Networker
 from estimator.utils import gen_batch
+import estimator.utils as utils
 from middleware.log import logger
 
 
 class DoubleDQN(TFEstimator):
-    def __init__(self, dim_ob, n_act, lr=1e-4, discount=0.99):
-        self.cnt = 1
-        super().__init__(dim_ob, n_act, lr, discount)
+    def __init__(self, config): # dim_ob, n_act, lr=1e-4, discount=0.99):
+        super().__init__(config) #dim_ob, n_act, lr, discount)
         self._update_target()
+        self.cnt = None
 
     def _build_model(self):
 
@@ -74,13 +75,19 @@ class DoubleDQN(TFEstimator):
 
     def update(self, trajectories):
 
-        batch_size = 64
-        batch_generator = gen_batch(trajectories, batch_size)
+        self.cnt = self.sess.run(tf.train.get_global_step()) // self.update_target_every + 1 if self.cnt is None else self.cnt
+
+        data_batch = utils.trajectories_to_batch(trajectories, self.batch_size, self.discount)
+        batch_generator = utils.generator(data_batch, self.batch_size)
 
         while True:
             try:
-                state_batch, action_batch, reward_batch, next_state_batch, done_batch = next(
-                    batch_generator)
+                sample_batch = next(batch_generator)
+                state_batch = sample_batch["state"]
+                action_batch = sample_batch["action"].flatten()
+                reward_batch = sample_batch["spanreward"].flatten()
+                next_state_batch = sample_batch["laststate"]
+                done_batch = sample_batch["lastdone"].flatten()
 
                 next_q_vals, target_next_q_vals = self.sess.run(
                     [self.qvals, self.target_qvals],
@@ -106,7 +113,7 @@ class DoubleDQN(TFEstimator):
                 break
 
         # Update target model.
-        if total_t > 100 * self.cnt:
+        if total_t > self.update_target_every * self.cnt:
             self.cnt += 1
             self._update_target()
 

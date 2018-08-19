@@ -10,16 +10,14 @@ from middleware.log import logger
 class PPO(TFEstimator):
     """Proximal Policy Optimization."""
 
-    def __init__(self, dim_ob, dim_act, lr=3e-4, discount=0.99):
-        self.dim_act = dim_act
-        self.delta = 0.01
+    def __init__(self, config):
         self.beta = 1.0
-        super().__init__(dim_ob, None, lr, discount)
+        super().__init__(config) 
 
     def _build_model(self):
         # Build inputs.
         self.observation = tf.placeholder(
-            tf.float32, [None, self.dim_ob], "observation")
+            tf.float32, [None]+list(self.dim_ob), "observation")
         self.action = tf.placeholder(
             tf.float32, [None, self.dim_act], "action")
         self.span_reward = tf.placeholder(tf.float32, [None, 1], "span_reward")
@@ -90,10 +88,7 @@ class PPO(TFEstimator):
                             tf.random_normal(shape=[self.dim_act], dtype=tf.float32))
 
     def update(self, trajectories):
-
-        batch_size = 64
-        data_batch = utils.trajectories_to_batch(
-            trajectories, batch_size, self.discount)
+        data_batch = utils.trajectories_to_batch(trajectories, self.batch_size, self.discount)
 
         # # Shuffle batch.
         # n_sample = data_batch["state"].shape[0]
@@ -118,7 +113,7 @@ class PPO(TFEstimator):
 
         # ---------- Update actor ----------
         for _ in range(10):
-            batch_generator = utils.generator(data_batch, batch_size)
+            batch_generator = utils.generator(data_batch, self.batch_size)
 
             while True:
                 try:
