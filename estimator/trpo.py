@@ -92,7 +92,7 @@ class TRPO(TFEstimator):
                             tf.exp(self.log_var / 2.0) * tf.random_normal(shape=[self.dim_act], dtype=tf.float32))
 
     def update(self, trajectories):
-        data_batch = utils.trajectories_to_batch(trajectories, self.batch_size, self.discount)
+        data_batch = utils.trajectories_to_batch(trajectories, self.discount)
 
         self.feeddict = {self.input: data_batch["state"],
                          self.action: data_batch["action"],

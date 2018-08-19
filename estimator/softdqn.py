@@ -2,31 +2,46 @@ import numpy as np
 import tensorflow as tf
 from estimator.tfestimator import TFEstimator
 from estimator.networker import Networker
-from estimator.utils import gen_batch
+import estimator.utils as utils
 from middleware.log import logger
 
 
 class SoftDQN(TFEstimator):
-    def __init__(self, dim_ob, n_act, lr=1e-4, discount=0.99, tau=0.001):
-        self.tau = tau
-        super().__init__(dim_ob, n_act, lr, discount)
+    def __init__(self, config):
+        self.tau = 0.001
+        super().__init__(config)
 
     def _build_model(self):
 
-        self.input = tf.placeholder(
-            shape=[None, self.dim_ob], dtype=tf.float32, name="inputs")
+        assert len(self.dim_ob) == 1 or len(self.dim_ob) == 3, "Wrong observation dimension: {}".format(
+            self.dim_ob)
+
+        if len(self.dim_ob) == 1:
+            self.input = tf.placeholder(
+                shape=[None, self.dim_ob], dtype=tf.float32, name="inputs")
+        elif len(self.dim_ob) == 3:
+            self.input = tf.placeholder(
+                shape=[None] + list(self.dim_ob), dtype=tf.float32, name="inputs")
+
         self.actions = tf.placeholder(
             shape=[None], dtype=tf.int32, name="actions")
         self.target = tf.placeholder(
             shape=[None], dtype=tf.float32, name="target")
 
         # Build net.
-        with tf.variable_scope("qnet"):
-            self.qvals = Networker.build_dense_net(
-                self.input, [512, 256, self.n_act])
-        with tf.variable_scope("target_qnet"):
-            self.target_qvals = Networker.build_dense_net(
-                self.input, [512, 256, self.n_act], trainable=False)
+        if len(self.dim_ob) == 1:
+            with tf.variable_scope("qnet"):
+                self.qvals = Networker.build_dense_net(
+                    self.input, [512, 256, self.n_act])
+            with tf.variable_scope("target_qnet"):
+                self.target_qvals = Networker.build_dense_net(
+                    self.input, [512, 256, self.n_act], trainable=False)
+        elif len(self.dim_ob) == 3:
+            with tf.variable_scope("qnet"):
+                self.qvals = Networker.build_cnn_net(self.input, self.n_act)
+            with tf.variable_scope("target_qnet"):
+                self.target_qvals = Networker.build_cnn_net(
+                    self.input, self.n_act, trainable=False)
 
         trainable_variables = tf.trainable_variables('qnet')
         batch_size = tf.shape(self.input)[0]
@@ -61,13 +76,17 @@ class SoftDQN(TFEstimator):
 
     def update(self, trajectories):
 
-        batch_size = 64
-        batch_generator = gen_batch(trajectories, batch_size)
+        data_batch = utils.trajectories_to_batch(trajectories, self.discount)
+        batch_generator = utils.generator(data_batch, self.batch_size)
 
         while True:
             try:
-                state_batch, action_batch, reward_batch, next_state_batch, done_batch = next(
-                    batch_generator)
+                sample_batch = next(batch_generator)
+                state_batch = sample_batch["state"]
+                action_batch = sample_batch["action"].flatten()
+                reward_batch = sample_batch["spanreward"].flatten()
+                next_state_batch = sample_batch["laststate"]
+                done_batch = sample_batch["lastdone"].flatten()
 
                 target_next_q_vals = self.sess.run(
                     self.target_qvals, feed_dict={

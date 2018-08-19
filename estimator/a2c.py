@@ -68,21 +68,7 @@ class A2C(TFEstimator):
 
     def update(self, trajectories):
 
-        data_batch = utils.trajectories_to_batch(trajectories, self.batch_size, self.discount)
-
-        # batch_generator = utils.generator(data_batch, self.batch_size)
-
-        # # Shuffle data batch.
-        # n_sample = data_batch["state"].shape[0]
-        # index = np.arange(n_sample)
-        # np.random.shuffle(index)
-
-        # data_batch["state"] = data_batch["state"][index, :]
-        # data_batch["action"] = data_batch["action"][index, :]
-        # data_batch["reward"] = data_batch["reward"][index, :]
-        # data_batch["nextstate"] = data_batch["nextstate"][index, :]
-        # data_batch["done"] = data_batch["done"][index, :]
-        # data_batch["spanreward"] = data_batch["spanreward"][index, :]
+        data_batch = utils.trajectories_to_batch(trajectories, self.discount)
 
         old_mu_val, old_log_var_val = self.sess.run(
             [self.mu, self.log_var], feed_dict={self.observation: data_batch["state"]})

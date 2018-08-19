@@ -8,8 +8,8 @@ from middleware.log import logger
 
 
 class DoubleDQN(TFEstimator):
-    def __init__(self, config): # dim_ob, n_act, lr=1e-4, discount=0.99):
-        super().__init__(config) #dim_ob, n_act, lr, discount)
+    def __init__(self, config):
+        super().__init__(config)
         self._update_target()
         self.cnt = None
 
@@ -77,7 +77,7 @@ class DoubleDQN(TFEstimator):
 
         self.cnt = self.sess.run(tf.train.get_global_step()) // self.update_target_every + 1 if self.cnt is None else self.cnt
 
-        data_batch = utils.trajectories_to_batch(trajectories, self.batch_size, self.discount)
+        data_batch = utils.trajectories_to_batch(trajectories, self.discount)
         batch_generator = utils.generator(data_batch, self.batch_size)
 
         while True:

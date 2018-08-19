@@ -12,6 +12,11 @@
 	- [信息传递流程图](#信息传递流程图)
 <!-- /TOC -->
 
+## Result of SpaceInvaders
+![space invaders](figures/space_invaders.png)
+
+
+
 ## 交互框架
 ### 环境和Agent
 一个玩家同时和多个环境进行交互，从多个环境处收集数据进行训练。
@@ -65,4 +70,4 @@ python main.py --env "Reacher-v2" --model ppo
 
 ## 信息传递流程图
 
-![flow](flow.png)
+![flow](figures/flow.png)

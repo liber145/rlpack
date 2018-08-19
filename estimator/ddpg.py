@@ -12,7 +12,6 @@ class DDPG(TFEstimator):
 
     def __init__(self, config):
         super().__init__(config)
-        self.cnt = None
 
     def _build_model(self):
         # Build placeholders.
@@ -65,19 +64,13 @@ class DDPG(TFEstimator):
             self.value_loss, var_list=critic_vars)
 
     def update(self, trajectories):
-        self.cnt = self.sess.run(tf.train.get_global_step()) // self.update_target_every + 1 \
-                   if self.cnt is None else self.cnt
 
-        data_batch = utils.trajectories_to_batch(trajectories, self.batch_size, self.discount)
-        logger.debug("data_batch[state]: {}".format(data_batch["state"].shape))
-        
+        data_batch = utils.trajectories_to_batch(trajectories, self.discount)
 
         batch_generator = utils.generator(data_batch, self.batch_size)
         while True:
             try:
                 sample_batch = next(batch_generator)
-
-                logger.debug("sample_batch shape: {}".format(sample_batch.shape))
 
                 # ---------- Update Actor ----------
                 feeddict = {self.observation_ph: sample_batch["state"],
@@ -94,14 +87,14 @@ class DDPG(TFEstimator):
 
         batch_generator = utils.generator(data_batch, self.batch_size)
         while True:
-            try: 
-                sampe_batch = next(batch_generator)
-                
+            try:
+                sample_batch = next(batch_generator)
+
                 # ---------- Update Critic ----------
                 # Compute taget Q-value.
                 next_act = self.sess.run(self.dummy_action, feed_dict={
                                          self.observation_ph: sample_batch["nextstate"]})
-                next_qval = self.sess.run(self.dummy_qval, 
+                next_qval = self.sess.run(self.dummy_qval,
                                           feed_dict={self.observation_ph: sample_batch["nextstate"],
                                                      self.action_ph: next_act})
 
@@ -109,21 +102,18 @@ class DDPG(TFEstimator):
                     (1 - sample_batch["done"]) * self.discount * next_qval
 
                 # Update critic.
-                feeddict[self.target_qval_ph] = target_qval
-
-                _, loss = self.sess.run([self.train_critic_op, self.value_loss], 
+                _, loss = self.sess.run([self.train_critic_op, self.value_loss],
                                         feed_dict={
                                             self.observation_ph: sample_batch["state"],
-                                            self.action_ph: sample_batch["action"]
+                                            self.action_ph: sample_batch["action"],
+                                            self.target_qval_ph: target_qval
                                             })
             except StopIteration:
                 del batch_generator
                 break
 
-        if tot_step > self.cnt * self.update_target_every:
-            self._copy_parameters("qval_net", "dummy_qval_net")
-            self._copy_parameters("act_net", "dummy_act_net")
-            self.cnt += 1
+        self._copy_parameters("qval_net", "dummy_qval_net")
+        self._copy_parameters("act_net", "dummy_act_net")
 
         return tot_step, {"loss": loss}
 
@@ -141,30 +131,9 @@ class DDPG(TFEstimator):
         assign_op = [x.assign(y) for x, y in zip(oldvars, newvars)]
         self.sess.run(assign_op)
 
-    def _trajectories_to_batch(self, trajectories):
-
-        def func(traj):
-            return map(np.array, zip(*traj))
-
-        (state_batch,
-         action_batch,
-         reward_batch,
-         nextstate_batch,
-         done_batch) = map(np.concatenate, zip(*map(func, trajectories)))
-
-        reward_batch = reward_batch[:, np.newaxis]
-        done_batch = done_batch[:, np.newaxis]
-
-        return {"state": state_batch,
-                "action": action_batch,
-                "reward": reward_batch,
-                "nextstate": nextstate_batch,
-                "done": done_batch
-                }
-
     def get_action(self, ob, epsilon=0.1):
-        logger.debug("ge action: {}".format(ob.shape))
         if np.random.uniform() < epsilon:
-            return np.random.uniform(-1, 1, size=(1, self.dim_act))
+            # TODO: remove magic number 4 (stack number).
+            return np.random.uniform(-1, 1, size=(4, self.dim_act))
         else:
             return self.sess.run(self.action, feed_dict={self.observation_ph: ob})

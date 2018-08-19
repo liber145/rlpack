@@ -20,7 +20,7 @@ def gen_batch(trajectories, batch_size):
         yield state_batch[span_index, :], action_batch[span_index], reward_batch[span_index], next_state_batch[span_index, :], done_batch[span_index]
 
 
-def process_traj(traj, batch_size, discount=0.99):
+def process_traj(traj, discount=0.99):
     """traj构成：sarsd"""
     n_sample = len(traj)
 
@@ -55,9 +55,9 @@ def process_traj(traj, batch_size, discount=0.99):
     return state_batch, action_batch, reward_batch, next_state_batch, done_batch, span_reward_batch, last_state_batch, last_done_batch
 
 
-def trajectories_to_batch(trajectories, batch_size, discount):
+def trajectories_to_batch(trajectories, discount):
     state_batch, action_batch, reward_batch, next_state_batch, done_batch, span_reward_batch, last_state_batch, last_done_batch = map(
-        np.concatenate, zip(*map(lambda x: process_traj(x, batch_size, discount), trajectories)))
+        np.concatenate, zip(*map(lambda x: process_traj(x, discount), trajectories)))
 
     return {"state": state_batch,
             "action": action_batch,
@@ -78,14 +78,4 @@ def generator(data_batch, batch_size=64):
     for i in range(math.ceil(n_sample / batch_size)):
         span_index = slice(i*batch_size, min((i+1)*batch_size, n_sample))
         span_index = index[span_index]
-        # yield {"state": data_batch["state"][span_index, :],
-        #        "action": data_batch["action"][span_index, :],
-        #        "reward": data_batch["reward"][span_index, :],
-        #        "nextstate": data_batch["nextstate"][span_index, :],
-        #        "done": data_batch["done"][span_index, :],
-        #        "spanreward": data_batch["spanreward"][span_index, :],
-        #        "laststate": data_batch["laststate"][span_index, :],
-        #        "lastdone": data_batch["lastdone"][span_index, :],
-        #        "oldmu": data_batch["oldmu"][span_index, :]
-        #        }
         yield {key: item[span_index, :] for key, item in data_batch.items()}

@@ -8,8 +8,8 @@ from middleware.log import logger
 
 
 class DQN(TFEstimator):
-    def __init__(self, config):  # dim_ob, n_act, lr=1e-4, discount=0.99):
-        super().__init__(config)  # dim_ob, n_act, lr, discount)
+    def __init__(self, config):
+        super().__init__(config)
         self._update_target()
         self.cnt = None
 
@@ -80,36 +80,23 @@ class DQN(TFEstimator):
         self.cnt = self.sess.run(tf.train.get_global_step()) // self.update_target_every + 1 \
                    if self.cnt is None else self.cnt
 
-        batch_size = self.batch_size
-        data_batch = utils.trajectories_to_batch(
-            trajectories, batch_size, self.discount)
-        batch_generator = utils.generator(data_batch, batch_size)
+        data_batch = utils.trajectories_to_batch(trajectories, self.discount)
+        batch_generator = utils.generator(data_batch, self.batch_size)
 
         while True:
             try:
                 sample_batch = next(batch_generator)
                 state_batch = sample_batch["state"]
-                action_batch = sample_batch["action"]
-                reward_batch = sample_batch["spanreward"]
+                action_batch = sample_batch["action"].flatten()
+                reward_batch = sample_batch["spanreward"].flatten()
                 next_state_batch = sample_batch["laststate"]
-                done_batch = sample_batch["lastdone"]
+                done_batch = sample_batch["lastdone"].flatten()
 
                 target_next_q_vals = self.sess.run(self.target_qvals, feed_dict={
                     self.input: next_state_batch})
 
-                reward_batch = reward_batch.flatten()
-                done_batch = done_batch.flatten()
-                action_batch = action_batch.flatten()
-
                 target = reward_batch + (
                     1 - done_batch) * self.discount * target_next_q_vals.max(axis=1)
-
-                # logger.debug("max q: {}".format(
-                #     target_next_q_vals.max(axis=1).shape))
-                # logger.debug("q: {}".format(target_next_q_vals.shape))
-                # logger.debug("done: {}".format(done_batch.shape))
-                # logger.debug("reward: {}".format(reward_batch.shape))
-                # logger.debug("target: {}".format(target.shape))
 
                 _, total_t, loss, max_q_value = self.sess.run(
                     [self.train_op,
@@ -134,34 +121,6 @@ class DQN(TFEstimator):
             self._update_target()
 
         return total_t, {"loss": loss, "max_q_value": max_q_value}
-
-    # def update(self, state_batch, action_batch, reward_batch, next_state_batch, done_batch):
-
-    #     target_next_q_vals = self.sess.run(self.target_qvals, feed_dict={
-    #         self.input: next_state_batch})
-
-    #     target = reward_batch + (
-    #         1 - done_batch) * self.discount * target_next_q_vals.max(axis=1)
-
-    #     _, total_t, loss, max_q_value = self.sess.run(
-    #         [self.train_op,
-    #             tf.train.get_global_step(),
-    #             self.loss,
-    #             self.max_qval],
-    #         feed_dict={
-    #             self.input: state_batch,
-    #             self.actions: action_batch,
-    #             self.target: target
-    #         }
-    #     )
-
-    #     # Update target model.
-    #     if total_t > 1000 * self.cnt:
-    #         logger.debug("self.cnt: {}".format(self.cnt))
-    #         self.cnt += 1
-    #         self._update_target()
-
-    #     return total_t, {"loss": loss, "max_q_value": max_q_value}
 
     def get_action(self, obs, epsilon):
         qvals = self.sess.run(self.qvals, feed_dict={self.input: obs})

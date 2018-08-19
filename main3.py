@@ -7,7 +7,7 @@ from middleware.log import logger
 logger.setLevel(logging.DEBUG)
 
 parser = argparse.ArgumentParser(description="Process parameters.")
-parser.add_argument("--env", default="BeamRiderNoFrameskip-v4", type=str)
+parser.add_argument("--env", default="Atari.BeamRiderNoFrameskip-v4", type=str)
 parser.add_argument("--n_env", default=4, type=int)
 parser.add_argument("--model", default="dqn", type=str)
 parser.add_argument("--epsilon", default=0.01, type=float)

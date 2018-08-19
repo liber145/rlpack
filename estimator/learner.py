@@ -16,32 +16,6 @@ import logging
 import traceback
 
 
-# parser = argparse.ArgumentParser(description="Process parameters.")
-# parser.add_argument("--env", default="Reacher-v2", type=str)
-# parser.add_argument("--n_env", default=8, type=int)
-# parser.add_argument("--model", default="ppo", type=str)
-# parser.add_argument("--result_path", default=None, type=str)
-# parser.add_argument("--batch_size", default=32, type=int)
-# parser.add_argument("--n_iteration", default=10000000, type=int)
-# parser.add_argument("--n_trajectory", default=32, type=int)
-# parser.add_argument("--n_step", default=1, type=int)
-# parser.add_argument("--learning_starts", default=200, type=int)
-# parser.add_argument("--memory_size", default=500000, type=int)
-# parser.add_argument("--lr", default=0.0001, type=float)
-# parser.add_argument("--critic_lr", default=0.01, type=float)
-# parser.add_argument("--n_action", default=2, type=int)
-# parser.add_argument("--dim_action", default=2, type=int)
-# parser.add_argument("--dim_observation", default=11, type=int)
-# parser.add_argument("--discount", default=0.99, type=float)
-# parser.add_argument("--update_target_every", default=1000, type=int)
-# parser.add_argument("--save_model_every", default=1000, type=int)
-# args = parser.parse_args()
-
-# args.dim_observation = (84, 84, 4)
-# args.result_path = os.path.join(
-#     "./results", args.model) if args.result_path is None else args.result_path
-
-
 class ResultsBuffer(object):
     def __init__(self, rewards_history=[]):
         self.buffer = defaultdict(list)
@@ -81,8 +55,11 @@ class Learner(object):
     def run(self):
         config = self.config
 
-        # env_fn = get_atari_env_fn(config.env)  # 'BeamRiderNoFrameskip-v4')
-        env_fn = get_mujoco_env_fn(config.env)
+        env_type, env_name = config.env.split(".")
+        if env_type == "Atari":
+            env_fn = get_atari_env_fn(env_name)
+        elif env_type == "Mujoco":
+            env_fn = get_mujoco_env_fn(env_name)
         num_agents = config.n_env
         env = EnvMaker(num_agents=num_agents, env_fn=env_fn, basename='test')
 
@@ -140,6 +117,7 @@ class Learner(object):
         try:
             states = env.reset()
             for i in range(learning_starts):
+
                 actions = model.get_action(states, epsilon)
                 next_states, rewards, dones, info = env.step(actions)
 

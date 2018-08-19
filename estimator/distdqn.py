@@ -7,10 +7,6 @@ import estimator.utils as utils
 
 class DistDQN(TFEstimator):
     def __init__(self, config,
-                 #dim_ob,
-                 #n_ac,
-                 #lr=1e-4,
-                 #discount=0.99,
                  vmax=10,
                  vmin=-10,
                  n_atoms=51):
@@ -95,7 +91,7 @@ class DistDQN(TFEstimator):
         self.cnt = self.sess.run(tf.train.get_global_step()) // self.update_target_every + 1 \
                 if self.cnt is None else self.cnt
 
-        data_batch = utils.trajectories_to_batch(trajectories, self.batch_size, self.discount)
+        data_batch = utils.trajectories_to_batch(trajectories, self.discount)
         batch_generator = utils.generator(data_batch, self.batch_size)
 
         while True:

@@ -2,15 +2,15 @@ import numpy as np
 import tensorflow as tf
 from estimator.tfestimator import TFEstimator
 from estimator.networker import Networker
-from middleware.log import logger
 import estimator.utils as utils
+from middleware.log import logger
 
 
 class PG(TFEstimator):
     """Policy Gradient for coutinuous action."""
 
-    def __init__(self, config): # dim_ob, dim_ac, lr=1e-4, discount=0.999):
-        super().__init__(config) #dim_ob, None, lr, discount)
+    def __init__(self, config):
+        super().__init__(config)
 
     def _build_model(self):
         self.input = tf.placeholder(tf.float32, [None]+ list(self.dim_ob), "inputs")
@@ -39,7 +39,7 @@ class PG(TFEstimator):
 
     def update(self, trajectories):
 
-        data_batch = utils.trajectories_to_batch(trajectories, self.batch_size, self.discount)
+        data_batch = utils.trajectories_to_batch(trajectories, self.discount)
         batch_generator = utils.generator(data_batch, self.batch_size)
 
         while True:
@@ -64,41 +64,7 @@ class PG(TFEstimator):
                 del batch_generator
                 break
 
-        return total_t, {"loss": target, "logit": logit, "max_q_value": qval}
-
-
-        # sar = []
-        # for traj in trajectories:
-        #     # traj = [[S, A, R, S, D], [S, A, R, S, D], ...]
-        #     sar.extend(self._process_traj(traj))
-
-        # state_batch, action_batch, reward_batch = map(np.array, zip(*sar))
-        # reward_batch = reward_batch[:, np.newaxis]
-
-        # _, total_t, target, logit, qval = self.sess.run(
-        #     [self.train_op,
-        #      tf.train.get_global_step(),
-        #      self.target,
-        #      self.logit,
-        #      self.qval],
-        #     feed_dict={
-        #         self.input: state_batch,
-        #         self.action: action_batch,
-        #         self.qval: reward_batch
-        #     })
-
-        # if total_t % 100 == 0:
-        #     print("step: {} surr:{}".format(total_t, target))
-
-        # return total_t, {"loss": target, "logit": logit, "qval": qval}
-
-    def _process_traj(self, traj):
-        res = []
-        total_reward = 0
-        for transition in reversed(traj):
-            total_reward = transition[2] + total_reward * self.discount
-            res.append([transition[0], transition[1], total_reward])
-        return res
+        return total_t, {"loss": target, "logit": logit, "q_value": qval}
 
     def get_action(self, ob, epsilon=None):
         action = self.sess.run(self.mu, feed_dict={self.input: ob})
