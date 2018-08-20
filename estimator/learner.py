@@ -60,11 +60,17 @@ class Learner(object):
             env_fn = get_atari_env_fn(env_name)
         elif env_type == "Mujoco":
             env_fn = get_mujoco_env_fn(env_name)
+
         num_agents = config.n_env
         env = EnvMaker(num_agents=num_agents, env_fn=env_fn, basename='test')
 
-        config.dim_observation = env.observation_space.shape[1:]
-        config.n_action = env.action_space.shape[0]
+        if env_type == "Atari":
+            config.dim_observation = env.observation_space.shape[1:]
+            config.n_action = env.action_space.n
+        else env_type = "Mujoco":
+            config.dim_observation = env.observation_space.shape[1:]
+            config.n_action = env.action_space.shape[0]
+
 
         model_name = config.model
         if model_name == "dqn":

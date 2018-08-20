@@ -92,6 +92,7 @@ class EnvMaker:
 
         self.action_space = _get_multi_space(sample_env.action_space,
                                              self._num_agents)
+        self.action_space.n = sample_env.action_space.n
 
     def reset(self):
         for addr in self.addrs:
