@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import tensorflow as tf
-from middleware.log import logger
+from ..common.log import logger
 
 
 class TFEstimator(object):

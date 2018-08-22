@@ -6,8 +6,6 @@ import numpy as np
 import msgpack_numpy
 from gym import spaces
 from collections import OrderedDict
-from middleware.log import logger
-
 
 msgpack_numpy.patch()
 INITED_RAY = False

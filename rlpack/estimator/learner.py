@@ -1,20 +1,18 @@
 import argparse
 import gym
 import numpy as np
-from collections import defaultdict
-from environment.atari_wrapper import get_atari_env_fn
-from environment.mujoco_wrapper import get_mujoco_env_fn
-from environment.master_env import EnvMaker
-from estimator import DQN, SoftDQN, DoubleDQN, AveDQN, DistDQN, PG, TRPO, A2C, PPO, PPO, DDPG
-from middleware.memory import Memory2, Memory3
 import pickle
 import time
 import os
-from tensorboardX import SummaryWriter
-from middleware.log import logger
-import logging
 import traceback
-
+from tensorboardX import SummaryWriter
+from collections import defaultdict
+from ..environment.atari_wrapper import get_atari_env_fn
+from ..environment.mujoco_wrapper import get_mujoco_env_fn
+from ..environment.master_env import EnvMaker
+from . import DQN, SoftDQN, DoubleDQN, AveDQN, DistDQN, PG, TRPO, A2C, PPO, DDPG
+from ..common.memory import Memory2, Memory3
+from ..common.log import logger
 
 class ResultsBuffer(object):
     def __init__(self, rewards_history=[]):
@@ -56,6 +54,7 @@ class Learner(object):
         config = self.config
 
         env_type, env_name = config.env.split(".")
+        assert env_type == "Atari" or env_type == "Mujoco", "Unrecognized environment."
         if env_type == "Atari":
             env_fn = get_atari_env_fn(env_name)
         elif env_type == "Mujoco":
@@ -67,7 +66,7 @@ class Learner(object):
         if env_type == "Atari":
             config.dim_observation = env.observation_space.shape[1:]
             config.n_action = env.action_space.n
-        else env_type = "Mujoco":
+        elif env_type == "Mujoco":
             config.dim_observation = env.observation_space.shape[1:]
             config.n_action = env.action_space.shape[0]
 

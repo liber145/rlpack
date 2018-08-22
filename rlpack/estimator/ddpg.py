@@ -1,10 +1,9 @@
-import os
 import numpy as np
 import tensorflow as tf
-from estimator.tfestimator import TFEstimator
-from estimator.networker import Networker
-import estimator.utils as utils
-from middleware.log import logger
+
+from .networker import Networker
+from .tfestimator import TFEstimator
+from . import utils
 
 
 class DDPG(TFEstimator):

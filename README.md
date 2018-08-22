@@ -12,8 +12,33 @@
 	- [信息传递流程图](#信息传递流程图)
 <!-- /TOC -->
 
-## Result of SpaceInvaders
+
+
+## 特点
+- 多个环境并行
+
+
+## 实验结果
+- Breakout
+- Seaquest
+- Spaceinvaders
+
 ![space invaders](figures/space_invaders.png)
+
+## 安装
+
+
+## 使用方法
+
+
+
+
+
+
+## 引用
+
+
+
 
 
 
@@ -71,3 +96,5 @@ python main.py --env "Reacher-v2" --model ppo
 ## 信息传递流程图
 
 ![flow](figures/flow.png)
+
+

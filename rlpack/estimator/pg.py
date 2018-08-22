@@ -1,9 +1,9 @@
 import numpy as np
 import tensorflow as tf
-from estimator.tfestimator import TFEstimator
-from estimator.networker import Networker
-import estimator.utils as utils
-from middleware.log import logger
+from .tfestimator import TFEstimator
+from .networker import Networker
+from . import utils
+from ..common.log import logger
 
 
 class PG(TFEstimator):

@@ -6,7 +6,7 @@ import zmq
 import msgpack
 import msgpack_numpy
 import gym
-from middleware.log import logger
+from .log import logger
 
 
 msgpack_numpy.patch()
