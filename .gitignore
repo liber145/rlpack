@@ -6,3 +6,6 @@ __pycache__/
 *.pyc
 [._]*.sw[a-p]
 
+# Distribution / packaging
+*.egg-info/
+*.egg

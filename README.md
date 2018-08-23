@@ -3,6 +3,8 @@
 
 <!-- TOC depthFrom:1 depthTo:6 withLinks:1 updateOnSave:1 orderedList:0 -->
 - [RL-Algo](#rl-algo)
+	- [特点](#特点)
+	- [实验结果](#实验结果)
 	- [交互框架](#交互框架)
 		- [环境和Agent](#环境和agent)
 	- [算法涵盖](#算法涵盖)
@@ -13,9 +15,9 @@
 <!-- /TOC -->
 
 
-
 ## 特点
 - 多个环境并行
+- 方便重现结果
 
 
 ## 实验结果
@@ -26,9 +28,19 @@
 ![space invaders](figures/space_invaders.png)
 
 ## 安装
+依赖：
+- [gym](https://github.com/openai/gym)
+- tensorflow or tensorflow-gpu
 
+安装依赖后，使用下属方式安装在本地。建议使用Anaconda环境。
+```bash
+$ git clone https://github.com/smsxgz/rl-algo.git
+$ cd rl-algo
+$ pip install -e .
+```
 
-## 使用方法
+## 使用示例
+
 
 
 
