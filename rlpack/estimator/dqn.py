@@ -8,12 +8,14 @@ from ..common.log import logger
 
 
 class DQN(TFEstimator):
+    """Deep Q Network."""
     def __init__(self, config):
         super().__init__(config)
         self._update_target()
         self.cnt = None
 
     def _build_model(self):
+        """Build model."""
 
         assert len(self.dim_ob) == 1 or len(self.dim_ob) == 3, "Wrong observation dimension: {}".format(
             self.dim_ob)
@@ -76,6 +78,12 @@ class DQN(TFEstimator):
         return update_ops
 
     def update(self, trajectories):
+        """Update the model from the collected trajectories.
+
+        Args:
+            trajectories: A list of sampled trajectories. For example:
+            [[(s,a,r,s,d), (s,a,r,s,d), ...], [(s,a,r,s,d), (s,a,r,s,d), ...]]
+        """
 
         self.cnt = self.sess.run(tf.train.get_global_step()) // self.update_target_every + 1 \
                    if self.cnt is None else self.cnt
@@ -123,6 +131,12 @@ class DQN(TFEstimator):
         return total_t, {"loss": loss, "max_q_value": max_q_value}
 
     def get_action(self, obs, epsilon):
+        """Get action according to the given observation and epsilon-greedy method.
+
+        Args:
+            obs: observation.
+            epsilon: arguments for epsilon-greedy method.
+        """
         qvals = self.sess.run(self.qvals, feed_dict={self.input: obs})
         best_action = np.argmax(qvals, axis=1)
         batch_size = obs.shape[0]

@@ -5,6 +5,9 @@
 - [RL-Algo](#rl-algo)
 	- [特点](#特点)
 	- [实验结果](#实验结果)
+	- [安装](#安装)
+	- [使用示例](#使用示例)
+	- [引用](#引用)
 	- [交互框架](#交互框架)
 		- [环境和Agent](#环境和agent)
 	- [算法涵盖](#算法涵盖)
@@ -19,45 +22,6 @@
 - 多个环境并行
 - 方便重现结果
 
-
-## 实验结果
-- Breakout
-- Seaquest
-- Spaceinvaders
-
-![space invaders](figures/space_invaders.png)
-
-## 安装
-依赖：
-- [gym](https://github.com/openai/gym)
-- tensorflow or tensorflow-gpu
-
-安装依赖后，使用下属方式安装在本地。建议使用Anaconda环境。
-```bash
-$ git clone https://github.com/smsxgz/rl-algo.git
-$ cd rl-algo
-$ pip install -e .
-```
-
-## 使用示例
-
-
-
-
-
-
-
-## 引用
-
-
-
-
-
-
-## 交互框架
-### 环境和Agent
-一个玩家同时和多个环境进行交互，从多个环境处收集数据进行训练。
-
 ## 算法涵盖
 - DQN
 - DoubleDQN
@@ -70,10 +34,55 @@ $ pip install -e .
 - PPO
 - DDPG
 
-运行算法：
+
+## 实验结果
+- Breakout
+- Seaquest
+- SpaceInvaders
+- Mujoco系列
+
+DoubleDQN的结果，Rainbow的结果和我们的结果。
+
+|    	   		 | DoubledQN |Rainbow | RLPack |
+|---------------|-----------|--------|---------|
+| Breakout 		 |	         |        |        | 
+| Seaquest 		 |           |        |    	   |
+| SpaceInvaders |           |        |		   |
+| Mujoco        |           |        |  	   |	 
+ 
+![space invaders](figures/space_invaders.png)
+
+
+## 安装
+依赖：
+
+- gym
+- tensorflow or tensorflow-gpu
+
+依赖项可通过pip安装。
+注意，`gym.mujoco`的使用需要额外的许可，请参考[gym](https://github.com/openai/gym)。
+`tensorflow`有cpu版本和gpu版本，根据配置选择。
+
 ```bash
-python main.py --env "Reacher-v2" --model ppo
+$ pip install "gym[atari,mujoco]"
+$ pip install tensorflow 
+$ pip install tensorflow-gpu
 ```
+
+安装依赖后，使用下属方式安装在本地。建议使用Anaconda环境。
+
+```bash
+$ git clone https://github.com/smsxgz/rl-algo.git
+$ cd rl-algo
+$ pip install -e .
+```
+
+## 使用示例
+
+```bash
+$ python main.py --env Atari.SpaceInvadersNoFrameskip-v4 --model dqn
+```
+
 
 额外的参数
 - `result_path`：模型和结果存储路径。
@@ -88,6 +97,30 @@ python main.py --env "Reacher-v2" --model ppo
 - `n_step`：每次和环境交互的步数。
 - `save_model_every`：多久保存一次模型。
 - `update_target_every`：多久更新一次target模型。
+
+
+
+## 引用
+
+- [Human-level control through deep reinforcement learning](https://www.nature.com/articles/nature14236)
+- [Deep Reinforcement Learning with Double Q-learning](https://arxiv.org/abs/1509.06461)
+- [Averaged-DQN: Variance Reduction and Stabilization
+for Deep Reinforcement Learning](https://arxiv.org/pdf/1611.01929)
+- [A Distributional Perspective on Reinforcement Learning](https://arxiv.org/abs/1707.06887)
+- [Reinforcement Learning with Deep Energy-Based Policies](https://arxiv.org/abs/1702.08165)
+- [Trust Region Policy Optimization](https://arxiv.org/abs/1502.05477)
+- [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347)
+- [Asynchronous Methods for Deep Reinforcement Learning](https://arxiv.org/abs/1602.01783)
+- [Continuous control with deep reinforcement learning](https://arxiv.org/abs/1509.02971)
+- [Introduction to Reinforcement Learning](https://dl.acm.org/citation.cfm?id=551283)
+
+
+
+## 交互框架
+### 环境和Agent
+一个玩家同时和多个环境进行交互，从多个环境处收集数据进行训练。
+
+
 
 ## 代码组成
 ### 代码主要部分

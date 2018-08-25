@@ -25,6 +25,7 @@ def _get_multi_space(space, n):
 
 
 class EnvMaker:
+    """The environment master collecting received messages from all sub environment."""
     def __init__(self, num_agents, env_fn, basename, backend='ray'):
         self._num_agents = num_agents
 
@@ -93,6 +94,7 @@ class EnvMaker:
         self.action_space.n = sample_env.action_space.n
 
     def reset(self):
+        """Reset all sub environments."""
         for addr in self.addrs:
             self._socket.send_multipart([addr, b'', b'reset'])
         for _ in range(self._num_agents):
@@ -102,6 +104,14 @@ class EnvMaker:
         return np.array(list(self.addrs.values()))
 
     def step(self, actions):
+        """Step forward a batch of actions in all sub environments.
+       
+        Args:
+            actions: A batch of actions for sub environments.
+
+        Returns:
+            A batch of states, rewards, dones, infos from the corresponding sub environments.
+        """
         for action, addr in zip(actions, self.addrs.keys()):
             self._socket.send_multipart([addr, b'', msgpack.dumps(action)])
 
@@ -116,6 +126,7 @@ class EnvMaker:
         return states, rewards, dones, info
 
     def close(self):
+        """Close environments."""
         for addr in self.addrs:
             self._socket.send_multipart([addr, b'', b'close'])
         time.sleep(1)

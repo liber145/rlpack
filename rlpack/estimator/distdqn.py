@@ -6,6 +6,7 @@ from . import utils
 
 
 class DistDQN(TFEstimator):
+    """Distributed Deep Q Network."""
     def __init__(self, config,
                  vmax=10,
                  vmin=-10,

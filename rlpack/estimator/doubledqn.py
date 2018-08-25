@@ -7,12 +7,14 @@ from . import utils
 
 
 class DoubleDQN(TFEstimator):
+    "Double Deep Q Network."
     def __init__(self, config):
         super().__init__(config)
         self._update_target()
         self.cnt = None
 
     def _build_model(self):
+        "Build model."
 
         assert len(self.dim_ob) == 1 or len(self.dim_ob) == 3, "Wrong observation dimension: {}".format(
             self.dim_ob)

@@ -1,0 +1,418 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>rlpack.common.mq &mdash; rl-algo  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+
+  
+  <script src="../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> rl-algo
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../main.html">main module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../rlpack.html">rlpack package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../setup.html">setup module</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">rl-algo</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>rlpack.common.mq</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for rlpack.common.mq</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">abc</span> <span class="k">import</span> <span class="n">ABCMeta</span><span class="p">,</span> <span class="n">abstractmethod</span>
+<span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="k">import</span> <span class="n">Process</span>
+<span class="kn">import</span> <span class="nn">traceback</span>
+<span class="kn">import</span> <span class="nn">collections</span>
+<span class="kn">import</span> <span class="nn">zmq</span>
+<span class="kn">import</span> <span class="nn">msgpack</span>
+<span class="kn">import</span> <span class="nn">msgpack_numpy</span>
+<span class="kn">import</span> <span class="nn">gym</span>
+<span class="kn">from</span> <span class="nn">.log</span> <span class="k">import</span> <span class="n">logger</span>
+
+
+<span class="n">msgpack_numpy</span><span class="o">.</span><span class="n">patch</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="Client"><a class="viewcode-back" href="../../../rlpack.common.mq.html#rlpack.common.mq.Client">[docs]</a><span class="k">class</span> <span class="nc">Client</span><span class="p">(</span><span class="n">Process</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Env是Clinet，向Agent发送动作请求。&quot;&quot;&quot;</span>
+    <span class="n">__metaclass__</span> <span class="o">=</span> <span class="n">ABCMeta</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">identity</span><span class="p">,</span> <span class="n">n_step</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">identity</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_step</span> <span class="o">=</span> <span class="n">n_step</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cnt</span> <span class="o">=</span> <span class="mi">0</span>
+
+<div class="viewcode-block" id="Client.run"><a class="viewcode-back" href="../../../rlpack.common.mq.html#rlpack.common.mq.Client.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="n">zmq</span><span class="o">.</span><span class="n">Context</span><span class="p">()</span>
+        <span class="n">req1_socket</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">REQ</span><span class="p">)</span>   <span class="c1"># pylint: disable=E1101</span>
+        <span class="n">req2_socket</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">REQ</span><span class="p">)</span>   <span class="c1"># pylint: disable=E1101</span>
+        <span class="n">req1_socket</span><span class="o">.</span><span class="n">setsockopt</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">IDENTITY</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>   <span class="c1"># pylint: disable=E1101</span>
+        <span class="n">req2_socket</span><span class="o">.</span><span class="n">setsockopt</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">IDENTITY</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>   <span class="c1"># pylint: disable=E1101</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">socket1</span> <span class="o">=</span> <span class="n">req1_socket</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">socket2</span> <span class="o">=</span> <span class="n">req2_socket</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cont</span> <span class="o">=</span> <span class="n">context</span>
+
+        <span class="n">req1_socket</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s2">&quot;tcp://localhost:5550&quot;</span><span class="p">)</span>
+        <span class="n">req2_socket</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s2">&quot;tcp://localhost:5559&quot;</span><span class="p">)</span>
+
+        <span class="n">req2_socket</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;Ready.&quot;</span><span class="p">)</span>
+        <span class="n">req2_socket</span><span class="o">.</span><span class="n">recv</span><span class="p">()</span>   <span class="c1"># Means this client go to sleep.</span>
+        <span class="n">req2_socket</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;I get awake.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">startsend</span><span class="p">()</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+
+                    <span class="n">msg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_packet</span><span class="p">()</span>
+                    <span class="n">req1_socket</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">msgpack</span><span class="o">.</span><span class="n">packb</span><span class="p">(</span>
+                        <span class="n">msg</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">))</span>  <span class="c1"># 发送整个游戏过程的大礼包</span>
+                    <span class="n">msg</span> <span class="o">=</span> <span class="n">req1_socket</span><span class="o">.</span><span class="n">recv</span><span class="p">()</span>                       <span class="c1"># 接受信息，不做任何处理</span>
+
+                    <span class="c1"># logger.debug(&quot;Client({}): {}&quot;.format(self.id, self.cnt))</span>
+
+                    <span class="n">req2_socket</span><span class="o">.</span><span class="n">recv</span><span class="p">()</span>
+                    <span class="n">req2_socket</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;I get awake.&quot;</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">startsend</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">cnt</span> <span class="o">=</span> <span class="mi">0</span>
+
+                <span class="n">msg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_packet</span><span class="p">()</span>
+                <span class="n">req1_socket</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">msgpack</span><span class="o">.</span><span class="n">packb</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">))</span>
+
+                <span class="n">msg</span> <span class="o">=</span> <span class="n">req1_socket</span><span class="o">.</span><span class="n">recv</span><span class="p">()</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="n">msgpack</span><span class="o">.</span><span class="n">unpackb</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_perform_action</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">cnt</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Keyboad interrupt at env (</span><span class="si">{}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="n">traceback</span><span class="o">.</span><span class="n">print_exc</span><span class="p">()</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;close env (</span><span class="si">{}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">))</span>
+            <span class="n">req1_socket</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">req2_socket</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">context</span><span class="o">.</span><span class="n">term</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Client.close"><a class="viewcode-back" href="../../../rlpack.common.mq.html#rlpack.common.mq.Client.close">[docs]</a>    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;断开所有连接。&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+        <span class="c1"># print(&quot;close env ({})&quot;.format(self.id))</span>
+        <span class="c1"># print(&quot;socket1:&quot;, self.socket1)</span>
+        <span class="c1"># self.socket1.close()</span>
+        <span class="c1"># self.socket2.close()</span>
+        <span class="c1"># self.cont.term()</span>
+
+<div class="viewcode-block" id="Client.startsend"><a class="viewcode-back" href="../../../rlpack.common.mq.html#rlpack.common.mq.Client.startsend">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">startsend</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;开始新的一轮&quot;&quot;&quot;</span></div>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_perform_action</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">action</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;运行来自Agent的动作action；收集trajectory信息。&quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_get_packet</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;整理发送给Agent的消息。&quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_check</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;检查是否发送n_step的数据。&quot;&quot;&quot;</span></div>
+
+
+<div class="viewcode-block" id="Worker"><a class="viewcode-back" href="../../../rlpack.common.mq.html#rlpack.common.mq.Worker">[docs]</a><span class="k">class</span> <span class="nc">Worker</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Agent是Worker，处理来自Env发过来的信息，回复动作。&quot;&quot;&quot;</span>
+    <span class="n">__metaclass__</span> <span class="o">=</span> <span class="n">ABCMeta</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_client</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">n_handle</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_client</span> <span class="o">=</span> <span class="n">n_client</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addrs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">received_msg</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_handle</span> <span class="o">=</span> <span class="n">n_client</span> <span class="k">if</span> <span class="n">n_handle</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">n_handle</span>
+
+<div class="viewcode-block" id="Worker.run"><a class="viewcode-back" href="../../../rlpack.common.mq.html#rlpack.common.mq.Worker.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="n">zmq</span><span class="o">.</span><span class="n">Context</span><span class="p">()</span>
+        <span class="n">router1_socket</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">ROUTER</span><span class="p">)</span>  <span class="c1"># pylint: disable=E1101</span>
+        <span class="n">router2_socket</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">ROUTER</span><span class="p">)</span>  <span class="c1"># pylint: disable=E1101</span>
+
+        <span class="n">router1_socket</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="s2">&quot;tcp://*:5550&quot;</span><span class="p">)</span>
+        <span class="n">router2_socket</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="s2">&quot;tcp://*:5559&quot;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_client</span><span class="p">):</span>
+            <span class="n">addr</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">msg</span> <span class="o">=</span> <span class="n">router2_socket</span><span class="o">.</span><span class="n">recv_multipart</span><span class="p">()</span>  <span class="c1"># pylint: disable=E0632</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">addrs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">addr</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">getup</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="n">n_received</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">getup</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">addr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">addrs</span><span class="p">:</span>
+                        <span class="n">router2_socket</span><span class="o">.</span><span class="n">send_multipart</span><span class="p">([</span><span class="n">addr</span><span class="p">,</span> <span class="sa">b</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="sa">b</span><span class="s2">&quot;Get up.&quot;</span><span class="p">])</span>
+                    <span class="k">for</span> <span class="n">addr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">addrs</span><span class="p">:</span>
+                        <span class="n">addr</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">msg</span> <span class="o">=</span> <span class="n">router2_socket</span><span class="o">.</span><span class="n">recv_multipart</span><span class="p">()</span>  <span class="c1"># pylint: disable=E0632</span>
+
+                    <span class="bp">self</span><span class="o">.</span><span class="n">getup</span> <span class="o">=</span> <span class="kc">False</span>
+
+                <span class="n">addr</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">msg</span> <span class="o">=</span> <span class="n">router1_socket</span><span class="o">.</span><span class="n">recv_multipart</span><span class="p">()</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="n">msgpack</span><span class="o">.</span><span class="n">unpackb</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">received_msg</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">addr</span><span class="p">,</span> <span class="n">msg</span><span class="p">))</span>
+
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">received_msg</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_handle</span><span class="p">:</span>
+                    <span class="n">client_addr</span><span class="p">,</span> <span class="n">action</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_action</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">received_msg</span><span class="p">)</span>
+
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">client_addr</span><span class="p">)):</span>
+                        <span class="n">addr</span> <span class="o">=</span> <span class="n">client_addr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                        <span class="n">act</span> <span class="o">=</span> <span class="n">action</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                        <span class="n">router1_socket</span><span class="o">.</span><span class="n">send_multipart</span><span class="p">(</span>
+                            <span class="p">[</span><span class="n">addr</span><span class="p">,</span> <span class="sa">b</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">msgpack</span><span class="o">.</span><span class="n">packb</span><span class="p">(</span><span class="n">act</span><span class="p">)])</span>
+
+                    <span class="bp">self</span><span class="o">.</span><span class="n">received_msg</span> <span class="o">=</span> <span class="p">[]</span>
+
+                <span class="c1"># action = self._get_action(msg)</span>
+                <span class="c1"># router1_socket.send_multipart(</span>
+                <span class="c1">#     [addr, b&quot;&quot;, msgpack.packb(action)])</span>
+
+                <span class="c1"># 收集游戏数据。</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_collect_data</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                    <span class="n">n_received</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="c1"># logger.debug(&quot;trajectory: {}&quot;.format(</span>
+                    <span class="c1">#     len(msg[b&quot;trajectory&quot;])))</span>
+
+                    <span class="k">if</span> <span class="n">n_received</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_client</span><span class="p">:</span>
+                        <span class="n">n_received</span> <span class="o">=</span> <span class="mi">0</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_update_policy</span><span class="p">()</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">getup</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Keyboard interrupt at agent!&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="n">traceback</span><span class="o">.</span><span class="n">print_exc</span><span class="p">()</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Close agent!&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">save_model</span><span class="p">()</span>
+            <span class="n">router1_socket</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">router2_socket</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">context</span><span class="o">.</span><span class="n">term</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Worker.initialize"><a class="viewcode-back" href="../../../rlpack.common.mq.html#rlpack.common.mq.Worker.initialize">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;初始化。设置合适的model。&quot;&quot;&quot;</span></div>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_get_action</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;计算处理接受信息的动作；处理是否等待更新。&quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_collect_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;收集收据。&quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_check</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;检查是否收到大礼包。&quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_update_policy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;更新Policy。&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Worker.save_model"><a class="viewcode-back" href="../../../rlpack.common.mq.html#rlpack.common.mq.Worker.save_model">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">save_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;保存模型。&quot;&quot;&quot;</span></div></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">num</span> <span class="o">=</span> <span class="mi">32</span>
+    <span class="n">worker</span> <span class="o">=</span> <span class="n">Worker</span><span class="p">(</span><span class="n">num</span><span class="p">)</span>
+    <span class="n">worker</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num</span><span class="p">):</span>
+        <span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;ascii&quot;</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">client</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Author.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../',
+            VERSION:'',
+            LANGUAGE:'en',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../_static/doctools.js"></script>
+
+  
+
+  <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,383 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>rlpack.estimator.learner &mdash; rl-algo  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+
+  
+  <script src="../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> rl-algo
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../main.html">main module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../rlpack.html">rlpack package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../setup.html">setup module</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">rl-algo</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>rlpack.estimator.learner</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for rlpack.estimator.learner</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">gym</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">traceback</span>
+<span class="kn">from</span> <span class="nn">tensorboardX</span> <span class="k">import</span> <span class="n">SummaryWriter</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">defaultdict</span>
+<span class="kn">from</span> <span class="nn">..environment.atari_wrapper</span> <span class="k">import</span> <span class="n">get_atari_env_fn</span>
+<span class="kn">from</span> <span class="nn">..environment.mujoco_wrapper</span> <span class="k">import</span> <span class="n">get_mujoco_env_fn</span>
+<span class="kn">from</span> <span class="nn">..environment.master_env</span> <span class="k">import</span> <span class="n">EnvMaker</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="k">import</span> <span class="n">DQN</span><span class="p">,</span> <span class="n">SoftDQN</span><span class="p">,</span> <span class="n">DoubleDQN</span><span class="p">,</span> <span class="n">AveDQN</span><span class="p">,</span> <span class="n">DistDQN</span><span class="p">,</span> <span class="n">PG</span><span class="p">,</span> <span class="n">TRPO</span><span class="p">,</span> <span class="n">A2C</span><span class="p">,</span> <span class="n">PPO</span><span class="p">,</span> <span class="n">DDPG</span>
+<span class="kn">from</span> <span class="nn">..common.memory</span> <span class="k">import</span> <span class="n">Memory2</span><span class="p">,</span> <span class="n">Memory3</span>
+<span class="kn">from</span> <span class="nn">..common.log</span> <span class="k">import</span> <span class="n">logger</span>
+
+<div class="viewcode-block" id="ResultsBuffer"><a class="viewcode-back" href="../../../rlpack.estimator.learner.html#rlpack.estimator.learner.ResultsBuffer">[docs]</a><span class="k">class</span> <span class="nc">ResultsBuffer</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Summary of results here.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        buffer: A dict mapping keys to the corresponding results along time steps.</span>
+<span class="sd">        reward_history: A list storing rewards along time steps.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rewards_history</span><span class="o">=</span><span class="p">[]):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rewards_history</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rewards_history</span> <span class="o">=</span> <span class="n">rewards_history</span>
+
+<div class="viewcode-block" id="ResultsBuffer.update_infos"><a class="viewcode-back" href="../../../rlpack.estimator.learner.html#rlpack.estimator.learner.ResultsBuffer.update_infos">[docs]</a>    <span class="k">def</span> <span class="nf">update_infos</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">info</span><span class="p">,</span> <span class="n">total_t</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">info</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">[</span><span class="s1">&#39;reward&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">msg</span><span class="p">[</span><span class="sa">b</span><span class="s1">&#39;reward&#39;</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">[</span><span class="s1">&#39;length&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">msg</span><span class="p">[</span><span class="sa">b</span><span class="s1">&#39;length&#39;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="sa">b</span><span class="s1">&#39;real_reward&#39;</span> <span class="ow">in</span> <span class="n">msg</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">[</span><span class="s1">&#39;real_reward&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">msg</span><span class="p">[</span><span class="sa">b</span><span class="s1">&#39;real_reward&#39;</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">[</span><span class="s1">&#39;real_length&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">msg</span><span class="p">[</span><span class="sa">b</span><span class="s1">&#39;real_length&#39;</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">rewards_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="p">[</span><span class="n">total_t</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">msg</span><span class="p">[</span><span class="sa">b</span><span class="s1">&#39;real_reward&#39;</span><span class="p">]])</span></div>
+
+<div class="viewcode-block" id="ResultsBuffer.update_summaries"><a class="viewcode-back" href="../../../rlpack.estimator.learner.html#rlpack.estimator.learner.ResultsBuffer.update_summaries">[docs]</a>    <span class="k">def</span> <span class="nf">update_summaries</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">summaries</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">summaries</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">summaries</span><span class="p">[</span><span class="n">key</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="ResultsBuffer.add_summary"><a class="viewcode-back" href="../../../rlpack.estimator.learner.html#rlpack.estimator.learner.ResultsBuffer.add_summary">[docs]</a>    <span class="k">def</span> <span class="nf">add_summary</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">summary_writer</span><span class="p">,</span> <span class="n">total_t</span><span class="p">,</span> <span class="n">time</span><span class="p">):</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="n">time</span><span class="p">}</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">[</span><span class="n">key</span><span class="p">]:</span>
+                <span class="n">s</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">s</span><span class="p">:</span>
+            <span class="n">summary_writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">total_t</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="Learner"><a class="viewcode-back" href="../../../rlpack.estimator.learner.html#rlpack.estimator.learner.Learner">[docs]</a><span class="k">class</span> <span class="nc">Learner</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Run the specified algorithm to interact with the environment to learn policy.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        config: An argparse object for learning config.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">config</span>
+
+<div class="viewcode-block" id="Learner.run"><a class="viewcode-back" href="../../../rlpack.estimator.learner.html#rlpack.estimator.learner.Learner.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Interact with the environment according to the config.&quot;&quot;&quot;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+
+        <span class="n">env_type</span><span class="p">,</span> <span class="n">env_name</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">env_type</span> <span class="o">==</span> <span class="s2">&quot;Atari&quot;</span> <span class="ow">or</span> <span class="n">env_type</span> <span class="o">==</span> <span class="s2">&quot;Mujoco&quot;</span><span class="p">,</span> <span class="s2">&quot;Unrecognized environment.&quot;</span>
+        <span class="k">if</span> <span class="n">env_type</span> <span class="o">==</span> <span class="s2">&quot;Atari&quot;</span><span class="p">:</span>
+            <span class="n">env_fn</span> <span class="o">=</span> <span class="n">get_atari_env_fn</span><span class="p">(</span><span class="n">env_name</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">env_type</span> <span class="o">==</span> <span class="s2">&quot;Mujoco&quot;</span><span class="p">:</span>
+            <span class="n">env_fn</span> <span class="o">=</span> <span class="n">get_mujoco_env_fn</span><span class="p">(</span><span class="n">env_name</span><span class="p">)</span>
+
+        <span class="n">num_agents</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">n_env</span>
+        <span class="n">env</span> <span class="o">=</span> <span class="n">EnvMaker</span><span class="p">(</span><span class="n">num_agents</span><span class="o">=</span><span class="n">num_agents</span><span class="p">,</span> <span class="n">env_fn</span><span class="o">=</span><span class="n">env_fn</span><span class="p">,</span> <span class="n">basename</span><span class="o">=</span><span class="s1">&#39;test&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">env_type</span> <span class="o">==</span> <span class="s2">&quot;Atari&quot;</span><span class="p">:</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">dim_observation</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">observation_space</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">n_action</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">n</span>
+        <span class="k">elif</span> <span class="n">env_type</span> <span class="o">==</span> <span class="s2">&quot;Mujoco&quot;</span><span class="p">:</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">dim_observation</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">observation_space</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">n_action</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+
+        <span class="n">model_name</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">model</span>
+        <span class="k">if</span> <span class="n">model_name</span> <span class="o">==</span> <span class="s2">&quot;dqn&quot;</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">DQN</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">model_name</span> <span class="o">==</span> <span class="s2">&quot;softdqn&quot;</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">SoftDQN</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">model_name</span> <span class="o">==</span> <span class="s2">&quot;doubledqn&quot;</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">DoubleDQN</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">model_name</span> <span class="o">==</span> <span class="s2">&quot;avedqn&quot;</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">AveDQN</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">model_name</span> <span class="o">==</span> <span class="s2">&quot;distdqn&quot;</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">DistDQN</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">model_name</span> <span class="o">==</span> <span class="s2">&quot;pg&quot;</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">PG</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">model_name</span> <span class="o">==</span> <span class="s2">&quot;trpo&quot;</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">TRPO</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">model_name</span> <span class="o">==</span> <span class="s2">&quot;ppo&quot;</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">PPO</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">model_name</span> <span class="o">==</span> <span class="s2">&quot;a2c&quot;</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">A2C</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">model_name</span> <span class="o">==</span> <span class="s2">&quot;ddpg&quot;</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">DDPG</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Unrecognized model name!&quot;</span><span class="p">)</span>
+
+        <span class="n">events_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">result_path</span><span class="p">,</span> <span class="s1">&#39;events&#39;</span><span class="p">)</span>
+        <span class="n">models_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">result_path</span><span class="p">,</span> <span class="s1">&#39;models&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">events_path</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">events_path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">models_path</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">models_path</span><span class="p">)</span>
+
+        <span class="n">model</span><span class="o">.</span><span class="n">load_model</span><span class="p">(</span><span class="n">models_path</span><span class="p">)</span>
+        <span class="n">summary_writer</span> <span class="o">=</span> <span class="n">SummaryWriter</span><span class="p">(</span><span class="n">events_path</span><span class="p">)</span>
+        <span class="n">rewards_history</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">pkl_path</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">/rewards.pkl&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">result_path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">pkl_path</span><span class="p">):</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">pkl_path</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">rewards_history</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">batch_size</span>
+        <span class="n">epsilon</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">epsilon</span>
+        <span class="n">learning_starts</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">learning_starts</span>
+        <span class="n">save_model_every</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">save_model_every</span>
+        <span class="n">memory_buffer</span> <span class="o">=</span> <span class="n">Memory3</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">memory_size</span><span class="p">)</span>
+        <span class="n">results_buffer</span> <span class="o">=</span> <span class="n">ResultsBuffer</span><span class="p">(</span><span class="n">rewards_history</span><span class="p">)</span>
+        <span class="n">n_iteration</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">n_iteration</span>
+        <span class="n">global_step</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">states</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">learning_starts</span><span class="p">):</span>
+
+                <span class="n">actions</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">get_action</span><span class="p">(</span><span class="n">states</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
+                <span class="n">next_states</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">actions</span><span class="p">)</span>
+
+                <span class="n">memory_buffer</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+                    <span class="n">states</span><span class="p">,</span> <span class="n">actions</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">next_states</span><span class="p">,</span> <span class="n">dones</span><span class="p">)</span>
+                <span class="n">states</span> <span class="o">=</span> <span class="n">next_states</span>
+
+            <span class="n">states</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_iteration</span><span class="p">):</span>
+                <span class="n">actions</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">get_action</span><span class="p">(</span><span class="n">states</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
+                <span class="n">next_states</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">actions</span><span class="p">)</span>
+
+                <span class="n">results_buffer</span><span class="o">.</span><span class="n">update_infos</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">global_step</span><span class="p">)</span>
+                <span class="n">memory_buffer</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+                    <span class="n">states</span><span class="p">,</span> <span class="n">actions</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">next_states</span><span class="p">,</span> <span class="n">dones</span><span class="p">)</span>
+
+                <span class="n">global_step</span><span class="p">,</span> <span class="n">summaries</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                    <span class="n">memory_buffer</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">batch_size</span><span class="p">))</span>
+
+                <span class="n">results_buffer</span><span class="o">.</span><span class="n">update_summaries</span><span class="p">(</span><span class="n">summaries</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">global_step</span> <span class="o">%</span> <span class="n">save_model_every</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">t</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span>
+                    <span class="n">model</span><span class="o">.</span><span class="n">save_model</span><span class="p">(</span><span class="n">models_path</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Save model, global_step: </span><span class="si">{}</span><span class="s2">, delta_time: </span><span class="si">{}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">global_step</span><span class="p">,</span> <span class="n">t</span><span class="p">))</span>
+                    <span class="n">results_buffer</span><span class="o">.</span><span class="n">add_summary</span><span class="p">(</span><span class="n">summary_writer</span><span class="p">,</span> <span class="n">global_step</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+                    <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+                <span class="n">states</span> <span class="o">=</span> <span class="n">next_states</span>
+
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="c1"># raise e</span>
+            <span class="n">traceback</span><span class="o">.</span><span class="n">print_exc</span><span class="p">()</span>
+
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">save_model</span><span class="p">(</span><span class="n">models_path</span><span class="p">)</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">pkl_path</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">results_buffer</span><span class="o">.</span><span class="n">rewards_history</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+            <span class="n">env</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Author.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../',
+            VERSION:'',
+            LANGUAGE:'en',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../_static/doctools.js"></script>
+
+  
+
+  <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

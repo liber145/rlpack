@@ -61,6 +61,15 @@ class Memory3(object):
         pass
 
     def extend(self, states, actions, rewards, next_states, dones):
+        """Store SARSD tuples.
+
+        Args:
+            states: current states.
+            actions: current actions.
+            rewards: received rewards.
+            next_states: next states.
+            dones: dones.
+        """
         for i in range(actions.shape[0]):
             self.traj[i].append(
                 (states[i, :], actions[i], rewards[i], next_states[i, :], dones[i]))
@@ -73,4 +82,5 @@ class Memory3(object):
         return samples
 
     def clear(self):
+        """Empty memory."""
         self.mem.clear()

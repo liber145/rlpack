@@ -15,6 +15,13 @@ from ..common.memory import Memory2, Memory3
 from ..common.log import logger
 
 class ResultsBuffer(object):
+    """Summary of results here.
+
+    Attributes:
+        buffer: A dict mapping keys to the corresponding results along time steps.
+        reward_history: A list storing rewards along time steps.
+    """
+
     def __init__(self, rewards_history=[]):
         self.buffer = defaultdict(list)
         assert isinstance(rewards_history, list)
@@ -47,10 +54,16 @@ class ResultsBuffer(object):
 
 
 class Learner(object):
+    """Run the specified algorithm to interact with the environment to learn policy.
+
+    Attributes:
+        config: An argparse object for learning config.
+    """
     def __init__(self, config):
         self.config = config
 
     def run(self):
+        """Interact with the environment according to the config."""
         config = self.config
 
         env_type, env_name = config.env.split(".")

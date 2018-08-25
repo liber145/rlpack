@@ -1,0 +1,442 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>rlpack.environment.atari_wrappers module &mdash; rl-algo  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="rlpack.environment.env module" href="rlpack.environment.env.html" />
+    <link rel="prev" title="rlpack.environment.atari_wrapper module" href="rlpack.environment.atari_wrapper.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> rl-algo
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="main.html">main module</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="rlpack.html">rlpack package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="rlpack.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="rlpack.common.html">rlpack.common package</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="rlpack.environment.html">rlpack.environment package</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="rlpack.environment.html#submodules">Submodules</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="rlpack.estimator.html">rlpack.estimator package</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="setup.html">setup module</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">rl-algo</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="rlpack.html">rlpack package</a> &raquo;</li>
+        
+          <li><a href="rlpack.environment.html">rlpack.environment package</a> &raquo;</li>
+        
+      <li>rlpack.environment.atari_wrappers module</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/rlpack.environment.atari_wrappers.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-rlpack.environment.atari_wrappers">
+<span id="rlpack-environment-atari-wrappers-module"></span><h1>rlpack.environment.atari_wrappers module<a class="headerlink" href="#module-rlpack.environment.atari_wrappers" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="rlpack.environment.atari_wrappers.ClipRewardEnv">
+<em class="property">class </em><code class="descclassname">rlpack.environment.atari_wrappers.</code><code class="descname">ClipRewardEnv</code><span class="sig-paren">(</span><em>env</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/environment/atari_wrappers.html#ClipRewardEnv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.atari_wrappers.ClipRewardEnv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">gym.core.RewardWrapper</span></code></p>
+<dl class="method">
+<dt id="rlpack.environment.atari_wrappers.ClipRewardEnv.reward">
+<code class="descname">reward</code><span class="sig-paren">(</span><em>reward</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/environment/atari_wrappers.html#ClipRewardEnv.reward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.atari_wrappers.ClipRewardEnv.reward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bin reward to {+1, 0, -1} by its sign.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="rlpack.environment.atari_wrappers.EpisodicLifeEnv">
+<em class="property">class </em><code class="descclassname">rlpack.environment.atari_wrappers.</code><code class="descname">EpisodicLifeEnv</code><span class="sig-paren">(</span><em>env</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/environment/atari_wrappers.html#EpisodicLifeEnv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.atari_wrappers.EpisodicLifeEnv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">gym.core.Wrapper</span></code></p>
+<dl class="method">
+<dt id="rlpack.environment.atari_wrappers.EpisodicLifeEnv.reset">
+<code class="descname">reset</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/environment/atari_wrappers.html#EpisodicLifeEnv.reset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.atari_wrappers.EpisodicLifeEnv.reset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reset only when lives are exhausted.
+This way all states are still reachable even though lives are episodic,
+and the learner need not know about any of this behind-the-scenes.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="rlpack.environment.atari_wrappers.EpisodicLifeEnv.step">
+<code class="descname">step</code><span class="sig-paren">(</span><em>action</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/environment/atari_wrappers.html#EpisodicLifeEnv.step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.atari_wrappers.EpisodicLifeEnv.step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run one timestep of the environment’s dynamics. When end of
+episode is reached, you are responsible for calling <cite>reset()</cite>
+to reset this environment’s state.</p>
+<p>Accepts an action and returns a tuple (observation, reward, done, info).</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd>action (object): an action provided by the environment</dd>
+<dt>Returns:</dt>
+<dd>observation (object): agent’s observation of the current environment
+reward (float) : amount of reward returned after previous action
+done (boolean): whether the episode has ended, in which case further step() calls will return undefined results
+info (dict): contains auxiliary diagnostic information (helpful for debugging, and sometimes learning)</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="rlpack.environment.atari_wrappers.FireResetEnv">
+<em class="property">class </em><code class="descclassname">rlpack.environment.atari_wrappers.</code><code class="descname">FireResetEnv</code><span class="sig-paren">(</span><em>env</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/environment/atari_wrappers.html#FireResetEnv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.atari_wrappers.FireResetEnv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">gym.core.Wrapper</span></code></p>
+<dl class="method">
+<dt id="rlpack.environment.atari_wrappers.FireResetEnv.reset">
+<code class="descname">reset</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/environment/atari_wrappers.html#FireResetEnv.reset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.atari_wrappers.FireResetEnv.reset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resets the state of the environment and returns an initial observation.</p>
+<dl class="docutils">
+<dt>Returns: observation (object): the initial observation of the</dt>
+<dd>space.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="rlpack.environment.atari_wrappers.FireResetEnv.step">
+<code class="descname">step</code><span class="sig-paren">(</span><em>ac</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/environment/atari_wrappers.html#FireResetEnv.step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.atari_wrappers.FireResetEnv.step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run one timestep of the environment’s dynamics. When end of
+episode is reached, you are responsible for calling <cite>reset()</cite>
+to reset this environment’s state.</p>
+<p>Accepts an action and returns a tuple (observation, reward, done, info).</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd>action (object): an action provided by the environment</dd>
+<dt>Returns:</dt>
+<dd>observation (object): agent’s observation of the current environment
+reward (float) : amount of reward returned after previous action
+done (boolean): whether the episode has ended, in which case further step() calls will return undefined results
+info (dict): contains auxiliary diagnostic information (helpful for debugging, and sometimes learning)</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="rlpack.environment.atari_wrappers.FrameStack">
+<em class="property">class </em><code class="descclassname">rlpack.environment.atari_wrappers.</code><code class="descname">FrameStack</code><span class="sig-paren">(</span><em>env</em>, <em>k</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/environment/atari_wrappers.html#FrameStack"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.atari_wrappers.FrameStack" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">gym.core.Wrapper</span></code></p>
+<dl class="method">
+<dt id="rlpack.environment.atari_wrappers.FrameStack.reset">
+<code class="descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/environment/atari_wrappers.html#FrameStack.reset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.atari_wrappers.FrameStack.reset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resets the state of the environment and returns an initial observation.</p>
+<dl class="docutils">
+<dt>Returns: observation (object): the initial observation of the</dt>
+<dd>space.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="rlpack.environment.atari_wrappers.FrameStack.step">
+<code class="descname">step</code><span class="sig-paren">(</span><em>action</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/environment/atari_wrappers.html#FrameStack.step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.atari_wrappers.FrameStack.step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run one timestep of the environment’s dynamics. When end of
+episode is reached, you are responsible for calling <cite>reset()</cite>
+to reset this environment’s state.</p>
+<p>Accepts an action and returns a tuple (observation, reward, done, info).</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd>action (object): an action provided by the environment</dd>
+<dt>Returns:</dt>
+<dd>observation (object): agent’s observation of the current environment
+reward (float) : amount of reward returned after previous action
+done (boolean): whether the episode has ended, in which case further step() calls will return undefined results
+info (dict): contains auxiliary diagnostic information (helpful for debugging, and sometimes learning)</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="rlpack.environment.atari_wrappers.LazyFrames">
+<em class="property">class </em><code class="descclassname">rlpack.environment.atari_wrappers.</code><code class="descname">LazyFrames</code><span class="sig-paren">(</span><em>frames</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/environment/atari_wrappers.html#LazyFrames"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.atari_wrappers.LazyFrames" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="rlpack.environment.atari_wrappers.MaxAndSkipEnv">
+<em class="property">class </em><code class="descclassname">rlpack.environment.atari_wrappers.</code><code class="descname">MaxAndSkipEnv</code><span class="sig-paren">(</span><em>env</em>, <em>skip=4</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/environment/atari_wrappers.html#MaxAndSkipEnv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.atari_wrappers.MaxAndSkipEnv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">gym.core.Wrapper</span></code></p>
+<dl class="method">
+<dt id="rlpack.environment.atari_wrappers.MaxAndSkipEnv.reset">
+<code class="descname">reset</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/environment/atari_wrappers.html#MaxAndSkipEnv.reset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.atari_wrappers.MaxAndSkipEnv.reset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resets the state of the environment and returns an initial observation.</p>
+<dl class="docutils">
+<dt>Returns: observation (object): the initial observation of the</dt>
+<dd>space.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="rlpack.environment.atari_wrappers.MaxAndSkipEnv.step">
+<code class="descname">step</code><span class="sig-paren">(</span><em>action</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/environment/atari_wrappers.html#MaxAndSkipEnv.step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.atari_wrappers.MaxAndSkipEnv.step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Repeat action, sum reward, and max over last observations.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="rlpack.environment.atari_wrappers.NoopResetEnv">
+<em class="property">class </em><code class="descclassname">rlpack.environment.atari_wrappers.</code><code class="descname">NoopResetEnv</code><span class="sig-paren">(</span><em>env</em>, <em>noop_max=30</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/environment/atari_wrappers.html#NoopResetEnv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.atari_wrappers.NoopResetEnv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">gym.core.Wrapper</span></code></p>
+<dl class="method">
+<dt id="rlpack.environment.atari_wrappers.NoopResetEnv.reset">
+<code class="descname">reset</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/environment/atari_wrappers.html#NoopResetEnv.reset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.atari_wrappers.NoopResetEnv.reset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Do no-op action for a number of steps in [1, noop_max].</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="rlpack.environment.atari_wrappers.NoopResetEnv.step">
+<code class="descname">step</code><span class="sig-paren">(</span><em>ac</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/environment/atari_wrappers.html#NoopResetEnv.step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.atari_wrappers.NoopResetEnv.step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run one timestep of the environment’s dynamics. When end of
+episode is reached, you are responsible for calling <cite>reset()</cite>
+to reset this environment’s state.</p>
+<p>Accepts an action and returns a tuple (observation, reward, done, info).</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd>action (object): an action provided by the environment</dd>
+<dt>Returns:</dt>
+<dd>observation (object): agent’s observation of the current environment
+reward (float) : amount of reward returned after previous action
+done (boolean): whether the episode has ended, in which case further step() calls will return undefined results
+info (dict): contains auxiliary diagnostic information (helpful for debugging, and sometimes learning)</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="rlpack.environment.atari_wrappers.ScaledFloatFrame">
+<em class="property">class </em><code class="descclassname">rlpack.environment.atari_wrappers.</code><code class="descname">ScaledFloatFrame</code><span class="sig-paren">(</span><em>env</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/environment/atari_wrappers.html#ScaledFloatFrame"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.atari_wrappers.ScaledFloatFrame" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">gym.core.ObservationWrapper</span></code></p>
+<dl class="method">
+<dt id="rlpack.environment.atari_wrappers.ScaledFloatFrame.observation">
+<code class="descname">observation</code><span class="sig-paren">(</span><em>observation</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/environment/atari_wrappers.html#ScaledFloatFrame.observation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.atari_wrappers.ScaledFloatFrame.observation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="rlpack.environment.atari_wrappers.WarpFrame">
+<em class="property">class </em><code class="descclassname">rlpack.environment.atari_wrappers.</code><code class="descname">WarpFrame</code><span class="sig-paren">(</span><em>env</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/environment/atari_wrappers.html#WarpFrame"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.atari_wrappers.WarpFrame" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">gym.core.ObservationWrapper</span></code></p>
+<dl class="method">
+<dt id="rlpack.environment.atari_wrappers.WarpFrame.observation">
+<code class="descname">observation</code><span class="sig-paren">(</span><em>frame</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/environment/atari_wrappers.html#WarpFrame.observation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.atari_wrappers.WarpFrame.observation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="rlpack.environment.atari_wrappers.make_atari">
+<code class="descclassname">rlpack.environment.atari_wrappers.</code><code class="descname">make_atari</code><span class="sig-paren">(</span><em>env_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/environment/atari_wrappers.html#make_atari"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.atari_wrappers.make_atari" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="rlpack.environment.atari_wrappers.make_deepmind_atari">
+<code class="descclassname">rlpack.environment.atari_wrappers.</code><code class="descname">make_deepmind_atari</code><span class="sig-paren">(</span><em>env_id</em>, <em>skip=4</em>, <em>stack=4</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/environment/atari_wrappers.html#make_deepmind_atari"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.atari_wrappers.make_deepmind_atari" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="rlpack.environment.atari_wrappers.wrap_deepmind">
+<code class="descclassname">rlpack.environment.atari_wrappers.</code><code class="descname">wrap_deepmind</code><span class="sig-paren">(</span><em>env</em>, <em>episode_life=True</em>, <em>clip_rewards=True</em>, <em>frame_stack=False</em>, <em>scale=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/environment/atari_wrappers.html#wrap_deepmind"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.atari_wrappers.wrap_deepmind" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configure environment for DeepMind-style Atari.</p>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="rlpack.environment.env.html" class="btn btn-neutral float-right" title="rlpack.environment.env module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="rlpack.environment.atari_wrapper.html" class="btn btn-neutral" title="rlpack.environment.atari_wrapper module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Author.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'',
+            LANGUAGE:'en',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

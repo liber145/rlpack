@@ -7,6 +7,7 @@ from . import utils
 
 
 class AveDQN(TFEstimator):
+    """Average Deep Q Network."""
     def __init__(self, config):
 
         self.k = config.n_dqn
