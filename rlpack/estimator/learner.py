@@ -14,6 +14,7 @@ from . import DQN, SoftDQN, DoubleDQN, AveDQN, DistDQN, PG, TRPO, A2C, PPO, DDPG
 from ..common.memory import Memory2, Memory3
 from ..common.log import logger
 
+
 class ResultsBuffer(object):
     """Summary of results here.
 
@@ -59,6 +60,7 @@ class Learner(object):
     Attributes:
         config: An argparse object for learning config.
     """
+
     def __init__(self, config):
         self.config = config
 
@@ -82,7 +84,6 @@ class Learner(object):
         elif env_type == "Mujoco":
             config.dim_observation = env.observation_space.shape[1:]
             config.n_action = env.action_space.shape[0]
-
 
         model_name = config.model
         if model_name == "dqn":
@@ -139,8 +140,7 @@ class Learner(object):
                 actions = model.get_action(states, epsilon)
                 next_states, rewards, dones, info = env.step(actions)
 
-                memory_buffer.extend(
-                    states, actions, rewards, next_states, dones)
+                memory_buffer.extend(states, actions, rewards, next_states, dones)
                 states = next_states
 
             states = env.reset()
@@ -150,11 +150,9 @@ class Learner(object):
                 next_states, rewards, dones, info = env.step(actions)
 
                 results_buffer.update_infos(info, global_step)
-                memory_buffer.extend(
-                    states, actions, rewards, next_states, dones)
+                memory_buffer.extend(states, actions, rewards, next_states, dones)
 
-                global_step, summaries = model.update(
-                    memory_buffer.sample(batch_size))
+                global_step, summaries = model.update(memory_buffer.sample(batch_size))
 
                 results_buffer.update_summaries(summaries)
 

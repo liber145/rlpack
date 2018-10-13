@@ -9,6 +9,7 @@ from ..common.log import logger
 
 class DQN(TFEstimator):
     """Deep Q Network."""
+
     def __init__(self, config):
         super().__init__(config)
         self._update_target()
@@ -86,7 +87,7 @@ class DQN(TFEstimator):
         """
 
         self.cnt = self.sess.run(tf.train.get_global_step()) // self.update_target_every + 1 \
-                   if self.cnt is None else self.cnt
+            if self.cnt is None else self.cnt
 
         data_batch = utils.trajectories_to_batch(trajectories, self.discount)
         batch_generator = utils.generator(data_batch, self.batch_size)
@@ -100,11 +101,9 @@ class DQN(TFEstimator):
                 next_state_batch = sample_batch["laststate"]
                 done_batch = sample_batch["lastdone"].flatten()
 
-                target_next_q_vals = self.sess.run(self.target_qvals, feed_dict={
-                    self.input: next_state_batch})
+                target_next_q_vals = self.sess.run(self.target_qvals, feed_dict={self.input: next_state_batch})
 
-                target = reward_batch + (
-                    1 - done_batch) * self.discount * target_next_q_vals.max(axis=1)
+                target = reward_batch + (1 - done_batch) * self.discount * target_next_q_vals.max(axis=1)
 
                 _, total_t, loss, max_q_value = self.sess.run(
                     [self.train_op,

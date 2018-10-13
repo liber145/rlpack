@@ -71,8 +71,7 @@ class Memory3(object):
             dones: dones.
         """
         for i in range(actions.shape[0]):
-            self.traj[i].append(
-                (states[i, :], actions[i], rewards[i], next_states[i, :], dones[i]))
+            self.traj[i].append((states[i, :], actions[i], rewards[i], next_states[i, :], dones[i]))
 
             if dones[i] is True or len(self.traj[i]) == self.n_step:
                 self.mem.append(self.traj.pop(i))
@@ -84,3 +83,19 @@ class Memory3(object):
     def clear(self):
         """Empty memory."""
         self.mem.clear()
+
+
+class Memory4(object):
+    def __init__(self, capacity):
+        self.mem = deque(maxlen=capacity)
+
+    def put(self, data):
+        self.mem.append(data)
+
+    def sample(self, batch_size):
+        """均匀采样。"""
+        assert batch_size <= len(self.mem), "No enough data to sample"
+        samples = random.sample(self.mem, batch_size)
+
+        # 将(s,a,r,s,d)拆成5个矩阵发送出去。
+        return map(np.array, zip(*samples))
