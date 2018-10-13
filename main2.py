@@ -2,6 +2,7 @@ import argparse
 import gym
 import numpy as np
 import time
+import datetime
 import os
 from tqdm import tqdm
 
@@ -26,7 +27,8 @@ config = parser.parse_args()
 
 
 def process_config(env):
-    config.save_path = os.path.join("./log", config.model) if config.save_path is None else config.save_path
+    time_stamp = datetime.datetime.now().strftime("%Y%m%d%I%M%S")
+    config.save_path = os.path.join("./log", config.model+time_stamp) if config.save_path is None else config.save_path
     config.dim_observation = env.observation_space.shape[0]
     config.n_action = env.action_space.n
 
@@ -46,10 +48,10 @@ def learn():
         pol.put([s, a, r, next_s, d])
         mem.put([s, a, modified_r, next_s, d])
 
-        # # 到了更新周期。
-        # if i % config.update_freq == 0 and i > config.batch_size:
-        #     minibatch = mem.sample(config.batch_size)
-        #     pol.update(minibatch)
+        # 到了更新周期。
+        if i % config.update_freq == 0 and i > config.batch_size:
+            minibatch = mem.sample(config.batch_size)
+            pol.update(minibatch)
 
         # 游戏轨迹结束。
         if d is True:

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+import datetime
 import numpy as np
 import tensorflow as tf
 from tensorboardX import SummaryWriter
@@ -35,7 +36,6 @@ class DQN(TFEstimator):
         self.save_model_freq = config.save_model_freq
 
         # ------------- 初始化网络和训练 -------------
-        self.optimizer = tf.train.AdamOptimizer(self.lr, epsilon=1.5e-8)
         tf.reset_default_graph()
         tf.Variable(0, name="global_step", trainable=False)
 
@@ -56,6 +56,7 @@ class DQN(TFEstimator):
             self.target_qvals = tf.layers.dense(x, self.n_act, activation=None, trainable=False)
 
         # ------------- 构建算法 --------------
+        self.optimizer = tf.train.AdamOptimizer(self.lr, epsilon=1.5e-8)
         trainable_variables = tf.trainable_variables("qnet")
 
         # 当前状态动作值。
@@ -86,7 +87,7 @@ class DQN(TFEstimator):
         # 状态值中的最大的q值，用于打印出来，用于反应效果怎么样。
         self.max_qval = tf.reduce_max(self.qvals)
 
-        # ------------- 存储中间结果和创建session --------------
+        # ------------- 创建优化器和存储器，并创建session --------------
         self.saver = tf.train.Saver(max_to_keep=5)
         conf = tf.ConfigProto(allow_soft_placement=True)
         conf.gpu_options.allow_growth = True  # pylint: disable=E1101
@@ -96,7 +97,7 @@ class DQN(TFEstimator):
         # self.cnt = None
 
         # ------------- 初始化记录器 --------------
-        self.summary_writer = SummaryWriter(os.path.join("./log", "dqn", "summary"))
+        self.summary_writer = SummaryWriter(os.path.join(self.save_path, "summary"))
 
         # ------------- 从上一次存储的模型开始 --------------
         self._load_model(self.save_path)
@@ -169,7 +170,7 @@ class DQN(TFEstimator):
         global_step = self.sess.run(tf.train.get_global_step())
         self.saver.save(
             self.sess,
-            os.path.join(save_path, "model"),
+            os.path.join(save_path, "model", "model"),
             global_step,
             write_meta_graph=True
         )
