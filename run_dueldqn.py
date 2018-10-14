@@ -6,7 +6,7 @@ import datetime
 import os
 from tqdm import tqdm
 
-from rlpack.estimator_v2.dqn import DQN
+from rlpack.algos.duel_dqn import DuelDQN
 from rlpack.common.memory import Memory4 as Memory
 
 
@@ -27,7 +27,8 @@ config = parser.parse_args()
 
 
 def process_config(env):
-    time_stamp = datetime.datetime.now().strftime("%Y%m%d%I%M%S")
+    config.model = "dueldqn"
+    time_stamp = datetime.datetime.now().strftime("%y%m%d%H%M%S")
     config.save_path = os.path.join("./log", config.model+time_stamp) if config.save_path is None else config.save_path
     config.dim_observation = env.observation_space.shape[0]
     config.n_action = env.action_space.n
@@ -37,7 +38,7 @@ def learn():
 
     env = gym.make("CartPole-v1")
     process_config(env)  # 配置config
-    pol = DQN(config)
+    pol = DuelDQN(config)
     mem = Memory(config.memory_size)
 
     s = env.reset()
@@ -45,7 +46,7 @@ def learn():
         a = pol.get_action(s)
         next_s, r, d, _ = env.step(a)
         modified_r = -1 if d else 0.1
-        pol.put([s, a, r, next_s, d])
+        pol.put(r, d)
         mem.put([s, a, modified_r, next_s, d])
 
         # 到了更新周期。

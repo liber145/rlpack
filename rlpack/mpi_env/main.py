@@ -18,16 +18,23 @@ import gym
 # if rank == 0:
 #     print(f"Process {rank} gather all data {recv_data}")
 
-class Policy(object):
-    env = gym.make("CartPole-v1")
+# 调用主进程。
+def master_only(func):
+    def _call_master(*args, **kwargs):
+        if MPI.COMM_WORLD.Get_rank() == 0:
+            return func(*args, **kwargs)
+    return _call_master
 
+
+class Policy(object):
+    @master_only
     def __init__(self):
         pass
 
     @staticmethod
+    @master_only
     def get_action(state):
-        num_action = len(state)
-        return [env.action_space.sample() for _ in range(num_action)]
+        return [np.random.randint(2) for _ in range(4)]
 
 
 class Environment(object):
@@ -51,18 +58,14 @@ class Environment(object):
 
 if __name__ == "__main__":
 
+    pol = Policy()
     env = Environment()
     s = env.reset()
-    a = [env.env.action_space.sample() for i in range(4)]
 
     for i in range(1, 11):
+        a = pol.get_action(s)
         s_batch = env.step(a)
 
         if MPI.COMM_WORLD.Get_rank() == 0:
             if i % 5 == 0:
                 print("Process {}: s: {}".format(MPI.COMM_WORLD.Get_rank(), s_batch))
-
-            # policy发光发热的地方。
-            a = [env.env.action_space.sample() for i in range(4)]
-        else:
-            a = None
