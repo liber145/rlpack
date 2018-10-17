@@ -8,6 +8,7 @@ from . import utils
 
 class SoftDQN(TFEstimator):
     """Soft Deep Q Network."""
+
     def __init__(self, config):
         self.tau = 0.001
         super().__init__(config)

@@ -1,17 +1,18 @@
 from .baseq import BaseQ
 import tensorflow as tf
+from tensorflow import keras
 import numpy as np
 import scipy
 
 
-class DoubleDQN(BaseQ):
+class SoftDQN(BaseQ):
     def __init__(self, config):
         super().__init__(config)
 
     def build_network(self):
-        self.observation = tf.placeholder(shape=[None, self.dim_observation], dtype=tf.float32, name="observation")
-        self.action = tf.placeholder(shape=[None], dtype=tf.int32, name="action")
-        self.target = tf.placeholder(shape=[None], dtype=tf.float32, name="target")
+        self.observation = tf.placeholder(tf.float32, [None, self.dim_observation], name="observation")
+        self.action = tf.placeholder(tf.int32, [None], name="action")
+        self.target = tf.placeholder(tf.float32, [None], name="target")
 
         with tf.variable_scope("qnet"):
             x = tf.layers.dense(self.observation, 32, activation=tf.nn.relu, trainable=True)
@@ -24,18 +25,27 @@ class DoubleDQN(BaseQ):
             self.target_qvals = tf.layers.dense(x, self.n_action, activation=None, trainable=False)
 
     def build_algorithm(self):
-        self.optimizer = tf.train.AdamOptimizer(self.lr, epsilon=1.5e-8)
+        self.alpha = 0.1
+        self.optimizer = tf.train.AdamOptimizer(self.lr, epsilon=1.5-8)
         trainable_variables = tf.trainable_variables("qnet")
 
+        # Compute Q(s,a)
         batch_size = tf.shape(self.observation)[0]
         gather_indices = tf.range(batch_size) * self.n_action + self.action
         action_q = tf.gather(tf.reshape(self.qvals, [-1]), gather_indices)
 
+        # Compute target_v.
+        self.target_v = self.alpha * tf.reduce_logsumexp(self.target_qvals / self.alpha, axis=1)
+        self.v = self.alpha * tf.reduce_logsumexp(self.qvals / self.alpha, axis=1)
+
+        # Compute action_probability.
+        self.action_probability = tf.exp((self.qvals - self.v) / self.alpha)
+
+        # Compute loss.
         self.loss = tf.reduce_mean(tf.squared_difference(self.target, action_q))
         self.train_op = self.optimizer.minimize(self.loss,
                                                 global_step=tf.train.get_global_step(),
-                                                var_list=trainable_variables
-                                                )
+                                                var_list=trainable_variables)
 
         # 更新目标网络。
         def _update_target(new_net, old_net):
@@ -57,6 +67,38 @@ class DoubleDQN(BaseQ):
         self.max_qval = tf.reduce_max(self.qvals)
 
     def get_action(self, obs):
+        if obs.ndim == 1:
+            newobs = np.array(obs)[np.newaxis, :]
+        elif obs.ndim == 2:
+            newobs = obs
+        else:
+            raise RuntimeError
+
+        batch_size = newobs.shape[0]
+        assert batch_size == 1
+
+        self.epsilon -= (self.initial_epsilon - self.final_epsilon) / 100000
+        self.epsilon = max(self.final_epsilon, self.epsilon)
+
+        # Compute action probability.
+        exp_m = self.sess.run(self.action_probability, feed_dict={self.observation: newobs})
+        assert exp_m.shape == (newobs.shape[0], self.n_action)
+
+        global_step = self.sess.run(tf.train.get_global_step())
+        self.summary_writer.add_scalar("action_probability", exp_m[0][0], global_step)
+
+        # sample according to the above action probability.
+        # random_actions = np.random.randint(self.n_action, size=batch_size)
+        actions = [np.random.choice(self.n_action, p=exp_m[i]) for i in range(newobs.shape[0])]
+        # idx = np.random.uniform(size=batch_size) < self.epsilon
+        # actions = np.array(actions)
+        # actions[idx] = random_actions[idx]
+
+        if obs.ndim == 1:
+            actions = actions[0]
+        return actions
+
+    def get_action_greedy(self, obs):
         if obs.ndim == 1:
             newobs = np.array(obs)[np.newaxis, :]
         else:
@@ -83,11 +125,11 @@ class DoubleDQN(BaseQ):
             newobs = obs
 
         # 0.01 是一个不错的参数。
-        alpha = 0.001
+        # alpha = 0.001
 
         qvals = self.sess.run(self.qvals, feed_dict={self.observation: newobs})
-        exp_m = scipy.special.logsumexp(qvals / alpha, axis=1)
-        exp_m = np.exp(qvals / alpha - exp_m)
+        exp_m = scipy.special.logsumexp(qvals / self.alpha, axis=1)
+        exp_m = np.exp(qvals / self.alpha - exp_m)
 
         global_step = self.sess.run(tf.train.get_global_step())
         self.summary_writer.add_scalar("action_probability", exp_m[0][0], global_step)
@@ -99,16 +141,34 @@ class DoubleDQN(BaseQ):
         return actions
 
     def update(self, minibatch):
-
         # 拆分样本。
         s_batch, a_batch, r_batch, next_s_batch, d_batch = minibatch
 
-        batch_size = s_batch.shape[0]
-        current_next_q_vals, target_next_q_vals = self.sess.run(
-            [self.qvals, self.target_qvals], feed_dict={self.observation: next_s_batch})
-        q_next = target_next_q_vals[range(batch_size), current_next_q_vals.argmax(axis=1)]
-        target_batch = r_batch + (1 - d_batch) * self.discount * q_next
+        # 计算目标Q值。
+        # target_next_q_vals, target_next_logsumexp_q = self.sess.run([self.target_qvals, self.target_v],
+        #                                                             feed_dict={self.observation: next_s_batch})
+        # p_a = np.exp((target_next_q_vals - np.array(target_next_logsumexp_q)[:, np.newaxis]) / self.alpha)
+        # p_a = np.clip(p_a, 0.001, 1)
+        # tmp = (target_next_q_vals / self.alpha) * np.log(p_a)
+        # v_batch = self.alpha * scipy.special.logsumexp(tmp, axis=1)
 
+        # print(f"tmp: {tmp.shape}")
+        # print(f"p_a shape: {p_a.shape}")
+        # print(f"{p_a[0][0]} {p_a[0][1]}")
+        # input()
+
+        # v_batch = self.alpha * np.log(np.sum(np.exp(target_next_q_vals / self.alpha), axis=1))
+
+        v_batch = self.sess.run(self.target_v, feed_dict={self.observation: next_s_batch})
+
+        target_batch = r_batch + (1 - d_batch) * self.discount * v_batch
+
+        # print(f"r_batch: {r_batch.shape}")
+        # print(f"target_batch: {target_batch.shape}")
+        # print(f"v_batch: {v_batch.shape}")
+        # input()
+
+        # 更新策略。
         _, global_step, loss, max_q_val = self.sess.run(
             [self.train_op,
              tf.train.get_global_step(),
