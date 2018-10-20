@@ -9,6 +9,7 @@ from ..estimator.utils import gen_batch
 from ..estimator.networker import Networker
 from ..common.log import logger
 from .baseq import BaseQ
+from ..common.utils import assert_shape
 
 
 class DQN(BaseQ):
@@ -74,8 +75,12 @@ class DQN(BaseQ):
 
         # 当前状态动作值。
         batch_size = tf.shape(self.observation)[0]
-        gather_indices = tf.range(batch_size) * self.n_action + self.action
-        action_q = tf.gather(tf.reshape(self.qvals, [-1]), gather_indices)
+        # gather_indices = tf.range(batch_size) * self.n_action + self.action
+        # action_q = tf.gather(tf.reshape(self.qvals, [-1]), gather_indices)
+
+        action_index = tf.stack([tf.range(batch_size), self.action], axis=1)
+        action_q = tf.gather_nd(self.qvals, action_index)
+        assert_shape(action_q, [None])
 
         # 计算损失函数，优化参数。
         self.loss = tf.reduce_mean(tf.squared_difference(self.target, action_q))   # 损失值。

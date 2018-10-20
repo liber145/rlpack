@@ -6,7 +6,7 @@ import datetime
 import os
 from tqdm import tqdm
 
-from rlpack.algos.soft_dqn import SoftDQN
+from rlpack.algos.pcl import PCL
 from rlpack.common.memory import Memory4 as Memory
 
 
@@ -27,38 +27,25 @@ config = parser.parse_args()
 
 
 def process_config(env):
-    config.model = "softdqn"
-    time_stamp = datetime.datetime.now().strftime("%y%m%d.%H%M%S")
+    config.model = "pcl"
+    time_stamp = datetime.datetime.now().strftime("%y%m%d%H%M%S")
     config.save_path = os.path.join("./log", config.model + time_stamp) if config.save_path is None else config.save_path
     config.dim_observation = env.observation_space.shape[0]
     config.n_action = env.action_space.n
 
 
 def learn():
-    reward_scale = 30
 
     env = gym.make("CartPole-v1")
     process_config(env)  # 配置config
-    pol = SoftDQN(config)
+    pol = PCL(config)
     mem = Memory(config.memory_size)
 
     s = env.reset()
-    for i in range(1000):
-        a = env.action_space.sample()
-        next_s, r, d, _ = env.step(a)
-        modified_r = -1 * reward_scale if d else 0.1 * reward_scale
-        pol.put(r, d)
-        mem.put([s, a, modified_r, next_s, d])
-
-        if d is True:
-            s = env.reset()
-        s = next_s
-
-    s = env.reset()
     for i in tqdm(range(1, config.n_step + 1)):
-        a = pol.get_action_greedy(s)
+        a = pol.get_action(s)
         next_s, r, d, _ = env.step(a)
-        modified_r = -1 * reward_scale if d else 0.1 * reward_scale
+        modified_r = -1 if d else 0.1
         pol.put(r, d)
         mem.put([s, a, modified_r, next_s, d])
 
