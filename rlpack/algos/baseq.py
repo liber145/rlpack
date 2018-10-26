@@ -15,6 +15,7 @@ class BaseQ(ABC):
         self.n_action = config.n_action
         self.discount = config.discount
         self.batch_size = config.batch_size
+        self.trajectory_length = config.trajectory_length
         self.initial_epsilon = config.initial_epsilon
         self.final_epsilon = config.final_epsilon
         self.epsilon = self.initial_epsilon

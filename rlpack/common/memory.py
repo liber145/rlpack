@@ -99,3 +99,9 @@ class Memory4(object):
 
         # 将(s,a,r,s,d)拆成5个矩阵发送出去。
         return map(np.array, zip(*samples))
+
+    def get_full(self):
+        return map(np.array, zip(*self.mem))
+
+    def clear(self):
+        self.mem.clear()
