@@ -63,7 +63,7 @@ class BaseQ(ABC):
         self.summary_writer = SummaryWriter(os.path.join(self.save_path, "summary"))
 
         # ------------------------ 从上次存储的模型开始训练 ------------------------
-        self.load_model(self.save_path)
+        self.load_model()
 
         # ------------------------ 初始化其他 ------------------------
         self.total_reward = 0
@@ -78,17 +78,17 @@ class BaseQ(ABC):
         """更新策略，使用minibatch样本。"""
         pass
 
-    def save_model(self, save_path):
+    def save_model(self):
         global_step = self.sess.run(tf.train.get_global_step())
         self.saver.save(
             self.sess,
-            os.path.join(save_path, "model", "model"),
+            os.path.join(self.save_path, "model", "model"),
             global_step,
             write_meta_graph=True
         )
 
-    def load_model(self, save_path):
-        latest_checkpoint = tf.train.latest_checkpoint(save_path)
+    def load_model(self):
+        latest_checkpoint = tf.train.latest_checkpoint(os.path.join(self.save_path, "model"))
         if latest_checkpoint:
             logger.info("Loading model checkpoint {} ...".format(latest_checkpoint))
             self.saver.restore(self.sess, latest_checkpoint)

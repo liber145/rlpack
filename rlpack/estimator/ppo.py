@@ -12,7 +12,7 @@ class PPO(TFEstimator):
 
     def __init__(self, config):
         self.beta = 1.0
-        super().__init__(config) 
+        super().__init__(config)
 
     def _build_model(self):
         # Build inputs.
