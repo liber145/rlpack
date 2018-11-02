@@ -23,32 +23,6 @@ class DQN(BaseQ):
         4. 使用上面的函数近似网络，搭建算法框架，如DQN等。
         5. 创建tf.saver，tf.session。
         """
-        # # ------------- 获得参数 --------------
-        # self.dim_ob = config.dim_observation
-        # self.n_act = config.n_action
-        # self.discount = config.discount
-        # self.batch_size = config.batch_size
-        # self.initial_epsilon = config.initial_epsilon    # epsilon-greedy algorithm。
-        # self.final_epsilon = config.final_epsilon
-        # self.epsilon = self.initial_epsilon
-        # self.update_target_freq = config.update_target_freq  # 　更新目标网络的频率。
-        # self.lr = config.lr
-        # self.save_path = config.save_path
-        # self.save_model_freq = config.save_model_freq
-
-        # # ------------- 初始化网络和训练 -------------
-        # tf.reset_default_graph()
-        # tf.Variable(0, name="global_step", trainable=False)
-
-        # # ------------- 搭建网络 --------------
-        # self.build_network()
-
-        # # ------------- 搭建算法 --------------
-        # self.build_algorithm()
-
-        # #　------------- 存储模型，存储训练信息，重载上回模型 --------------
-        # self._prepare()
-
         super().__init__(config)
 
     def build_network(self):
@@ -153,7 +127,7 @@ class DQN(BaseQ):
             actions = actions[0]
         return actions
 
-    def update(self, minibatch):
+    def update(self, minibatch, update_ratio: float):
         """更新策略，使用minibatch样本。"""
 
         # 拆分sample样本。
@@ -180,7 +154,7 @@ class DQN(BaseQ):
 
         # 存储模型。
         if global_step % self.save_model_freq == 0:
-            self.save_model(self.save_path)
+            self.save_model()
 
         # 更新目标策略。
         if global_step % self.update_target_freq == 0:

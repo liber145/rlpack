@@ -17,7 +17,7 @@ from rlpack.envs import FrameStack, make_env
 
 from rlpack.environment.atari_wrapper import get_atari_env_fn, get_eval_atari_env_fn
 from rlpack.algos.ppo import PPO
-from rlpack.common.memory import Memory4 as Memory
+from rlpack.common.memory import Memory5 as Memory
 
 
 # parser = argparse.ArgumentParser(description="Parse Arguments.")
@@ -40,7 +40,7 @@ from rlpack.common.memory import Memory4 as Memory
 class Config(object):
     def __init__(self):
         self.seed = 1
-        self.save_path = "./log/alien2"
+        self.save_path = "./log/alien"
         self.save_model_freq = 0.001
 
         # 环境
@@ -79,6 +79,7 @@ class Trainer(object):
         self.agent = agent
         self.obs = env.reset()
         self.config = config
+        self.memory = Memory(1000)
 
     def collect_trajectory(self, n_step, n_env):
         mb_obs, mb_actions, mb_rewards, mb_dones = [], [], [], []
@@ -126,8 +127,26 @@ class Trainer(object):
 
         for i in tqdm(range(10000)):
 
+            epinfos = []
+            for step in range(config.trajectory_length):
+                actions = self.agent.get_action(self.obs)
+                next_obs, rewards, dones, infos = self.env.step(actions)
+
+                for info in infos:
+                    maybeepinfo = info.get('episode')
+                    if maybeepinfo:
+                        epinfos.append(maybeepinfo)
+
+                self.memory.store_sard(self.obs.copy(), actions, rewards, dones)
+                self.obs = next_obs
+
+            if self.memory.size <= config.trajectory_length:
+                print(f"continue......")
+                continue
+
             update_ratio = i/10000.0
-            data_batch, epinfos = self.collect_trajectory(self.config.trajectory_length, self.config.n_env)
+            # data_batch, epinfos = self.collect_trajectory(self.config.trajectory_length, self.config.n_env)
+            data_batch = self.memory.get_last_n_step(config.trajectory_length)
             pol.update(data_batch, update_ratio)
 
             epinfobuf.extend(epinfos)
@@ -138,7 +157,7 @@ class Trainer(object):
                 # print(f"epinfo: {epinfos}")
                 rewmean = safemean([epinfo["r"] for epinfo in epinfobuf])
                 lenmean = safemean([epinfo['l'] for epinfo in epinfobuf])
-                print(f"eprewmean: {rewmean}  eplenmean: {lenmean}")
+                tqdm.write(f"eprewmean: {rewmean}  eplenmean: {lenmean}")
 
 
 def safemean(x):

@@ -139,8 +139,7 @@ class PPO(BaseQ):
 
         # Clip gradients.
         clipped_grads, _ = tf.clip_by_global_norm(grads, 0.5)
-        self.total_train_op = self.optimizer.apply_gradients(
-            zip(clipped_grads, tf.trainable_variables()), global_step=tf.train.get_global_step())
+        self.total_train_op = self.optimizer.apply_gradients(zip(clipped_grads, tf.trainable_variables()), global_step=tf.train.get_global_step())
 
     def get_action(self, obs):
         if obs.ndim == 1 or obs.ndim == 3:

@@ -70,12 +70,19 @@ class BaseQ(ABC):
 
     @abstractmethod
     def get_action(self, obs):
-        """从当前观测值获得动作。"""
+        """从当前观测值获得动作。
+        :param obs: the observation that could be image or real-number features
+        :return: actions
+        """
         pass
 
     @abstractmethod
-    def update(self, minibatch):
-        """更新策略，使用minibatch样本。"""
+    def update(self, minibatch, update_ratio):
+        """更新策略，使用minibatch样本。
+        :param minibatch: a minibatch of training data
+        :update_ratio: the ratio of current update step in total update step
+        :return: None
+        """
         pass
 
     def save_model(self):
