@@ -1,25 +1,28 @@
-import numpy as np
-import os
+import gym
 from tqdm import tqdm
-from collections import deque
+import numpy as np
+import tensorflow as tf
 from tensorboardX import SummaryWriter
+from collections import deque
+import os
 
-from rlpack.environment import AtariWrapper
-from rlpack.algos import PPO
 from rlpack.common import Memory
+from rlpack.environment import MujocoWrapper
+from rlpack.algos import TRPO
 
 
 class Config(object):
     def __init__(self):
         self.seed = 1
-        self.save_path = "./log/breakout"
+        self.save_path = "./log/trpo_reacher"
         self.save_model_freq = 0.001
         self.log_freq = 10
 
         # 环境
         self.n_stack = 4
         self.dim_observation = None
-        self.n_action = None   # gym中不同环境的action数目不同。
+        self.dim_action = None   # gym中不同环境的action数目不同。
+        self.n_action = None
 
         # 训练长度
         self.n_env = 8
@@ -27,25 +30,46 @@ class Config(object):
         self.n_trajectory = 10000   # for each env
         self.batch_size = 64
         self.warm_start_length = 1
+        self.memory_size = 1000
 
         # 训练参数
-        self.training_epochs = 3
+        self.training_epoch = 10
         self.discount = 0.99
         self.gae = 0.95
+        self.lr_schedule = lambda x: (1-x) * 2.5e-4
+        self.clip_schedule = lambda x: (1-x) * 0.1
         self.vf_coef = 1.0
         self.entropy_coef = 0.01
         self.max_grad_norm = 0.5
-        self.lr_schedule = lambda x: (1-x) * 2.5e-4
-        self.clip_schedule = lambda x: (1-x) * 0.1
-        self.memory_size = 1000
+        self.initial_epsilon = 0.9
+        self.final_epsilon = 0.01
+        self.lr = 3e-4
+        self.update_target_freq = 100
+        self.delta = 0.01
 
 
-def process_config(env):
+def process_env(env):
     config = Config()
-    config.dim_observation = env.observation_space.shape
-    config.n_action = env.action_space.n
+    config.dim_observation = env.dim_observation
+    config.dim_action = env.dim_action[0]
 
+    print(f"dim_action: {env.dim_action}")
     return config
+
+
+# class Agent(PPO):
+#     def __init__(self, config):
+#         super().__init__(config)
+#
+#     def build_network(self):
+#         self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], name="observation")
+#         x = tf.layers.dense(self.observation, 256, activation=tf.nn.relu)
+#         x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
+#         x = tf.layers.dense(x, 512, activation=tf.nn.relu)
+#         self.logit_action_probability = tf.layers.dense(
+#             x, self.n_action, activation=None, kernel_initializer=tf.truncated_normal_initializer(0.0, 0.01))
+#         self.state_value = tf.squeeze(tf.layers.dense(
+#             x, 1, activation=None, kernel_initializer=tf.truncated_normal_initializer()))
 
 
 def safemean(x):
@@ -99,19 +123,7 @@ def learn(env, agent, config):
 
 
 if __name__ == "__main__":
-    n_stack = 4
-    n_env = 8
-    # env = SubprocVecEnv([make_env(i, 'BreakoutNoFrameskip-v4') for i in range(n_env)])
-    # env = FrameStack(env, n_stack)
-
-    env = AtariWrapper("BreakoutNoFrameskip-v4", n_env)
-
-    print("---------------")
-    print(f"action space: {env.action_space.n}")
-    print(f"observation space: {env.observation_space.shape}")
-    print("---------------")
-
-    config = process_config(env)  # 配置config
-    pol = PPO(config)
-
-    learn(env, pol, config)
+    env = MujocoWrapper("Reacher-v2", 8)
+    config = process_env(env)
+    agent = TRPO(config)
+    learn(env, agent, config)

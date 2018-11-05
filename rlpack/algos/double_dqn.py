@@ -1,17 +1,15 @@
-from .baseq import BaseQ
+from .base import Base
 import tensorflow as tf
 import numpy as np
 import scipy
 
 
-class DoubleDQN(BaseQ):
+class DoubleDQN(Base):
     def __init__(self, config):
         super().__init__(config)
 
     def build_network(self):
-        self.observation = tf.placeholder(shape=[None, self.dim_observation], dtype=tf.float32, name="observation")
-        self.action = tf.placeholder(shape=[None], dtype=tf.int32, name="action")
-        self.target = tf.placeholder(shape=[None], dtype=tf.float32, name="target")
+        self.observation = tf.placeholder(shape=[None, *self.dim_observation], dtype=tf.float32, name="observation")
 
         with tf.variable_scope("qnet"):
             x = tf.layers.dense(self.observation, 32, activation=tf.nn.relu, trainable=True)
@@ -24,6 +22,8 @@ class DoubleDQN(BaseQ):
             self.target_qvals = tf.layers.dense(x, self.n_action, activation=None, trainable=False)
 
     def build_algorithm(self):
+        self.action = tf.placeholder(shape=[None], dtype=tf.int32, name="action")
+        self.target = tf.placeholder(shape=[None], dtype=tf.float32, name="target")
         self.optimizer = tf.train.AdamOptimizer(self.lr, epsilon=1.5e-8)
         trainable_variables = tf.trainable_variables("qnet")
 
@@ -57,9 +57,10 @@ class DoubleDQN(BaseQ):
         self.max_qval = tf.reduce_max(self.qvals)
 
     def get_action(self, obs):
-        if obs.ndim == 1:
+        if obs.ndim == 1 or obs.ndim == 3:
             newobs = np.array(obs)[np.newaxis, :]
         else:
+            assert obs.ndim == 2 or obs.ndim == 4
             newobs = obs
 
         self.epsilon -= (self.initial_epsilon - self.final_epsilon) / 100000
@@ -98,10 +99,10 @@ class DoubleDQN(BaseQ):
             actions = actions[0]
         return actions
 
-    def update(self, minibatch):
+    def update(self, minibatch, update_ratio):
 
         # 拆分样本。
-        s_batch, a_batch, r_batch, next_s_batch, d_batch = minibatch
+        s_batch, a_batch, r_batch, d_batch, next_s_batch = minibatch
 
         batch_size = s_batch.shape[0]
         current_next_q_vals, target_next_q_vals = self.sess.run(
@@ -127,10 +128,10 @@ class DoubleDQN(BaseQ):
 
         # 存储模型。
         if global_step % self.save_model_freq == 0:
-            self.save_model(self.save_path)
+            self.save_model()
 
         # 更新目标策略。
         if global_step % self.update_target_freq == 0:
             self.sess.run(self.update_target_op)
 
-        return global_step, {"loss": loss, "max_q_value": max_q_val}
+        return {"loss": loss, "max_q_value": max_q_val, "training_step": global_step}

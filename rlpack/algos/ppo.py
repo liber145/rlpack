@@ -1,11 +1,11 @@
 import numpy as np
 import tensorflow as tf
-from .baseq import BaseQ
-from ..common.utils import assert_shape, exponential_decay, linear_decay
+from .base import Base
+from ..common.utils import assert_shape
 import math
 
 
-class PPO(BaseQ):
+class PPO(Base):
     def __init__(self, config):
         self.tau = config.gae
         self.entropy_coefficient = config.entropy_coef
@@ -138,7 +138,7 @@ class PPO(BaseQ):
         grads = tf.gradients(self.total_loss, tf.trainable_variables())
 
         # Clip gradients.
-        clipped_grads, _ = tf.clip_by_global_norm(grads, 0.5)
+        clipped_grads, _ = tf.clip_by_global_norm(grads, self.max_grad_norm)
         self.total_train_op = self.optimizer.apply_gradients(zip(clipped_grads, tf.trainable_variables()), global_step=tf.train.get_global_step())
 
     def get_action(self, obs):
@@ -283,8 +283,8 @@ class PPO(BaseQ):
                     del batch_generator
                     break
 
-            if (update_ratio / self.save_model_freq) % 1 == 0:
-                self.save_model()
+        if (update_ratio / self.save_model_freq) % 1 == 0:
+            self.save_model()
 
     def _generator(self, data_batch, batch_size=32):
         n_sample = data_batch[0].shape[0]

@@ -1,14 +1,12 @@
 from abc import ABC, abstractmethod
 import os
-import datetime
-import numpy as np
 import tensorflow as tf
 from tensorboardX import SummaryWriter
 from ..common.log import logger
 
 
-class BaseQ(ABC):
-    """Q-learning基类。"""
+class Base(ABC):
+    """算法基类。"""
 
     def __init__(self, config):
         self.dim_observation = config.dim_observation
@@ -81,11 +79,12 @@ class BaseQ(ABC):
         """更新策略，使用minibatch样本。
         :param minibatch: a minibatch of training data
         :update_ratio: the ratio of current update step in total update step
-        :return: None
+        :return: update info, i.e. loss.
         """
         pass
 
     def save_model(self):
+        """Save model to `save_path`."""
         global_step = self.sess.run(tf.train.get_global_step())
         self.saver.save(
             self.sess,
@@ -95,6 +94,7 @@ class BaseQ(ABC):
         )
 
     def load_model(self):
+        """Load model from `save_path` if there exists."""
         latest_checkpoint = tf.train.latest_checkpoint(os.path.join(self.save_path, "model"))
         if latest_checkpoint:
             logger.info("Loading model checkpoint {} ...".format(latest_checkpoint))
@@ -102,10 +102,10 @@ class BaseQ(ABC):
         else:
             logger.info("New start!")
 
-    def put(self, reward, done):
-        """收集过程中的奖励，并将其存储起来。"""
-        self.total_reward += reward
-        if done is True:
-            global_step = self.sess.run(tf.train.get_global_step())
-            self.summary_writer.add_scalar("total_reward", self.total_reward, global_step=global_step)
-            self.total_reward = 0
+    # def put(self, reward, done):
+    #     """收集过程中的奖励，并将其存储起来。"""
+    #     self.total_reward += reward
+    #     if done is True:
+    #         global_step = self.sess.run(tf.train.get_global_step())
+    #         self.summary_writer.add_scalar("total_reward", self.total_reward, global_step=global_step)
+    #         self.total_reward = 0

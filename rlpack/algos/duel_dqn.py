@@ -1,9 +1,9 @@
-from .baseq import BaseQ
+from .base import Base
 import tensorflow as tf
 import numpy as np
 
 
-class DuelDQN(BaseQ):
+class DuelDQN(Base):
     """Dueling Archtecture, Double DQN"""
 
     def __init__(self, config):
@@ -64,9 +64,13 @@ class DuelDQN(BaseQ):
         self.max_qval = tf.reduce_max(self.qvals)
 
     def get_action(self, obs):
-        if obs.ndim == 1:
+        """Get action with respect to the observation.
+        :param obs: observation, with 1-dimension representing real-value feature, 3-dimension representing image.
+        """
+        if obs.ndim == 1 or obs.ndim == 3:
             newobs = np.array(obs)[np.newaxis, :]
         else:
+            assert obs.ndim == 2 or obs.ndim == 4
             newobs = obs
 
         self.epsilon -= (self.initial_epsilon - self.final_epsilon) / 100000
@@ -83,10 +87,13 @@ class DuelDQN(BaseQ):
             actions = actions[0]
         return actions
 
-    def update(self, minibatch):
-
+    def update(self, minibatch, update_ratio) -> dict:
+        """
+        :param minibatch: a minibatch of (state_batch, action_batch, reward_batch, done_batch, next_state_batch)
+        :param update_ratio: the ratio of update
+        """
         # 拆分样本。
-        s_batch, a_batch, r_batch, next_s_batch, d_batch = minibatch
+        s_batch, a_batch, r_batch, d_batch, next_s_batch = minibatch
 
         batch_size = s_batch.shape[0]
         current_next_q_vals, target_next_q_vals = self.sess.run(
@@ -118,4 +125,4 @@ class DuelDQN(BaseQ):
         if global_step % self.update_target_freq == 0:
             self.sess.run(self.update_target_op)
 
-        return global_step, {"loss": loss, "max_q_value": max_q_val}
+        return {"loss": loss, "max_q_value": max_q_val, "training_step": global_step}

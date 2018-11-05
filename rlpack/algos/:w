@@ -1,0 +1,50 @@
+import tensorflow as tf 
+import numpy as np
+from .base import Base 
+
+
+class TRPO(Base):
+    def __init__(self, config):
+        self.delta = 0.01
+        super().__init__(config)
+
+    def build_model(self):
+        self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], "observation")
+
+        with tf.variable_scope("policy_net"):
+            x = tf.layers.dense(self.observation, 64, activation=tf.nn.tanh)
+            x = tf.layers.dense(x, 64, activation=tf.nn.tanh)
+            self.mu = tf.layers.dense(x, self.dim_action, activation=tf.nn.tanh)
+            self.log_var = tf.get_variable("log_var", [self.dim_action], tf.float32, tf.constant_initializer(0.0)) - 1
+
+        with tf.variable_scope("value_net"):
+            x = tf.layers.dense(self.observation, 64, activation=tf.nn.tanh)
+            x = tf.layers.dense(x, 64, activation=tf.nn.tanh)
+            self.state_value = tf.layers.dense(x, 1, "state_value")
+
+    def build_algorithm(self):
+        
+        logp = -0.5 * tf.reduce_sum(self.log_var)
+        logp += -0.5 * tf.reduce_sum(tf.square(self.action - self.mu) / tf.exp(self.log_var), axis=1, keepdims=True)
+
+        logp_old = -0.5 * tf.reduce_sum(self.old_log_var)
+        logp_old += -0.5 * tf.reduce_sum(tf.square(self.action - self.old_mu) / tf.exp(self.old_log_var), axis=1, keepdims=True)
+
+        # Object function.
+        self.obj = -tf.reduce_mean(self.advantage * tf.exp(logp - logp_old))
+
+        # Compute gradients of object function.
+        self.actor_vars = tf.trainable_variables("policy_net")
+        self.g = self._flat_param_list(tf.gradients(self.obj, self.actor_vars))
+
+        
+        # Compute KL divergence.
+        log_det_cov_old = tf.reduce_sum(self.old_log_var)
+        log_det_cov_new = tf.reduce_sum(self.log_var)
+        tr_old_new = tf.reduce_sum(tf.exp(self.old_log_var - self.log_var))
+
+        self.kl = 0.5 * tf.reduce_mean(log_dev_cov_new - log_det_cov_old + tr_old_new + tf.reduce_sum(tf.square(self.mu - self.old_mu) / tf.exp(self.log_var), axis=1) - self.dim_action)
+        g_kl = self._flat_param_list(tf.gradients(self.kl, self.actor_vars))
+
+        
+

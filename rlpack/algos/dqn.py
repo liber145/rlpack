@@ -1,18 +1,14 @@
 # -*- coding: utf-8 -*-
 import os
-import datetime
 import numpy as np
 import tensorflow as tf
 from tensorboardX import SummaryWriter
-from ..estimator import utils
-from ..estimator.utils import gen_batch
-from ..estimator.networker import Networker
 from ..common.log import logger
-from .baseq import BaseQ
+from .base import Base
 from ..common.utils import assert_shape
 
 
-class DQN(BaseQ):
+class DQN(Base):
     """Deep Q Network."""
 
     def __init__(self, config):
@@ -27,7 +23,7 @@ class DQN(BaseQ):
 
     def build_network(self):
         """ ------------- 搭建网络 -------------- """
-        self.observation = tf.placeholder(shape=[None, self.dim_observation], dtype=tf.float32, name="observation")
+        self.observation = tf.placeholder(shape=[None, *self.dim_observation], dtype=tf.float32, name="observation")
         self.action = tf.placeholder(shape=[None], dtype=tf.int32, name="action")
         self.target = tf.placeholder(shape=[None], dtype=tf.float32, name="target")  # 目标状态动作值。
 
@@ -108,9 +104,10 @@ class DQN(BaseQ):
         Args:
             obs: observation. The shape needs to be [None, dim_observation].
         """
-        if obs.ndim == 1:
+        if obs.ndim == 1 or obs.ndim == 3:
             newobs = np.array(obs)[np.newaxis, :]
         else:
+            assert obs.ndim == 2 or obs.ndim == 4
             newobs = obs
 
         self.epsilon -= (self.initial_epsilon - self.final_epsilon) / 100000
@@ -131,7 +128,7 @@ class DQN(BaseQ):
         """更新策略，使用minibatch样本。"""
 
         # 拆分sample样本。
-        s_batch, a_batch, r_batch, next_s_batch, d_batch = minibatch
+        s_batch, a_batch, r_batch, d_batch, next_s_batch = minibatch
 
         target_next_q_vals = self.sess.run(self.target_qvals, feed_dict={self.observation: next_s_batch})
         target_batch = r_batch + (1 - d_batch) * self.discount * target_next_q_vals.max(axis=1)
@@ -149,8 +146,8 @@ class DQN(BaseQ):
         )
 
         # 存储结果。
-        self.summary_writer.add_scalar("loss", loss, global_step)
-        self.summary_writer.add_scalar("max_q_value", max_q_val, global_step)
+        # self.summary_writer.add_scalar("loss", loss, global_step)
+        # self.summary_writer.add_scalar("max_q_value", max_q_val, global_step)
 
         # 存储模型。
         if global_step % self.save_model_freq == 0:

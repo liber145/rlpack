@@ -76,9 +76,9 @@ class PCL(BaseQ):
 
         self.update_target_op = _update_target("target_qnet", "qnet")
 
-    def update(self, minibatch):
+    def update(self, minibatch, update_ratio):
         # 拆分样本。
-        s_batch, a_batch, r_batch, next_s_batch, d_batch = minibatch
+        s_batch, a_batch, r_batch, d_batch, next_s_batch = minibatch
 
         batch_size = s_batch.shape[0]
 
@@ -102,9 +102,10 @@ class PCL(BaseQ):
         return global_step
 
     def get_action(self, obs):
-        if obs.ndim == 1:
+        if obs.ndim == 1 or obs.ndim == 3:
             newobs = np.array(obs)[np.newaxis, :]
         else:
+            assert obs.ndim == 2 or obs.ndim == 4
             newobs = obs
 
         qval, actionval, action_probability = self.sess.run([self.qvals, self.action_value, self.action_probability], feed_dict={self.observation: newobs})

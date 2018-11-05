@@ -3,16 +3,17 @@ import os
 from tqdm import tqdm
 from collections import deque
 from tensorboardX import SummaryWriter
+import tensorflow as tf
 
 from rlpack.environment import AtariWrapper
-from rlpack.algos import PPO
+from rlpack.algos import DoubleDQN
 from rlpack.common import Memory
 
 
 class Config(object):
     def __init__(self):
         self.seed = 1
-        self.save_path = "./log/breakout"
+        self.save_path = "./log/alien"
         self.save_model_freq = 0.001
         self.log_freq = 10
 
@@ -23,12 +24,17 @@ class Config(object):
 
         # 训练长度
         self.n_env = 8
-        self.trajectory_length = 128
+        self.trajectory_length = 4
         self.n_trajectory = 10000   # for each env
         self.batch_size = 64
-        self.warm_start_length = 1
+        self.warm_start_length = 1000
 
         # 训练参数
+        self.initial_epsilon = 0.9
+        self.final_epsilon = 0.01
+        self.lr = 2.5e-4
+        self.update_target_freq = 500
+
         self.training_epochs = 3
         self.discount = 0.99
         self.gae = 0.95
@@ -37,7 +43,31 @@ class Config(object):
         self.max_grad_norm = 0.5
         self.lr_schedule = lambda x: (1-x) * 2.5e-4
         self.clip_schedule = lambda x: (1-x) * 0.1
-        self.memory_size = 1000
+        self.memory_size = 10000
+
+
+class Agent(DoubleDQN):
+    def __init__(self, config):
+        super().__init__(config)
+
+    def build_network(self):
+        self.observation = tf.placeholder(shape=[None, *self.dim_observation], dtype=tf.float32, name="observation")
+
+        with tf.variable_scope("qnet"):
+            x = tf.layers.conv2d(self.observation, 32, 8, 4, activation=tf.nn.relu, trainable=True)
+            x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu, trainable=True)
+            x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu, trainable=True)
+            x = tf.contrib.layers.flatten(x)
+            x = tf.layers.dense(x, 512, activation=tf.nn.relu, trainable=True)
+            self.qvals = tf.layers.dense(x, self.n_action, activation=None, trainable=True)
+
+        with tf.variable_scope("target_qnet"):
+            x = tf.layers.conv2d(self.observation, 32, 8, 4, activation=tf.nn.relu, trainable=True)
+            x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu, trainable=True)
+            x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu, trainable=True)
+            x = tf.contrib.layers.flatten(x)
+            x = tf.layers.dense(x, 512, activation=tf.nn.relu, trainable=True)
+            self.target_qvals = tf.layers.dense(x, self.n_action, activation=None, trainable=True)
 
 
 def process_config(env):
@@ -85,7 +115,7 @@ def learn(env, agent, config):
             obs = next_obs
 
         update_ratio = i/config.n_trajectory
-        data_batch = memory.get_last_n_step(config.trajectory_length)
+        data_batch = memory.sample_transition(config.batch_size)
         agent.update(data_batch, update_ratio)
 
         epinfobuf.extend(epinfos)
@@ -101,10 +131,7 @@ def learn(env, agent, config):
 if __name__ == "__main__":
     n_stack = 4
     n_env = 8
-    # env = SubprocVecEnv([make_env(i, 'BreakoutNoFrameskip-v4') for i in range(n_env)])
-    # env = FrameStack(env, n_stack)
-
-    env = AtariWrapper("BreakoutNoFrameskip-v4", n_env)
+    env = AtariWrapper("AlienNoFrameskip-v4", 8)
 
     print("---------------")
     print(f"action space: {env.action_space.n}")
@@ -112,6 +139,6 @@ if __name__ == "__main__":
     print("---------------")
 
     config = process_config(env)  # 配置config
-    pol = PPO(config)
+    pol = Agent(config)
 
     learn(env, pol, config)

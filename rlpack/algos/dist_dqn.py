@@ -1,10 +1,10 @@
 import tensorflow as tf
 from tensorboardX import SummaryWriter
 import numpy as np
-from .baseq import BaseQ
+from .base import Base
 
 
-class DistDQN(BaseQ):
+class DistDQN(Base):
     def __init__(self, config):
         self.n_histogram = 51
         self.vmax = 1
@@ -64,8 +64,8 @@ class DistDQN(BaseQ):
         # ------------- 需要记录的中间值 --------------
         # ------------------------------------------
 
-    def update(self, minibatch):
-        s_batch, a_batch, r_batch, next_s_batch, d_batch = minibatch
+    def update(self, minibatch, update_ratio):
+        s_batch, a_batch, r_batch, d_batch, next_s_batch = minibatch
 
         next_q_probs = self.sess.run(self.probs_target, feed_dict={self.observation: next_s_batch})
         next_q_vals = np.sum(next_q_probs * self.split_points, axis=-1)
@@ -102,7 +102,7 @@ class DistDQN(BaseQ):
         if global_step % self.update_target_freq == 0:
             self.sess.run(self.update_target_op)
 
-        return global_step, {"loss": loss}
+        return {"loss": loss, "training_step": global_step}
 
     def get_action(self, obs):
         if obs.ndim == 1:
