@@ -1,12 +1,14 @@
-import os 
-from .stack_env import StackEnv
+import os
+
 import numpy as np
 
 from baselines import bench, logger
 from baselines.common.atari_wrappers import make_atari, wrap_deepmind
-from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
 from baselines.common.vec_env import VecEnv
+from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
 from gym import spaces
+
+from .stack_env import StackEnv
 
 
 class MujocoWrapper(StackEnv):
@@ -42,6 +44,7 @@ class MujocoWrapper(StackEnv):
     def is_continuous(self):
         return True
 
+
 class CartpoleWrapper(StackEnv):
     def __init__(self, n_env):
         super().__init__("CartPole-v1", n_env)
@@ -64,7 +67,7 @@ class CartpoleWrapper(StackEnv):
                 rewards[i] = 0.1
         return obs, rewards, dones, epinfos
 
-    @property 
+    @property
     def is_continuous(self):
         return False
 
@@ -75,7 +78,7 @@ class AtariWrapper(object):
         wos = self.env.observation_space
         low = np.repeat(wos.low, 4, axis=-1)
         high = np.repeat(wos.high, 4, axis=-1)
-        self.stackedobs = np.zeros((n_env,)+low.shape, low.dtype)
+        self.stackedobs = np.zeros((n_env,) + low.shape, low.dtype)
         self._observation_space = spaces.Box(low=low, high=high)
         self._action_space = self.env.action_space
 
@@ -85,7 +88,7 @@ class AtariWrapper(object):
             env.seed(1 + rank)
             env = bench.Monitor(env, logger.get_dir() and os.path.join(logger.get_dir(), str(rank)))
             env = wrap_deepmind(env)
-            return env 
+            return env
         return env_fn
 
     def step(self, actions):
@@ -100,7 +103,7 @@ class AtariWrapper(object):
     def reset(self):
         obs = self.env.reset()
         self.stackedobs[...] = 0
-        self.stackedobs[..., -obs.shape[-1]:] = obs 
+        self.stackedobs[..., -obs.shape[-1]:] = obs
         return self.stackedobs.astype(np.float32) / 255.0
 
     def close(self):
@@ -112,12 +115,11 @@ class AtariWrapper(object):
 
     @property
     def observation_space(self):
-        return self._observation_space 
+        return self._observation_space
 
     @property
     def is_continuous(self):
         return False
-
 
 
 if __name__ == "__main__":
