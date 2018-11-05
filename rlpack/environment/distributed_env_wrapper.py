@@ -3,6 +3,7 @@
 通过共享内存的方式实现多机多进程并行Env.
 
 """
+import time
 from multiprocessing.managers import BaseManager
 from queue import Empty, Queue
 from threading import Thread
@@ -49,6 +50,8 @@ class DistributedEnvManager(Thread):
         m = 0
         p = 0
         while m < n:
+            if p == 0:
+                time.sleep(0.0001)
             try:
                 srdi = self.srd_pad[p].get(block=False)
                 env_ids.append(p)
@@ -83,7 +86,7 @@ class DistributedEnvManager(Thread):
 if __name__ == '__main__':
     from tqdm import tqdm
     import random
-    n_env = 4
+    n_env = 8
     distributed_env_manager = DistributedEnvManager(n_env)
     distributed_env_manager.configure()
     distributed_env_manager.start()
@@ -93,7 +96,7 @@ if __name__ == '__main__':
     actions = dict((env_id, random.randrange(4)) for env_id in env_ids)
     distributed_env_manager.step(actions)
 
-    for _ in tqdm(range(1000)):
-        env_ids, obs, rewards, dones, infos = distributed_env_manager.get_envs_to_inference(n_env // 2)
+    for _ in tqdm(range(10000)):
+        env_ids, obs, rewards, dones, infos = distributed_env_manager.get_envs_to_inference(n_env)
         actions = dict((env_id, random.randrange(4)) for env_id in env_ids)
         distributed_env_manager.step(actions)

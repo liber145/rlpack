@@ -39,7 +39,7 @@ class DistributedEnvClient(Process):
 
 
 if __name__ == '__main__':
-    n_env = 4
+    n_env = 8
     processes = []
     for _ in range(n_env):
         p = DistributedEnvClient()
