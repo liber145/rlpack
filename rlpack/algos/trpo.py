@@ -2,24 +2,30 @@ import tensorflow as tf
 import numpy as np
 import math
 from .base import Base 
+from ..common.utils import assert_shape
 
 class TRPO(Base):
     def __init__(self, config):
         self.delta = config.delta
+
+        self.dim_observation = config.dim_observation
         self.dim_action = config.dim_action
+
         self.n_env = config.n_env
         self.gae = config.gae
         self.training_epoch = config.training_epoch
+        self.max_grad_norm = config.max_grad_norm
+        self.lr_schedule = config.lr_schedule
+        self.batch_size = config.batch_size
         super().__init__(config)
 
     def build_network(self):
         self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], "observation")
-
         with tf.variable_scope("policy_net"):
             x = tf.layers.dense(self.observation, 64, activation=tf.nn.tanh)
             x = tf.layers.dense(x, 64, activation=tf.nn.tanh)
-            self.mu = tf.layers.dense(x, self.dim_action, activation=tf.nn.tanh)
-            self.log_var = tf.get_variable("log_var", [self.dim_action], tf.float32, tf.constant_initializer(0.0)) - 1
+            self.mu = tf.layers.dense(x, self.dim_action, activation=None)
+            self.log_var = tf.get_variable("log_var", [self.mu.shape.as_list()[1]], tf.float32, tf.constant_initializer(0.0))
 
         with tf.variable_scope("value_net"):
             x = tf.layers.dense(self.observation, 64, activation=tf.nn.tanh)
@@ -27,22 +33,30 @@ class TRPO(Base):
             self.state_value = tf.squeeze(tf.layers.dense(x, 1, name="state_value"))
 
     def build_algorithm(self):
-        self.critic_optimizer = tf.train.AdamOptimizer(self.lr)
+        self.critic_optimizer = tf.train.AdamOptimizer(3e-3)
         self.action = tf.placeholder(tf.float32, [None, self.dim_action], "action")
-        self.old_mu = tf.placeholder(tf.float32, [None, self.dim_action])
+        self.old_mu = tf.placeholder(tf.float32, [None, self.dim_action], "old_mu")
         self.old_log_var = tf.placeholder(tf.float32, [self.dim_action], "old_var")
         self.advantage = tf.placeholder(tf.float32, [None], "advanatage")
         self.span_reward = tf.placeholder(tf.float32, [None], "span_reward")
     
-        
         logp = -0.5 * tf.reduce_sum(self.log_var)
         logp += -0.5 * tf.reduce_sum(tf.square(self.action - self.mu) / tf.exp(self.log_var), axis=1, keepdims=True)
+
+        assert_shape(logp, [None, 1])
+        assert_shape(tf.square(self.action - self.mu) / tf.exp(self.log_var), [None, self.dim_action])
 
         logp_old = -0.5 * tf.reduce_sum(self.old_log_var)
         logp_old += -0.5 * tf.reduce_sum(tf.square(self.action - self.old_mu) / tf.exp(self.old_log_var), axis=1, keepdims=True)
 
-        # Object function.
+        # # Object function, surrogate policy loss.
+        # ratio = tf.exp(logp - logp_old)
+        # surr1 = ratio * self.advantage 
+        # surr2 = tf.clip_by_value(ratio, 1.0 - 0.1, 1.0 + 0.1) * self.advantage
+        # self.obj = -tf.reduce_mean(tf.minimum(surr1, surr2))
+
         self.obj = -tf.reduce_mean(self.advantage * tf.exp(logp - logp_old))
+        self.p_pold = tf.exp(logp - logp_old)
 
         # Compute gradients of object function.
         self.actor_vars = tf.trainable_variables("policy_net")
@@ -62,13 +76,15 @@ class TRPO(Base):
 
         size_vec = np.sum([np.prod(v.shape.as_list()) for v in self.actor_vars])
         self.vec = tf.placeholder(tf.float32, [size_vec], "vector")
+        # Add damping vector.
         self.Hv = self._flat_param_list(tf.gradients(tf.reduce_sum(g_kl * self.vec), self.actor_vars)) + 0.1 * self.vec
 
-
         self.critic_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "value_net")
-    
         self.critic_loss = tf.reduce_mean(tf.square(self.state_value - self.span_reward))
-        self.train_critic_op = self.critic_optimizer.minimize(self.critic_loss, global_step=tf.train.get_global_step(), var_list=self.critic_vars)
+        grads = tf.gradients(self.critic_loss, self.critic_vars)
+        clipped_grads, _ = tf.clip_by_global_norm(grads, self.max_grad_norm)
+        self.train_critic_op = self.critic_optimizer.apply_gradients(zip(clipped_grads, self.critic_vars), global_step=tf.train.get_global_step())
+        # self.train_critic_op = self.critic_optimizer.minimize(self.critic_loss, global_step=tf.train.get_global_step(), var_list=self.critic_vars)
 
         # Build sample action.
         self.sample_action = self.mu + tf.exp(self.log_var / 2.0) * tf.random_normal(shape=[self.dim_action], dtype=tf.float32)
@@ -89,6 +105,7 @@ class TRPO(Base):
             last_advantage = 0
             for t in reversed(range(self.trajectory_length)):
                 advantage_batch[i, t] = delta_value_batch[t] + self.discount * self.gae * (1 - d_batch[i, t]) * last_advantage
+                last_advantage = advantage_batch[i, t]
 
             target_value_batch[i, :] = state_value_batch[:-1] + advantage_batch[i, :]
 
@@ -97,12 +114,11 @@ class TRPO(Base):
         advantage_batch = advantage_batch.reshape(self.n_env * self.trajectory_length)
         target_value_batch = target_value_batch.reshape(self.n_env * self.trajectory_length)
 
-        # Normalize advantage.
-        advantage_batch = (advantage_batch - advantage_batch.mean()) / (advantage_batch.std() + 1e-5)
+        # Normalize advantage. # TODO
+        # advantage_batch = (advantage_batch - advantage_batch.mean()) / (advantage_batch.std() + 1e-5)
 
         # Compute some values on old parameters.
         old_mu_batch, old_log_var = self.sess.run([self.mu, self.log_var], feed_dict={self.observation:s_batch})
-
 
         # ----------------- Update actor -------------------
         # Fill feed_dict.
@@ -114,7 +130,18 @@ class TRPO(Base):
                 self.advantage: advantage_batch}
 
         # Compute update direction.
-        g_obj = self.sess.run(self.g, feed_dict=self.feed_dict)
+        g_obj = self.sess.run(self.g, feed_dict={self.observation: s_batch, self.action: a_batch, self.advantage: advantage_batch, self.old_mu: old_mu_batch, self.old_log_var: old_log_var})
+
+        # print(f"g_obj: {g_obj}")
+        # print(f"advantage: {advantage_batch}")
+        # all_vars = tf.trainable_variables()
+        # obj_value, all_vars_value = self.sess.run([self.obj, all_vars], feed_dict=self.feed_dict)
+        # print(f"obj_value: {obj_value}")
+        # for va, va_value in zip(all_vars, all_vars_value):
+            # print(f"{va}: {va_value}")
+        # print(f"ratio: {ratio}")
+        # input()
+
         step_direction = self._conjudate_gradient(-g_obj)
 
         # Compute max step length.
@@ -133,13 +160,15 @@ class TRPO(Base):
 
         # ------------------ Update Critic ----------------------
         for _ in range(self.training_epoch):
-            batch_generator = self._generator([s_batch, a_batch, advantage_batch, old_mu_batch, target_value_batch], batch_size=self.batch_size)
-            while True:
-                try:
-                    mb_s, mb_a, mb_advantage, mb_old_mu, mb_target_value = next(batch_generator)
-                    self.sess.run(self.train_critic_op, feed_dict={self.observation: mb_s, self.span_reward: mb_target_value})
-                except StopIteration:
-                    break
+            self.sess.run(self.train_critic_op, feed_dict={self.observation: s_batch, self.span_reward: target_value_batch})
+
+            # batch_generator = self._generator([s_batch, a_batch, advantage_batch, old_mu_batch, target_value_batch], batch_size=self.batch_size)
+            # while True:
+            #     try:
+            #         mb_s, mb_a, mb_advantage, mb_old_mu, mb_target_value = next(batch_generator)
+            #         self.sess.run(self.train_critic_op, feed_dict={self.observation: mb_s, self.span_reward: mb_target_value})
+            #     except StopIteration:
+            #         break
 
 
     def _target_func(self, theta):

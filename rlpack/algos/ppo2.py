@@ -15,6 +15,7 @@ class PPO(Base):
         self.n_trajectory = config.n_trajectory
         self.trajectory_length = config.trajectory_length
         self.n_env = config.n_env
+        self.training_epoch = config.training_epoch
 
         self.dim_observation = config.dim_observation
         self.n_action = config.n_action
@@ -162,32 +163,46 @@ class PPO(Base):
             minibatch: n_env * trajectory_length * self.dim_observation
         """
         s_batch, a_batch, r_batch, d_batch = minibatch
-        assert s_batch.shape == (self.n_env, self.trajectory_length+1, *self.dim_observation)
+        # assert s_batch.shape == (self.n_env, self.trajectory_length+1, *self.dim_observation)
 
         # Compute advantage batch.
-        advantage_batch = np.empty([self.n_env, self.trajectory_length], dtype=np.float32)
-        target_value_batch = np.empty([self.n_env, self.trajectory_length], dtype=np.float32)
+        # advantage_batch = np.empty([self.n_env, self.trajectory_length], dtype=np.float32)
+        # target_value_batch = np.empty([self.n_env, self.trajectory_length], dtype=np.float32)
 
+        advantage_batch, target_value_batch = [], []
         for i in range(self.n_env):
-            state_value_batch = self.sess.run(self.state_value, feed_dict={self.observation: s_batch[i, ...]})
+            assert d_batch[i].ndim == 1
+            traj_size = len(d_batch[i])
+            target_value = np.empty(traj_size, dtype=np.float32)
+            adv = np.empty(traj_size, dtype=np.float32)
 
-            delta_value_batch = r_batch[i, :] + self.discount * (1 - d_batch[i, :]) * state_value_batch[1:] - state_value_batch[:-1]
-            assert state_value_batch.shape == (self.trajectory_length+1,)
-            assert delta_value_batch.shape == (self.trajectory_length,)
+            state_value = self.sess.run(self.state_value, feed_dict={self.observation: s_batch[i]})
+            delta_value = r_batch[i] + self.discount * (1 - d_batch[i]) * state_value[1:] - state_value[:-1]
+            # assert state_value_batch.shape == (self.trajectory_length+1,)
+            # assert delta_value_batch.shape == (self.trajectory_length,)
 
             last_advantage = 0
             for t in reversed(range(self.trajectory_length)):
-                advantage_batch[i, t] = delta_value_batch[t] + self.discount * self.tau * (1 - d_batch[i, t]) * last_advantage
-                last_advantage = advantage_batch[i, t]
+                adv[t] = delta_value[t] + self.discount * self.tau * (1 - d_batch[i][t]) * last_advantage
+                last_advantage = adv[t]
 
             # Compute target value.
-            target_value_batch[i, :] = state_value_batch[:-1] + advantage_batch[i, :]
+            target_value_batch.append(state_value[:-1] + adv[i])
+            # Collect advantage.
+            advantage_batch.append(adv)
 
         # Flat the batch values.
-        s_batch = s_batch[:, :-1, :, :, :].reshape(self.n_env * self.trajectory_length, *self.dim_observation)
-        a_batch = a_batch.reshape(self.n_env * self.trajectory_length)
-        advantage_batch = advantage_batch.reshape(self.n_env * self.trajectory_length)
-        target_value_batch = target_value_batch.reshape(self.n_env * self.trajectory_length)
+        all_step = sum(len(dones) for dones in d_batch)
+        s_batch = np.asarray([s[:-1, ...] for s in s_batch]).reshape(all_step, *self.dim_observation)
+        a_batch = np.asarray(a_batch).reshape(all_step)
+        advantage_batch = advantage_batch.reshape(all_step)
+        target_value_batch = target_value_batch.reshape(all_step)
+
+
+        # s_batch = s_batch[:, :-1, :, :, :].reshape(self.n_env * self.trajectory_length, *self.dim_observation)
+        # a_batch = a_batch.reshape(self.n_env * self.trajectory_length)
+        # advantage_batch = advantage_batch.reshape(self.n_env * self.trajectory_length)
+        # target_value_batch = target_value_batch.reshape(self.n_env * self.trajectory_length)
 
         # Normalize Advantage.
         advantage_batch = (advantage_batch - advantage_batch.mean()) / (advantage_batch.std() + 1e-5)
@@ -214,11 +229,10 @@ class PPO(Base):
         # # Normalization advantage. This must be done after target state value.
         # advantage_batch = (advantage_batch - advantage_batch.mean()) / (advantage_batch.std() + 1e-5)
 
-        old_logit_action_probability_batch = self.sess.run(
-            self.logit_action_probability, feed_dict={self.observation: s_batch})
+        old_logit_action_probability_batch = self.sess.run(self.logit_action_probability, feed_dict={self.observation: s_batch})
 
         # Train network.
-        for _ in range(3):
+        for _ in range(self.training_epoch):
             # Get training sample generator.
             batch_generator = self._generator([s_batch, a_batch, advantage_batch, old_logit_action_probability_batch, target_value_batch], batch_size=self.batch_size)
             # # Train actor.

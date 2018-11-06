@@ -63,7 +63,6 @@ class ContinuousPPO(Base):
             x = tf.layers.dense(x, 64, activation=tf.nn.tanh)
             self.mu = tf.layers.dense(x, self.dim_action, activation=tf.nn.tanh)
             self.log_var = tf.get_variable("logvars", [self.mu.shape.as_list()[1]], tf.float32, tf.constant_initializer(0.0)) - 1
-            self.state_value = tf.squeeze(tf.layers.dense(x, 1, activation=None))
 
         with tf.variable_scope("value_net"):
             x = tf.layers.dense(self.observation, 64, activation=tf.nn.tanh)
@@ -102,6 +101,15 @@ class ContinuousPPO(Base):
         surr1 = ratio * self.advantage
         surr2 = tf.clip_by_value(ratio, 1.0 - self.clip_epsilon, 1.0 + self.clip_epsilon) * self.advantage
         self.surrogate = -tf.reduce_mean(tf.minimum(surr1, surr2))
+
+        # ----------  可注释 ----------
+        # Compute gradients of policy net.
+
+        def _flat_param_list(ts):
+            return tf.concat([tf.reshape(t, [-1]) for t in ts if t is not None], axis=0)
+        actor_vars = tf.trainable_variables("policy_net")
+        self.g = _flat_param_list(tf.gradients(self.surrogate, actor_vars))
+        # ----------  可注释 ----------
 
         # Build value loss.
         self.critic_loss = tf.reduce_mean(tf.square(self.state_value - self.span_reward))
@@ -214,6 +222,7 @@ class ContinuousPPO(Base):
             last_advantage = 0
             for t in reversed(range(self.trajectory_length)):
                 advantage_batch[i, t] = delta_value_batch[t] + self.discount * self.tau * (1 - d_batch[i, t]) * last_advantage
+                last_advantage = advantage_batch[i, t]
 
             # Compute target value.
             target_value_batch[i, :] = state_value_batch[:-1] + advantage_batch[i, :]
@@ -230,6 +239,11 @@ class ContinuousPPO(Base):
         # Compute old terms for placeholder.
         old_mu_batch, old_log_var = self.sess.run([self.mu, self.log_var], feed_dict={self.observation: s_batch})
 
+        # # --------------- 可以注释 --------------
+        # gs = self.sess.run(self.g, feed_dict={self.observation: s_batch, self.action: a_batch, self.advantage: advantage_batch, self.old_mu: old_mu_batch, self.old_log_var: old_log_var, self.clip_epsilon: 0.1})
+        # print(f"+++++++++++++++++gs: {gs}")
+        # # --------------- 可以注释 --------------
+
         for _ in range(self.training_epoch):
             # print(f"n_env * trajectory_length: {self.n_env * self.trajectory_length}")
             # print(f"s_batch shape: {s_batch.shape}")
@@ -244,8 +258,8 @@ class ContinuousPPO(Base):
                     mb_s, mb_a, mb_advantage, mb_old_mu, mb_target_value = next(batch_generator)
                     global_step = self.sess.run(tf.train.get_global_step())
 
-                    entropy, _ = self.sess.run([self.entropy, self.train_actor_op],
-                                               feed_dict={
+                    gs, entropy, _ = self.sess.run([self.g, self.entropy, self.train_actor_op],
+                                                   feed_dict={
                         self.observation: mb_s,
                         self.action: mb_a,
                         self.span_reward: mb_target_value,
@@ -254,6 +268,7 @@ class ContinuousPPO(Base):
                         self.old_log_var: old_log_var,
                         self.moved_lr: self.lr_schedule(update_ratio),
                         self.clip_epsilon: self.clip_schedule(update_ratio)})
+                    # print(f"------gs: {gs}")
 
                     self.sess.run(self.train_critic_op, feed_dict={
                         self.observation: mb_s,

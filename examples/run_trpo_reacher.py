@@ -29,7 +29,7 @@ class Config(object):
         self.trajectory_length = 128
         self.n_trajectory = 10000   # for each env
         self.batch_size = 64
-        self.warm_start_length = 1
+        self.warm_start = 1
         self.memory_size = 1000
 
         # 训练参数
@@ -40,7 +40,7 @@ class Config(object):
         self.clip_schedule = lambda x: (1-x) * 0.1
         self.vf_coef = 1.0
         self.entropy_coef = 0.01
-        self.max_grad_norm = 0.5
+        self.max_grad_norm = 5
         self.initial_epsilon = 0.9
         self.final_epsilon = 0.01
         self.lr = 3e-4
@@ -85,10 +85,9 @@ def learn(env, agent, config):
     # 热启动，随机收集数据。
     obs = env.reset()
     print(f"observation: max={np.max(obs)} min={np.min(obs)}")
-    for i in tqdm(range(config.warm_start_length)):
+    for i in tqdm(range(config.warm_start)):
         actions = agent.get_action(obs)
         next_obs, rewards, dones, infos = env.step(actions)
-
         memory.store_sard(obs, actions, rewards, dones)
         obs = next_obs
 

@@ -6,7 +6,7 @@ from tensorboardX import SummaryWriter
 from collections import deque
 import os
 
-from rlpack.common import Memory
+from rlpack.common import NonBlockMemory
 from rlpack.environment import MujocoWrapper
 from rlpack.algos import ContinuousPPO
 
@@ -73,19 +73,22 @@ def safemean(x):
 
 def learn(env, agent, config):
 
-    memory = Memory(config.memory_size)
+    memory = NonBlockMemory(config.n_env)
     epinfobuf = deque(maxlen=100)
     summary_writer = SummaryWriter(os.path.join(config.save_path, "summary"))
 
     # 热启动，随机收集数据。
-    obs = env.reset()
+    tags, obs = env.reset()
+    memory.store_tag_s(tags, obs)
     print(f"observation: max={np.max(obs)} min={np.min(obs)}")
     for i in tqdm(range(config.warm_start_length)):
         actions = agent.get_action(obs)
-        next_obs, rewards, dones, infos = env.step(actions)
+        next_tags, next_obs, rewards, dones, infos = env.step(actions)
 
-        memory.store_sard(obs, actions, rewards, dones)
+        memory.store_tag_a(tags, actions)
+        memory.store_tag_rds(next_tags, rewards, dones, next_obs)
         obs = next_obs
+        tags = next_tags
 
     print("Finish warm start.")
     print("Start training.")
@@ -93,15 +96,17 @@ def learn(env, agent, config):
         epinfos = []
         for _ in range(config.trajectory_length):
             actions = agent.get_action(obs)
-            next_obs, rewards, dones, infos = env.step(actions)
+            next_tags, next_obs, rewards, dones, infos = env.step(actions)
 
             for info in infos:
                 maybeepinfo = info.get('episode')
                 if maybeepinfo:
                     epinfos.append(maybeepinfo)
 
-            memory.store_sard(obs, actions, rewards, dones)
+            memory.store_tag_a(tags, actions)
+            memory.store_tag_rds(next_tags, rewards, dones, next_obs)
             obs = next_obs
+            tags = next_tags
 
         update_ratio = i/config.n_trajectory
         data_batch = memory.get_last_n_step(config.trajectory_length)
