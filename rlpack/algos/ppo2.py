@@ -1,8 +1,10 @@
+import math
+
 import numpy as np
 import tensorflow as tf
-from .base import Base
+
 from ..common.utils import assert_shape
-import math
+from .base import Base
 
 
 class PPO(Base):
@@ -140,9 +142,16 @@ class PPO(Base):
 
         # Clip gradients.
         clipped_grads, _ = tf.clip_by_global_norm(grads, self.max_grad_norm)
-        self.total_train_op = self.optimizer.apply_gradients(zip(clipped_grads, tf.trainable_variables()), global_step=tf.train.get_global_step())
+        self.total_train_op = self.optimizer.apply_gradients(
+            zip(clipped_grads, tf.trainable_variables()), global_step=tf.train.get_global_step())
 
     def get_action(self, obs):
+        if isinstance(obs, list):
+            n_inference = len(obs)
+        elif isinstance(obs, np.ndarray):
+            n_inference = obs.shape[0]
+        else:
+            raise NotImplementedError("not supported observation type.")
         if obs.ndim == 1 or obs.ndim == 3:
             newobs = np.array(obs)[np.newaxis, :]
         else:
@@ -152,16 +161,11 @@ class PPO(Base):
         logit = self.sess.run(self.logit_action_probability, feed_dict={self.observation: newobs})
         logit = logit - np.max(logit, axis=1, keepdims=True)
         prob = np.exp(logit) / np.sum(np.exp(logit), axis=1, keepdims=True)
-        action = [np.random.choice(self.n_action, p=prob[i, :]) for i in range(self.n_env)]
-        assert len(action) == self.n_env
+        action = [np.random.choice(self.n_action, p=prob[i, :]) for i in range(n_inference)]
         return np.array(action)
 
     def update(self, minibatch, update_ratio):
-        """minibatch is a trajectory.
 
-        Arguments:
-            minibatch: n_env * trajectory_length * self.dim_observation
-        """
         s_batch, a_batch, r_batch, d_batch = minibatch
         # assert s_batch.shape == (self.n_env, self.trajectory_length+1, *self.dim_observation)
 
@@ -170,34 +174,39 @@ class PPO(Base):
         # target_value_batch = np.empty([self.n_env, self.trajectory_length], dtype=np.float32)
 
         advantage_batch, target_value_batch = [], []
-        for i in range(self.n_env):
+        for i in range(len(d_batch)):
             assert d_batch[i].ndim == 1
             traj_size = len(d_batch[i])
-            target_value = np.empty(traj_size, dtype=np.float32)
             adv = np.empty(traj_size, dtype=np.float32)
 
             state_value = self.sess.run(self.state_value, feed_dict={self.observation: s_batch[i]})
+
+            print("189>>>>", r_batch[i], d_batch[i], state_value)
             delta_value = r_batch[i] + self.discount * (1 - d_batch[i]) * state_value[1:] - state_value[:-1]
             # assert state_value_batch.shape == (self.trajectory_length+1,)
             # assert delta_value_batch.shape == (self.trajectory_length,)
 
             last_advantage = 0
-            for t in reversed(range(self.trajectory_length)):
+
+            for t in reversed(range(traj_size)):
                 adv[t] = delta_value[t] + self.discount * self.tau * (1 - d_batch[i][t]) * last_advantage
                 last_advantage = adv[t]
 
+            print('201>>>>>', i, state_value.shape, adv.shape)
             # Compute target value.
-            target_value_batch.append(state_value[:-1] + adv[i])
+            target_value_batch.append(state_value[:-1] + adv)
             # Collect advantage.
             advantage_batch.append(adv)
 
         # Flat the batch values.
+        advantage_batch = np.concatenate(advantage_batch, axis=0)
+        target_value_batch = np.concatenate(target_value_batch, axis=0)
         all_step = sum(len(dones) for dones in d_batch)
-        s_batch = np.asarray([s[:-1, ...] for s in s_batch]).reshape(all_step, *self.dim_observation)
-        a_batch = np.asarray(a_batch).reshape(all_step)
+
+        s_batch = np.concatenate([s[:-1, ...] for s in s_batch], axis=0)
+        a_batch = np.concatenate(a_batch, axis=0)
         advantage_batch = advantage_batch.reshape(all_step)
         target_value_batch = target_value_batch.reshape(all_step)
-
 
         # s_batch = s_batch[:, :-1, :, :, :].reshape(self.n_env * self.trajectory_length, *self.dim_observation)
         # a_batch = a_batch.reshape(self.n_env * self.trajectory_length)
@@ -229,12 +238,14 @@ class PPO(Base):
         # # Normalization advantage. This must be done after target state value.
         # advantage_batch = (advantage_batch - advantage_batch.mean()) / (advantage_batch.std() + 1e-5)
 
-        old_logit_action_probability_batch = self.sess.run(self.logit_action_probability, feed_dict={self.observation: s_batch})
+        old_logit_action_probability_batch = self.sess.run(
+            self.logit_action_probability, feed_dict={self.observation: s_batch})
 
         # Train network.
         for _ in range(self.training_epoch):
             # Get training sample generator.
-            batch_generator = self._generator([s_batch, a_batch, advantage_batch, old_logit_action_probability_batch, target_value_batch], batch_size=self.batch_size)
+            batch_generator = self._generator(
+                [s_batch, a_batch, advantage_batch, old_logit_action_probability_batch, target_value_batch], batch_size=self.batch_size)
             # # Train actor.
             # while True:
             #     try:
@@ -266,7 +277,8 @@ class PPO(Base):
 
             while True:
                 try:
-                    mini_s_batch, mini_a_batch, mini_advantage_batch, mini_old_logit_action_probability_batch, mini_target_state_value_batch = next(batch_generator)
+                    mini_s_batch, mini_a_batch, mini_advantage_batch, mini_old_logit_action_probability_batch, mini_target_state_value_batch = next(
+                        batch_generator)
 
                     # print(f"mini target state value shape: {mini_target_state_value_batch.shape}")
 
@@ -292,7 +304,8 @@ class PPO(Base):
                         logit = logit_act_p[0, :]
                         logit = logit - np.max(logit)
                         prob = np.exp(logit) / np.sum(np.exp(logit))
-                        print(f"c_loss: {c_loss}  surr: {surr}  entro: {entro[0]}  ratio: {p_ratio[0]} at step {global_step}")
+                        print(
+                            f"c_loss: {c_loss}  surr: {surr}  entro: {entro[0]}  ratio: {p_ratio[0]} at step {global_step}")
 
                 except StopIteration:
                     del batch_generator
@@ -303,12 +316,11 @@ class PPO(Base):
 
     def _generator(self, data_batch, batch_size=32):
         n_sample = data_batch[0].shape[0]
-        assert n_sample == self.n_env * self.trajectory_length
 
         index = np.arange(n_sample)
         np.random.shuffle(index)
 
         for i in range(math.ceil(n_sample / batch_size)):
-            span_index = slice(i*batch_size, min((i+1)*batch_size, n_sample))
+            span_index = slice(i * batch_size, min((i + 1) * batch_size, n_sample))
             span_index = index[span_index]
             yield [x[span_index] if x.ndim == 1 else x[span_index, :] for x in data_batch]
