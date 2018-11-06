@@ -1,6 +1,8 @@
-import tensorflow as tf
-from tensorboardX import SummaryWriter
 import numpy as np
+import tensorflow as tf
+
+from tensorboardX import SummaryWriter
+
 from .base import Base
 
 
@@ -78,9 +80,9 @@ class DistDQN(Base):
 
             for p, b in zip(probability, projection):
                 a = int(b)
-                m[a] += p * (1+a-b)
+                m[a] += p * (1 + a - b)
                 if a < self.n_histogram - 1:
-                    m[a+1] += p * (b-a)
+                    m[a + 1] += p * (b - a)
             return m
 
         targets = []

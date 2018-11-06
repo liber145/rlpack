@@ -1,7 +1,9 @@
-from .base import Base
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
+
 import scipy
+
+from .base import Base
 
 
 class DoubleDQN(Base):

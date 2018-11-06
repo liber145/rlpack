@@ -1,7 +1,10 @@
-from abc import ABC, abstractmethod
 import os
+from abc import ABC, abstractmethod
+
 import tensorflow as tf
+
 from tensorboardX import SummaryWriter
+
 from ..common.log import logger
 
 

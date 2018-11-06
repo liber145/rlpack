@@ -1,8 +1,10 @@
+import math
+
 import numpy as np
 import tensorflow as tf
+
 from .base import Base
-from ..common.utils import assert_shape, exponential_decay, linear_decay
-import math
+from .utils import assert_shape, exponential_decay, linear_decay
 
 
 class ContinuousPPO(Base):
@@ -62,7 +64,8 @@ class ContinuousPPO(Base):
             x = tf.layers.dense(self.observation, 64, activation=tf.nn.tanh)
             x = tf.layers.dense(x, 64, activation=tf.nn.tanh)
             self.mu = tf.layers.dense(x, self.dim_action, activation=tf.nn.tanh)
-            self.log_var = tf.get_variable("logvars", [self.mu.shape.as_list()[1]], tf.float32, tf.constant_initializer(0.0)) - 1
+            self.log_var = tf.get_variable("logvars", [self.mu.shape.as_list()[1]],
+                                           tf.float32, tf.constant_initializer(0.0)) - 1
             self.state_value = tf.squeeze(tf.layers.dense(x, 1, activation=None))
 
         with tf.variable_scope("value_net"):
@@ -86,16 +89,19 @@ class ContinuousPPO(Base):
         logp += -0.5 * tf.reduce_sum(tf.square(self.action - self.mu) / tf.exp(self.log_var), axis=1, keepdims=True)
 
         logp_old = -0.5 * tf.reduce_sum(self.old_log_var)
-        logp_old += -0.5 * tf.reduce_sum(tf.square(self.action - self.old_mu) / tf.exp(self.old_log_var), axis=1, keepdims=True)
+        logp_old += -0.5 * tf.reduce_sum(tf.square(self.action - self.old_mu) /
+                                         tf.exp(self.old_log_var), axis=1, keepdims=True)
 
         # Compute KL divergence.
         log_det_cov_old = tf.reduce_sum(self.old_log_var)
         log_det_cov_new = tf.reduce_sum(self.log_var)
         tr_old_new = tf.reduce_sum(tf.exp(self.old_log_var - self.log_var))
 
-        self.kl = 0.5 * tf.reduce_mean(log_det_cov_new - log_det_cov_old + tr_old_new + tf.reduce_sum(tf.square(self.mu - self.old_mu) / tf.exp(self.log_var), axis=1) - self.dim_action)
+        self.kl = 0.5 * tf.reduce_mean(log_det_cov_new - log_det_cov_old + tr_old_new + tf.reduce_sum(
+            tf.square(self.mu - self.old_mu) / tf.exp(self.log_var), axis=1) - self.dim_action)
 
-        self.entropy = 0.5 * (self.dim_action + self.dim_action * tf.log(2*np.pi) + tf.exp(tf.reduce_sum(self.log_var)))
+        self.entropy = 0.5 * (self.dim_action + self.dim_action *
+                              tf.log(2 * np.pi) + tf.exp(tf.reduce_sum(self.log_var)))
 
         # Build surrogate loss.
         ratio = tf.exp(logp - logp_old)
@@ -110,12 +116,14 @@ class ContinuousPPO(Base):
         self.total_loss = self.surrogate + self.critic_coef * self.critic_loss + self.entropy_coef * self.entropy   # TODO
 
         # Build action sample.
-        self.sample_action = self.mu + tf.exp(self.log_var / 2.0) * tf.random_normal(shape=[self.dim_action], dtype=tf.float32)
+        self.sample_action = self.mu + tf.exp(self.log_var / 2.0) * \
+            tf.random_normal(shape=[self.dim_action], dtype=tf.float32)
 
         # Build training operation.
         grads = tf.gradients(self.total_loss, tf.trainable_variables())
         clipped_grads, _ = tf.clip_by_global_norm(grads, self.max_grad_norm)
-        self.total_train_op = self.optimizer.apply_gradients(zip(clipped_grads, tf.trainable_variables()), global_step=tf.train.get_global_step())
+        self.total_train_op = self.optimizer.apply_gradients(
+            zip(clipped_grads, tf.trainable_variables()), global_step=tf.train.get_global_step())
 
         # Build actor operation.
         self.train_actor_op = self.optimizer.minimize(self.surrogate)
@@ -198,7 +206,7 @@ class ContinuousPPO(Base):
         s_batch, a_batch, r_batch, d_batch = minibatch
         # print(f"dim observatin: {self.dim_observation}  trajectory length:{self.trajectory_length} n_env:{self.n_env}")
         # print(f"s_batch shape: {s_batch.shape}")
-        assert s_batch.shape == (self.n_env, self.trajectory_length+1, *self.dim_observation)
+        assert s_batch.shape == (self.n_env, self.trajectory_length + 1, *self.dim_observation)
 
         # Compute advantage batch.
         advantage_batch = np.empty([self.n_env, self.trajectory_length], dtype=np.float32)
@@ -207,13 +215,15 @@ class ContinuousPPO(Base):
         for i in range(self.n_env):
             state_value_batch = self.sess.run(self.state_value, feed_dict={self.observation: s_batch[i, ...]})
 
-            delta_value_batch = r_batch[i, :] + self.discount * (1 - d_batch[i, :]) * state_value_batch[1:] - state_value_batch[:-1]
-            assert state_value_batch.shape == (self.trajectory_length+1,)
+            delta_value_batch = r_batch[i, :] + self.discount * \
+                (1 - d_batch[i, :]) * state_value_batch[1:] - state_value_batch[:-1]
+            assert state_value_batch.shape == (self.trajectory_length + 1,)
             assert delta_value_batch.shape == (self.trajectory_length,)
 
             last_advantage = 0
             for t in reversed(range(self.trajectory_length)):
-                advantage_batch[i, t] = delta_value_batch[t] + self.discount * self.tau * (1 - d_batch[i, t]) * last_advantage
+                advantage_batch[i, t] = delta_value_batch[t] + self.discount * \
+                    self.tau * (1 - d_batch[i, t]) * last_advantage
 
             # Compute target value.
             target_value_batch[i, :] = state_value_batch[:-1] + advantage_batch[i, :]
@@ -238,7 +248,8 @@ class ContinuousPPO(Base):
             # print(f"old_mu shape: {old_mu_batch.shape}")
             # # print(f"old_log_var shape: {old_log_var_batch.shape}")
             # print(f"target value shape: {target_value_batch.shape}")
-            batch_generator = self._generator([s_batch, a_batch, advantage_batch, old_mu_batch, target_value_batch], batch_size=self.batch_size)
+            batch_generator = self._generator([s_batch, a_batch, advantage_batch,
+                                               old_mu_batch, target_value_batch], batch_size=self.batch_size)
             while True:
                 try:
                     mb_s, mb_a, mb_advantage, mb_old_mu, mb_target_value = next(batch_generator)
@@ -404,6 +415,6 @@ class ContinuousPPO(Base):
         np.random.shuffle(index)
 
         for i in range(math.ceil(n_sample / batch_size)):
-            span_index = slice(i*batch_size, min((i+1)*batch_size, n_sample))
+            span_index = slice(i * batch_size, min((i + 1) * batch_size, n_sample))
             span_index = index[span_index]
             yield [x[span_index] if x.ndim == 1 else x[span_index, :] for x in data_batch]

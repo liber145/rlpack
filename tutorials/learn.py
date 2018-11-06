@@ -1,13 +1,14 @@
 import argparse
-import gym
-import numpy as np
-import time
 import os
+import time
+
+import numpy as np
+
+import gym
 import tqdm
 
-from .dqn import DQN
 from ..common.memory import Memory4 as Memory
-
+from .dqn import DQN
 
 parser = argparse.ArgumentParser(description="Parse Arguments.")
 parser.add_argument("--epsilon", default=0.01, type=float)

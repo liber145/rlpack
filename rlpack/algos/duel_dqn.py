@@ -1,6 +1,7 @@
-from .base import Base
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
+
+from .base import Base
 
 
 class DuelDQN(Base):

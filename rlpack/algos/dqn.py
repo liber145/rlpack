@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 import os
+
 import numpy as np
 import tensorflow as tf
+
 from tensorboardX import SummaryWriter
+
 from ..common.log import logger
+from .utils import assert_shape
 from .base import Base
-from ..common.utils import assert_shape
 
 
 class DQN(Base):
