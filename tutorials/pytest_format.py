@@ -10,6 +10,9 @@ class MyCustomClass:
     def sample(self, n):
         return list(range(n))
 
+    def foo(self, a, b):
+        return a + b
+
 
 class MyCustomClass2(MyCustomClass):
     def __init__(self, attr, new_attr):

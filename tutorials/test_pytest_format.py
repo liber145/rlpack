@@ -18,12 +18,11 @@ $ pytest
 ============================= test session starts ==============================
 platform linux -- Python 3.6.6, pytest-3.10.0, py-1.7.0, pluggy-0.8.0
 rootdir: /home/chenyu/dev/rl-algo, inifile:
-collected 1 item
+collected 5 items
 
-test_pytest_format.py .                                                  [100%]
+test_pytest_format.py .....                                              [100%]
 
-=========================== 1 passed in 0.01 seconds ===========================
-
+=========================== 5 passed in 0.02 seconds ===========================
 """
 
 import pytest
@@ -55,6 +54,11 @@ def test_sample(instance1):
 
 
 @pytest.mark.unit_test
-def test_sample(instance2):
+def test_sample2(instance2):
     # observation space
     assert hasattr(instance2, 'attr')
+
+
+@pytest.mark.parametrize("a,b", [(1, 2), (4, 6), (99, 99)])
+def test_cases(instance2, a, b):
+    assert type(instance2.foo(a, b)) is int
