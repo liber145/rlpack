@@ -1,8 +1,9 @@
-import tensorflow as tf 
+import tensorflow as tf
 import numpy as np
 import math
-from .base import Base 
+from .base import Base
 from ..common.utils import assert_shape
+
 
 class TRPO(Base):
     def __init__(self, config):
@@ -39,7 +40,7 @@ class TRPO(Base):
         self.old_log_var = tf.placeholder(tf.float32, [self.dim_action], "old_var")
         self.advantage = tf.placeholder(tf.float32, [None], "advanatage")
         self.span_reward = tf.placeholder(tf.float32, [None], "span_reward")
-    
+
         logp = -0.5 * tf.reduce_sum(self.log_var)
         logp += -0.5 * tf.reduce_sum(tf.square(self.action - self.mu) / tf.exp(self.log_var), axis=1, keepdims=True)
 
@@ -51,7 +52,7 @@ class TRPO(Base):
 
         # # Object function, surrogate policy loss.
         # ratio = tf.exp(logp - logp_old)
-        # surr1 = ratio * self.advantage 
+        # surr1 = ratio * self.advantage
         # surr2 = tf.clip_by_value(ratio, 1.0 - 0.1, 1.0 + 0.1) * self.advantage
         # self.obj = -tf.reduce_mean(tf.minimum(surr1, surr2))
 
@@ -62,7 +63,6 @@ class TRPO(Base):
         self.actor_vars = tf.trainable_variables("policy_net")
         self.g = self._flat_param_list(tf.gradients(self.obj, self.actor_vars))
 
-        
         # Compute KL divergence.
         log_det_cov_old = tf.reduce_sum(self.old_log_var)
         log_det_cov_new = tf.reduce_sum(self.log_var)
@@ -72,7 +72,6 @@ class TRPO(Base):
 
         # Compute gradients of KL divergence.
         g_kl = self._flat_param_list(tf.gradients(self.kl, self.actor_vars))
-
 
         size_vec = np.sum([np.prod(v.shape.as_list()) for v in self.actor_vars])
         self.vec = tf.placeholder(tf.float32, [size_vec], "vector")
@@ -118,16 +117,16 @@ class TRPO(Base):
         # advantage_batch = (advantage_batch - advantage_batch.mean()) / (advantage_batch.std() + 1e-5)
 
         # Compute some values on old parameters.
-        old_mu_batch, old_log_var = self.sess.run([self.mu, self.log_var], feed_dict={self.observation:s_batch})
+        old_mu_batch, old_log_var = self.sess.run([self.mu, self.log_var], feed_dict={self.observation: s_batch})
 
         # ----------------- Update actor -------------------
         # Fill feed_dict.
         self.feed_dict = {self.observation: s_batch,
-                self.action: a_batch,
-                self.span_reward: target_value_batch,
-                self.old_mu: old_mu_batch,
-                self.old_log_var: old_log_var,
-                self.advantage: advantage_batch}
+                          self.action: a_batch,
+                          self.span_reward: target_value_batch,
+                          self.old_mu: old_mu_batch,
+                          self.old_log_var: old_log_var,
+                          self.advantage: advantage_batch}
 
         # Compute update direction.
         g_obj = self.sess.run(self.g, feed_dict={self.observation: s_batch, self.action: a_batch, self.advantage: advantage_batch, self.old_mu: old_mu_batch, self.old_log_var: old_log_var})
@@ -138,11 +137,11 @@ class TRPO(Base):
         # obj_value, all_vars_value = self.sess.run([self.obj, all_vars], feed_dict=self.feed_dict)
         # print(f"obj_value: {obj_value}")
         # for va, va_value in zip(all_vars, all_vars_value):
-            # print(f"{va}: {va_value}")
+        # print(f"{va}: {va_value}")
         # print(f"ratio: {ratio}")
         # input()
 
-        step_direction = self._conjudate_gradient(-g_obj)
+        step_direction = self._conjudate_gradient(-g_obj)  # pylint: disable=E1130
 
         # Compute max step length.
         self.feed_dict[self.vec] = step_direction
@@ -156,7 +155,7 @@ class TRPO(Base):
         # Assign theta to actor parameters.
         self._recover_param_list(theta)
 
-        obj_val, kl_val = self.sess.run([self.obj, self.kl], feed_dict=self.feed_dict)
+        # obj_val, kl_val = self.sess.run([self.obj, self.kl], feed_dict=self.feed_dict)
 
         # ------------------ Update Critic ----------------------
         for _ in range(self.training_epoch):
@@ -170,7 +169,6 @@ class TRPO(Base):
             #     except StopIteration:
             #         break
 
-
     def _target_func(self, theta):
         self._recover_param_list(theta)
         return self.sess.run([self.obj, self.kl], feed_dict=self.feed_dict)
@@ -182,11 +180,11 @@ class TRPO(Base):
             theta = step_frac * step_len * step_dir + old_theta
             new_fval, new_kl = target_func(theta)
             if new_kl > 1e-2:
-                new_fval += np.inf 
+                new_fval += np.inf
             actual_improve = fval - new_fval
             if actual_improve > 0:
                 return theta, True
-        return old_theta, False 
+        return old_theta, False
 
     def _flat_param_list(self, ts):
         return tf.concat([tf.reshape(t, [-1]) for t in ts], axis=0)
@@ -213,11 +211,11 @@ class TRPO(Base):
             Ap = self.sess.run(self.Hv, feed_dict=self.feed_dict)
 
             alpha = np.dot(r, r) / np.dot(p, Ap)
-            x = x + alpha * p 
+            x = x + alpha * p
             r_new = r + alpha * Ap
             beta = np.dot(r_new, r_new) / np.dot(r, r)
             p = -r_new + beta * p
-            r = r_new 
+            r = r_new
 
             if np.dot(r, r) < residual_tol:
                 break
@@ -235,8 +233,6 @@ class TRPO(Base):
             span_index = index[span_index]
             yield [x[span_index] if x.ndim == 1 else x[span_index, :] for x in data_batch]
 
-
     def get_action(self, obs):
-        actions = self.sess.run(self.sample_action, feed_dict={self.observation:obs})
+        actions = self.sess.run(self.sample_action, feed_dict={self.observation: obs})
         return actions
-

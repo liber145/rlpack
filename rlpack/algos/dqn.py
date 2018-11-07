@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
-import os
 import numpy as np
 import tensorflow as tf
-from tensorboardX import SummaryWriter
-from ..common.log import logger
-from .base import Base
+
 from ..common.utils import assert_shape
+from .base import Base
 
 
 class DQN(Base):
@@ -22,7 +20,6 @@ class DQN(Base):
         super().__init__(config)
 
     def build_network(self):
-        """ ------------- 搭建网络 -------------- """
         self.observation = tf.placeholder(shape=[None, *self.dim_observation], dtype=tf.float32, name="observation")
         self.action = tf.placeholder(shape=[None], dtype=tf.int32, name="action")
         self.target = tf.placeholder(shape=[None], dtype=tf.float32, name="target")  # 目标状态动作值。
@@ -39,7 +36,6 @@ class DQN(Base):
             self.target_qvals = tf.layers.dense(x, self.n_action, activation=None, trainable=False)
 
     def build_algorithm(self):
-        """ ------------- 构建算法 -------------- """
         self.optimizer = tf.train.AdamOptimizer(self.lr, epsilon=1.5e-8)
         trainable_variables = tf.trainable_variables("qnet")
 
@@ -73,30 +69,7 @@ class DQN(Base):
 
         self.update_target_op = _update_target("target_qnet", "qnet")
 
-        # ------------------------------------------
-        # ------------- 需要记录的中间值 --------------
-        # ------------------------------------------
-        # 状态值中的最大的q值，用于打印出来，用于反应效果怎么样。
         self.max_qval = tf.reduce_max(self.qvals)
-
-    # def _prepare(self):
-    #     # ------------- 创建存储器，并创建session --------------
-    #     self.saver = tf.train.Saver(max_to_keep=5)
-    #     conf = tf.ConfigProto(allow_soft_placement=True)
-    #     conf.gpu_options.allow_growth = True  # pylint: disable=E1101
-    #     self.sess = tf.Session(config=conf)
-    #     self.sess.run(tf.global_variables_initializer())
-
-    #     # self.cnt = None
-
-    #     # ------------- 初始化记录器 --------------
-    #     self.summary_writer = SummaryWriter(os.path.join(self.save_path, "summary"))
-
-    #     # ------------- 从上一次存储的模型开始 --------------
-    #     self.load_model(self.save_path)
-
-    #     # ------------- 初始化其他 --------------
-    #     self.total_reward = 0
 
     def get_action(self, obs):
         """Get action according to the given observation and epsilon-greedy method.
@@ -157,29 +130,4 @@ class DQN(Base):
         if global_step % self.update_target_freq == 0:
             self.sess.run(self.update_target_op)
 
-        return global_step, {"loss": loss, "max_q_value": max_q_val}
-
-    # def save_model(self, save_path):
-    #     global_step = self.sess.run(tf.train.get_global_step())
-    #     self.saver.save(
-    #         self.sess,
-    #         os.path.join(save_path, "model", "model"),
-    #         global_step,
-    #         write_meta_graph=True
-    #     )
-
-    # def load_model(self, save_path):
-    #     latest_checkpoint = tf.train.latest_checkpoint(save_path)
-    #     if latest_checkpoint:
-    #         logger.info("Loading model checkpoint {}...".format(latest_checkpoint))
-    #         self.saver.restore(self.sess, latest_checkpoint)
-    #     else:
-    #         logger.info("New start!!")
-
-    # def put(self, data):
-    #     _, _, r, _, d = data
-    #     self.total_reward += r
-    #     if d is True:
-    #         global_step = self.sess.run(tf.train.get_global_step())
-    #         self.summary_writer.add_scalar("total_reward", self.total_reward, global_step)
-    #         self.total_reward = 0
+        return {"loss": loss, "max_q_value": max_q_val, "global_step": global_step}

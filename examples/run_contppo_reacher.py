@@ -14,7 +14,7 @@ from rlpack.algos import ContinuousPPO
 class Config(object):
     def __init__(self):
         self.seed = 1
-        self.save_path = "./log/ppo_reacher"
+        self.save_path = "./log/ppo_reacher_2"
         self.save_model_freq = 0.001
         self.log_freq = 10
 
@@ -22,25 +22,30 @@ class Config(object):
         self.n_stack = 4
         self.dim_observation = None
         self.dim_action = None   # gym中不同环境的action数目不同。
+        self.n_action = None
 
         # 训练长度
         self.n_env = 8
         self.trajectory_length = 128
-        self.n_trajectory = 10000   # for each env
+        self.n_trajectory = 1000   # for each env
         self.batch_size = 64
         self.warm_start_length = 1
         self.memory_size = 1000
 
         # 训练参数
-        self.training_epochs = 100
+        self.training_epoch = 10
         self.discount = 0.99
         self.gae = 0.95
-        self.lr_schedule = lambda x: (1-x) * 2.5e-4
-        self.clip_schedule = lambda x: (1-x) * 0.1
+        self.lr_schedule = lambda x: (1 - x) * 2.5e-4
+        self.clip_schedule = lambda x: (1 - x) * 0.1
         self.vf_coef = 1.0
         self.entropy_coef = 0.01
         self.max_grad_norm = 0.5
         self.lr = 3e-4
+
+        self.initial_epsilon = 0.9
+        self.final_epsilon = 0.01
+        self.update_target_freq = 100
 
 
 def process_env(env):
@@ -50,21 +55,6 @@ def process_env(env):
 
     print(f"dim_action: {env.dim_action}")
     return config
-
-
-# class Agent(PPO):
-#     def __init__(self, config):
-#         super().__init__(config)
-#
-#     def build_network(self):
-#         self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], name="observation")
-#         x = tf.layers.dense(self.observation, 256, activation=tf.nn.relu)
-#         x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
-#         x = tf.layers.dense(x, 512, activation=tf.nn.relu)
-#         self.logit_action_probability = tf.layers.dense(
-#             x, self.n_action, activation=None, kernel_initializer=tf.truncated_normal_initializer(0.0, 0.01))
-#         self.state_value = tf.squeeze(tf.layers.dense(
-#             x, 1, activation=None, kernel_initializer=tf.truncated_normal_initializer()))
 
 
 def safemean(x):
@@ -103,7 +93,7 @@ def learn(env, agent, config):
             memory.store_sard(obs, actions, rewards, dones)
             obs = next_obs
 
-        update_ratio = i/config.n_trajectory
+        update_ratio = i / config.n_trajectory
         data_batch = memory.get_last_n_step(config.trajectory_length)
         agent.update(data_batch, update_ratio)
 

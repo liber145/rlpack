@@ -13,18 +13,19 @@ from rlpack.common import Memory
 class Config(object):
     def __init__(self):
         self.seed = 1
-        self.save_path = "./log/alien"
+        self.save_path = "./log/doubledqn_alien"
         self.save_model_freq = 0.001
         self.log_freq = 10
 
         # 环境
         self.n_stack = 4
         self.dim_observation = None
+        self.dim_action = None
         self.n_action = None   # gym中不同环境的action数目不同。
 
         # 训练长度
         self.n_env = 8
-        self.trajectory_length = 4
+        self.trajectory_length = 128
         self.n_trajectory = 10000   # for each env
         self.batch_size = 64
         self.warm_start_length = 1000
@@ -41,8 +42,8 @@ class Config(object):
         self.vf_coef = 1.0
         self.entropy_coef = 0.01
         self.max_grad_norm = 0.5
-        self.lr_schedule = lambda x: (1-x) * 2.5e-4
-        self.clip_schedule = lambda x: (1-x) * 0.1
+        self.lr_schedule = lambda x: (1 - x) * 2.5e-4
+        self.clip_schedule = lambda x: (1 - x) * 0.1
         self.memory_size = 10000
 
 
@@ -57,7 +58,7 @@ class Agent(DoubleDQN):
             x = tf.layers.conv2d(self.observation, 32, 8, 4, activation=tf.nn.relu, trainable=True)
             x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu, trainable=True)
             x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu, trainable=True)
-            x = tf.contrib.layers.flatten(x)
+            x = tf.contrib.layers.flatten(x)   # pylint: disable=E1101
             x = tf.layers.dense(x, 512, activation=tf.nn.relu, trainable=True)
             self.qvals = tf.layers.dense(x, self.n_action, activation=None, trainable=True)
 
@@ -65,7 +66,7 @@ class Agent(DoubleDQN):
             x = tf.layers.conv2d(self.observation, 32, 8, 4, activation=tf.nn.relu, trainable=True)
             x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu, trainable=True)
             x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu, trainable=True)
-            x = tf.contrib.layers.flatten(x)
+            x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
             x = tf.layers.dense(x, 512, activation=tf.nn.relu, trainable=True)
             self.target_qvals = tf.layers.dense(x, self.n_action, activation=None, trainable=True)
 
@@ -114,7 +115,7 @@ def learn(env, agent, config):
             memory.store_sard(obs, actions, rewards, dones)
             obs = next_obs
 
-        update_ratio = i/config.n_trajectory
+        update_ratio = i / config.n_trajectory
         data_batch = memory.sample_transition(config.batch_size)
         agent.update(data_batch, update_ratio)
 

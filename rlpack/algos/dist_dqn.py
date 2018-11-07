@@ -14,7 +14,7 @@ class DistDQN(Base):
         super().__init__(config)
 
     def build_network(self):
-        self.observation = tf.placeholder(tf.float32, [None, self.dim_observation], name="observation")
+        self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], name="observation")
         self.action = tf.placeholder(tf.int32, [None], name="action")
 
         with tf.variable_scope("qnet"):
@@ -78,9 +78,9 @@ class DistDQN(Base):
 
             for p, b in zip(probability, projection):
                 a = int(b)
-                m[a] += p * (1+a-b)
+                m[a] += p * (1 + a - b)
                 if a < self.n_histogram - 1:
-                    m[a+1] += p * (b-a)
+                    m[a + 1] += p * (b - a)
             return m
 
         targets = []

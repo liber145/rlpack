@@ -259,13 +259,12 @@ class PPO(Base):
                     global_step = self.sess.run(tf.train.get_global_step())
 
                     # Train actor.
-                    c_loss, surr, entro, logit_act_p, p_ratio, _ = self.sess.run([self.critic_loss,
-                                                                                  self.surrogate,
-                                                                                  self.entropy,
-                                                                                  self.logit_action_probability,
-                                                                                  self.ratio,
-                                                                                  self.total_train_op],
-                                                                                 feed_dict={
+                    c_loss, surr, entro, p_ratio, _ = self.sess.run([self.critic_loss,
+                                                                     self.surrogate,
+                                                                     self.entropy,
+                                                                     self.ratio,
+                                                                     self.total_train_op],
+                                                                    feed_dict={
                         self.observation: mini_s_batch,
                         self.old_logit_action_probability: mini_old_logit_action_probability_batch,
                         self.action: mini_a_batch,
@@ -275,9 +274,6 @@ class PPO(Base):
                         self.clip_epsilon: self.clip_schedule(update_ratio)})
 
                     if global_step % 100 == 0:
-                        logit = logit_act_p[0, :]
-                        logit = logit - np.max(logit)
-                        prob = np.exp(logit) / np.sum(np.exp(logit))
                         print(f"c_loss: {c_loss}  surr: {surr}  entro: {entro[0]}  ratio: {p_ratio[0]} at step {global_step}")
 
                 except StopIteration:
