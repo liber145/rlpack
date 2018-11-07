@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 setup(name="rlpack",
       version="0.1.0",
@@ -11,5 +11,4 @@ setup(name="rlpack",
           "msgpack",
           "zmq",
           "tensorboardX",
-      ]
-)
+      ])

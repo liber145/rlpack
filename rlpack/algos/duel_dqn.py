@@ -1,6 +1,7 @@
-from .base import Base
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
+
+from .base import Base
 
 
 class DuelDQN(Base):
@@ -10,10 +11,7 @@ class DuelDQN(Base):
         super().__init__(config)
 
     def build_network(self):
-        """ ------------- 搭建网络 -------------- """
-        self.observation = tf.placeholder(shape=[None, self.dim_observation], dtype=tf.float32, name="observation")
-        self.action = tf.placeholder(shape=[None], dtype=tf.int32, name="action")
-        self.target = tf.placeholder(shape=[None], dtype=tf.float32, name="target")
+        self.observation = tf.placeholder(shape=[None, *self.dim_observation], dtype=tf.float32, name="observation")
 
         with tf.variable_scope("net"):
             x = tf.layers.dense(self.observation, 32, activation=tf.nn.relu, trainable=True)
@@ -29,6 +27,8 @@ class DuelDQN(Base):
 
     def build_algorithm(self):
         self.optimizer = tf.train.AdamOptimizer(self.lr, epsilon=1.5e-8)
+        self.action = tf.placeholder(shape=[None], dtype=tf.int32, name="action")
+        self.target = tf.placeholder(shape=[None], dtype=tf.float32, name="target")
         trainable_variables = tf.trainable_variables("net")
 
         # 计算Q(s,a)。
@@ -112,10 +112,6 @@ class DuelDQN(Base):
                 self.target: target_batch
             }
         )
-
-        # 存储结果。
-        self.summary_writer.add_scalar("loss", loss, global_step)
-        self.summary_writer.add_scalar("max_q_value", max_q_val, global_step)
 
         # 存储模型。
         if global_step % self.save_model_freq == 0:

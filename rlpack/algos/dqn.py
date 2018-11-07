@@ -10,21 +10,11 @@ class DQN(Base):
     """Deep Q Network."""
 
     def __init__(self, config):
-        """
-        1. 从config中获得参数。
-        2. 初始化tensorflow配置，如申请graph，动态使用gpu空间等。
-        3. 搭建神经网络，如值函数网络，目标值函数网络等。
-        4. 使用上面的函数近似网络，搭建算法框架，如DQN等。
-        5. 创建tf.saver，tf.session。
-        """
         super().__init__(config)
 
     def build_network(self):
         self.observation = tf.placeholder(shape=[None, *self.dim_observation], dtype=tf.float32, name="observation")
-        self.action = tf.placeholder(shape=[None], dtype=tf.int32, name="action")
-        self.target = tf.placeholder(shape=[None], dtype=tf.float32, name="target")  # 目标状态动作值。
 
-        # 值函数网络和目标值函数网络。
         with tf.variable_scope("qnet"):
             x = tf.layers.dense(self.observation, 32, activation=tf.nn.relu, trainable=True)
             x = tf.layers.dense(x, 32, activation=tf.nn.relu, trainable=True)
@@ -37,25 +27,24 @@ class DQN(Base):
 
     def build_algorithm(self):
         self.optimizer = tf.train.AdamOptimizer(self.lr, epsilon=1.5e-8)
+        self.action = tf.placeholder(shape=[None], dtype=tf.int32, name="action")
+        self.target = tf.placeholder(shape=[None], dtype=tf.float32, name="target")  # 目标状态动作值。
         trainable_variables = tf.trainable_variables("qnet")
 
-        # 当前状态动作值。
+        # Compute the state value.
         batch_size = tf.shape(self.observation)[0]
-        # gather_indices = tf.range(batch_size) * self.n_action + self.action
-        # action_q = tf.gather(tf.reshape(self.qvals, [-1]), gather_indices)
-
         action_index = tf.stack([tf.range(batch_size), self.action], axis=1)
         action_q = tf.gather_nd(self.qvals, action_index)
         assert_shape(action_q, [None])
 
-        # 计算损失函数，优化参数。
+        # Compute loss and optimize the object.
         self.loss = tf.reduce_mean(tf.squared_difference(self.target, action_q))   # 损失值。
         self.train_op = self.optimizer.minimize(self.loss,
                                                 global_step=tf.train.get_global_step(),
                                                 var_list=trainable_variables
                                                 )
 
-        # 更新目标网络。
+        # Update target network.
         def _update_target(new_net, old_net):
             params1 = tf.trainable_variables(old_net)
             params1 = sorted(params1, key=lambda v: v.name)
@@ -98,7 +87,10 @@ class DQN(Base):
         return actions
 
     def update(self, minibatch, update_ratio: float):
-        """更新策略，使用minibatch样本。"""
+        """更新策略，使用minibatch样本。
+        :param minibatch: A minibatch of samples.
+        :update ratio: the ratio of update.
+        """
 
         # 拆分sample样本。
         s_batch, a_batch, r_batch, d_batch, next_s_batch = minibatch
@@ -118,15 +110,11 @@ class DQN(Base):
             }
         )
 
-        # 存储结果。
-        # self.summary_writer.add_scalar("loss", loss, global_step)
-        # self.summary_writer.add_scalar("max_q_value", max_q_val, global_step)
-
-        # 存储模型。
+        # Store model.
         if global_step % self.save_model_freq == 0:
             self.save_model()
 
-        # 更新目标策略。
+        # Update target policy.
         if global_step % self.update_target_freq == 0:
             self.sess.run(self.update_target_op)
 

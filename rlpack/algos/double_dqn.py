@@ -92,7 +92,6 @@ class DoubleDQN(Base):
         exp_m = np.exp(qvals / alpha - exp_m)
 
         global_step = self.sess.run(tf.train.get_global_step())
-        self.summary_writer.add_scalar("action_probability", exp_m[0][0], global_step)
 
         actions = [np.random.choice(self.n_action, p=exp_m[i]) for i in range(newobs.shape[0])]
 
@@ -123,15 +122,11 @@ class DoubleDQN(Base):
             }
         )
 
-        # 存储结果。
-        self.summary_writer.add_scalar("loss", loss, global_step)
-        self.summary_writer.add_scalar("max_q_value", max_q_val, global_step)
-
-        # 存储模型。
+        # Save model.
         if global_step % self.save_model_freq == 0:
             self.save_model()
 
-        # 更新目标策略。
+        # Update policy.
         if global_step % self.update_target_freq == 0:
             self.sess.run(self.update_target_op)
 

@@ -1,7 +1,9 @@
-from abc import ABC, abstractmethod
 import os
+from abc import ABC, abstractmethod
+
 import tensorflow as tf
 from tensorboardX import SummaryWriter
+
 from ..common.log import logger
 
 
@@ -9,18 +11,15 @@ class Base(ABC):
     """Algorithm base class."""
 
     def __init__(self, config):
+        # Environment parameters.
+        self.n_env = config.n_env
         self.dim_observation = config.dim_observation
         self.dim_action = config.dim_action
         self.n_action = config.n_action
 
+        # Training parameters.
         self.discount = config.discount
         self.batch_size = config.batch_size
-        self.trajectory_length = config.trajectory_length
-        self.initial_epsilon = config.initial_epsilon
-        self.final_epsilon = config.final_epsilon
-        self.epsilon = self.initial_epsilon
-        self.lr = config.lr
-        self.update_target_freq = config.update_target_freq
 
         # Save.
         self.save_path = config.save_path
@@ -60,9 +59,6 @@ class Base(ABC):
 
         # ------------------------ Initialize tensorflow variables.  ------------------------
         self.sess.run(tf.global_variables_initializer())
-
-        # ------------------------ Initialize summary logger. ------------------------
-        self.summary_writer = SummaryWriter(os.path.join(self.save_path, "summary"))
 
         # ------------------------ Reload model from the saved path. ------------------------
         self.load_model()

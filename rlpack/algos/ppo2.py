@@ -43,49 +43,16 @@ class PPO(Base):
         # ------------------------ 存储模型，存储训练信息，重载上回模型 ------------------------
         self._prepare()
 
-    # def build_network(self):
-    #     self.observation = tf.placeholder(tf.float32, [None, self.dim_observation], "observation")
-    #     with tf.variable_scope("policy_net"):
-    #         x = tf.layers.dense(self.observation, 64, activation=tf.nn.relu)
-    #         x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-    #         self.logit_action_probability = tf.layers.dense(x, self.n_action, activation=None)
-
-    #     with tf.variable_scope("value_net"):
-    #         x = tf.layers.dense(self.observation, 64, activation=tf.nn.relu)
-    #         x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-    #         self.state_value = tf.squeeze(tf.layers.dense(x, 1))
-
     def build_network(self):
         self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], name="observation")
+
         x = tf.layers.conv2d(self.observation, 32, 8, 4, activation=tf.nn.relu)
         x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu)
         x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu)
         x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
         x = tf.layers.dense(x, 512, activation=tf.nn.relu)
-        self.logit_action_probability = tf.layers.dense(
-            x, self.n_action, activation=None, kernel_initializer=tf.truncated_normal_initializer(0.0, 0.01))
-        self.state_value = tf.squeeze(tf.layers.dense(
-            x, 1, activation=None, kernel_initializer=tf.truncated_normal_initializer()))
-
-    # def build_network(self):
-    #     self.observation = tf.placeholder(tf.float32, [None, 224, 320, 4], name="observation")
-    #     with tf.variable_scope("policy_net"):
-    #         x = tf.layers.conv2d(self.observation, 32, 5, 2, activation=tf.nn.relu)
-    #         x = tf.layers.batch_normalization(x, training=True)
-    #         x = tf.layers.conv2d(x, 32, 5, 2, activation=tf.nn.relu)
-    #         x = tf.layers.batch_normalization(x, training=True)
-    #         x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
-    #         x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-    #         self.logit_action_probability = tf.layers.dense(x, self.n_action, activation=None)
-
-    #     with tf.variable_scope("value_net"):
-    #         x = tf.layers.conv2d(self.observation, 32, 5, 2, activation=tf.nn.relu)
-    #         x = tf.layers.batch_normalization(x, training=True)
-    #         x = tf.layers.conv2d(x, 32, 5, 2, activation=tf.nn.relu)
-    #         x = tf.layers.batch_normalization(x, training=True)
-    #         x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
-    #         x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-    #         self.state_value = tf.squeeze(tf.layers.dense(x, 1))
+        self.logit_action_probability = tf.layers.dense(x, self.n_action, activation=None, kernel_initializer=tf.truncated_normal_initializer(0.0, 0.01))
+        self.state_value = tf.squeeze(tf.layers.dense(x, 1, activation=None, kernel_initializer=tf.truncated_normal_initializer()))
 
     def build_algorithm(self):
         self.init_clip_epsilon = 0.1
@@ -169,10 +136,6 @@ class PPO(Base):
         s_batch, a_batch, r_batch, d_batch = minibatch
         # assert s_batch.shape == (self.n_env, self.trajectory_length+1, *self.dim_observation)
 
-        # Compute advantage batch.
-        # advantage_batch = np.empty([self.n_env, self.trajectory_length], dtype=np.float32)
-        # target_value_batch = np.empty([self.n_env, self.trajectory_length], dtype=np.float32)
-
         advantage_batch, target_value_batch = [], []
         for i in range(len(d_batch)):
             assert d_batch[i].ndim == 1
@@ -204,35 +167,8 @@ class PPO(Base):
         advantage_batch = advantage_batch.reshape(all_step)
         target_value_batch = target_value_batch.reshape(all_step)
 
-        # s_batch = s_batch[:, :-1, :, :, :].reshape(self.n_env * self.trajectory_length, *self.dim_observation)
-        # a_batch = a_batch.reshape(self.n_env * self.trajectory_length)
-        # advantage_batch = advantage_batch.reshape(self.n_env * self.trajectory_length)
-        # target_value_batch = target_value_batch.reshape(self.n_env * self.trajectory_length)
-
         # Normalize Advantage.
         advantage_batch = (advantage_batch - advantage_batch.mean()) / (advantage_batch.std() + 1e-5)
-
-        # batch_size = s_batch.shape[0]
-        # next_state_value_batch = self.sess.run(self.state_value, feed_dict={self.observation: next_s_batch})
-        # state_value_batch = self.sess.run(self.state_value, feed_dict={self.observation: s_batch})
-
-        # assert next_state_value_batch.ndim == 1
-        # assert state_value_batch.ndim == 1
-
-        # # Compute generalized advantage.
-        # delta_batch = r_batch + self.discount * (1 - d_batch) * next_state_value_batch - state_value_batch
-        # assert delta_batch.shape == (batch_size,)
-        # advantage_batch = np.empty(batch_size, dtype=np.float32)
-        # last_advantage = 0
-        # for t in reversed(range(batch_size)):
-        #     advantage_batch[t] = delta_batch[t] + self.discount * self.tau * (1 - d_batch[t]) * last_advantage
-        #     last_advantage = advantage_batch[t].copy()
-
-        # # Compute target state value.
-        # target_state_value_batch = advantage_batch + state_value_batch
-
-        # # Normalization advantage. This must be done after target state value.
-        # advantage_batch = (advantage_batch - advantage_batch.mean()) / (advantage_batch.std() + 1e-5)
 
         old_logit_action_probability_batch = self.sess.run(
             self.logit_action_probability, feed_dict={self.observation: s_batch})
@@ -240,36 +176,7 @@ class PPO(Base):
         # Train network.
         for _ in range(self.training_epoch):
             # Get training sample generator.
-            batch_generator = self._generator(
-                [s_batch, a_batch, advantage_batch, old_logit_action_probability_batch, target_value_batch], batch_size=self.batch_size)
-            # # Train actor.
-            # while True:
-            #     try:
-            #         mini_s_batch, mini_a_batch, mini_advantage_batch, mini_old_logit_action_probability_batch, mini_target_state_value_batch = next(
-            #             batch_generator)
-
-            #         # print(f"mini target state value shape: {mini_target_state_value_batch.shape}")
-
-            #         global_step = self.sess.run(tf.train.get_global_step())
-
-            #         # Train actor.
-            #         p_ratio, _ = self.sess.run([self.ratio, self.actor_train_op], feed_dict={
-            #             self.observation: mini_s_batch,
-            #             self.old_logit_action_probability: mini_old_logit_action_probability_batch,
-            #             self.action: mini_a_batch,
-            #             self.advantage: mini_advantage_batch,
-            #             self.actor_lr: exponential_decay(self.actor_init_lr, 0.9999, 100000, global_step)})
-
-            #         # print(f"p_ratio: {p_ratio}")
-
-            #         # Train Critic.
-            #         self.sess.run(self.critic_train_op, feed_dict={
-            #             self.observation: mini_s_batch,
-            #             self.target_state_value: mini_target_state_value_batch,
-            #             self.critic_lr: exponential_decay(self.critic_init_lr, 0.9999, 100000, global_step)})
-            #     except StopIteration:
-            #         del batch_generator
-            #         break
+            batch_generator = self._generator([s_batch, a_batch, advantage_batch, old_logit_action_probability_batch, target_value_batch], batch_size=self.batch_size)
 
             while True:
                 try:

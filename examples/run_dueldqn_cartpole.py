@@ -2,9 +2,9 @@ import os
 from collections import deque
 
 import numpy as np
-from rlpack.algos import ContinuousPPO
-from rlpack.common import NonBlockMemory
-from rlpack.environment import MujocoWrapper
+from rlpack.algos import DuelDQN
+from rlpack.common import Memory
+from rlpack.environment import CartpoleWrapper
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
 
@@ -12,14 +12,14 @@ from tqdm import tqdm
 class Config(object):
     def __init__(self):
         self.seed = 1
-        self.save_path = "./log/ppo_reacher"
+        self.save_path = "./log/dueldqn_cartpole"
         self.save_model_freq = 0.001
         self.log_freq = 10
 
         # 环境
-        self.n_stack = 4
         self.dim_observation = None
-        self.dim_action = None   # gym中不同环境的action数目不同。
+        self.dim_action = None
+        self.n_action = None   # gym中不同环境的action数目不同。
 
         # 训练长度
         self.n_env = 8
@@ -27,42 +27,30 @@ class Config(object):
         self.n_trajectory = 10000   # for each env
         self.batch_size = 64
         self.warm_start_length = 1
-        self.memory_size = 1000
 
         # 训练参数
-        self.training_epoch = 100
+        self.training_epoch = 3
         self.discount = 0.99
         self.gae = 0.95
-        self.lr_schedule = lambda x: (1 - x) * 2.5e-4
-        self.clip_schedule = lambda x: (1 - x) * 0.1
         self.vf_coef = 1.0
         self.entropy_coef = 0.01
         self.max_grad_norm = 0.5
+        self.lr_schedule = lambda x: (1 - x) * 2.5e-4
+        self.clip_schedule = lambda x: (1 - x) * 0.1
+        self.memory_size = 1000
+
+        self.initial_epsilon = 0.9
+        self.final_epsilon = 0.01
         self.lr = 3e-4
 
+        self.update_target_freq = 100
 
-def process_env(env):
+
+def process_config(env):
     config = Config()
     config.dim_observation = env.dim_observation
-    config.dim_action = env.dim_action[0]
-
-    print(f"dim_action: {env.dim_action}")
+    config.n_action = env.n_action
     return config
-
-
-# class Agent(PPO):
-#     def __init__(self, config):
-#         super().__init__(config)
-#
-#     def build_network(self):
-#         self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], name="observation")
-#         x = tf.layers.dense(self.observation, 256, activation=tf.nn.relu)
-#         x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
-#         x = tf.layers.dense(x, 512, activation=tf.nn.relu)
-#         self.logit_action_probability = tf.layers.dense(
-#             x, self.n_action, activation=None, kernel_initializer=tf.truncated_normal_initializer(0.0, 0.01))
-#         self.state_value = tf.squeeze(tf.layers.dense(
-#             x, 1, activation=None, kernel_initializer=tf.truncated_normal_initializer()))
 
 
 def safemean(x):
@@ -71,22 +59,19 @@ def safemean(x):
 
 def learn(env, agent, config):
 
-    memory = NonBlockMemory(config.n_env)
+    memory = Memory(config.memory_size)
     epinfobuf = deque(maxlen=100)
     summary_writer = SummaryWriter(os.path.join(config.save_path, "summary"))
 
     # 热启动，随机收集数据。
-    tags, obs = env.reset()
-    memory.store_tag_s(tags, obs)
+    obs = env.reset()
     print(f"observation: max={np.max(obs)} min={np.min(obs)}")
     for i in tqdm(range(config.warm_start_length)):
         actions = agent.get_action(obs)
-        next_tags, next_obs, rewards, dones, infos = env.step(actions)
+        next_obs, rewards, dones, infos = env.step(actions)
 
-        memory.store_tag_a(tags, actions)
-        memory.store_tag_rds(next_tags, rewards, dones, next_obs)
+        memory.store_sard(obs, actions, rewards, dones)
         obs = next_obs
-        tags = next_tags
 
     print("Finish warm start.")
     print("Start training.")
@@ -94,20 +79,18 @@ def learn(env, agent, config):
         epinfos = []
         for _ in range(config.trajectory_length):
             actions = agent.get_action(obs)
-            next_tags, next_obs, rewards, dones, infos = env.step(actions)
+            next_obs, rewards, dones, infos = env.step(actions)
 
             for info in infos:
                 maybeepinfo = info.get('episode')
                 if maybeepinfo:
                     epinfos.append(maybeepinfo)
 
-            memory.store_tag_a(tags, actions)
-            memory.store_tag_rds(next_tags, rewards, dones, next_obs)
+            memory.store_sard(obs, actions, rewards, dones)
             obs = next_obs
-            tags = next_tags
 
         update_ratio = i / config.n_trajectory
-        data_batch = memory.get_last_n_step(config.trajectory_length)
+        data_batch = memory.sample_transition(config.batch_size)
         agent.update(data_batch, update_ratio)
 
         epinfobuf.extend(epinfos)
@@ -121,7 +104,8 @@ def learn(env, agent, config):
 
 
 if __name__ == "__main__":
-    env = MujocoWrapper("Reacher-v2", 8)
-    config = process_env(env)
-    agent = ContinuousPPO(config)
-    learn(env, agent, config)
+    config = Config()
+    env = CartpoleWrapper(config.n_env)
+    config = process_config(env)
+    pol = DuelDQN(config)
+    learn(env, pol, config)

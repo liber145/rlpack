@@ -1,6 +1,7 @@
+import numpy as np
 import tensorflow as tf
 from tensorboardX import SummaryWriter
-import numpy as np
+
 from .base import Base
 
 
@@ -15,7 +16,6 @@ class DistDQN(Base):
 
     def build_network(self):
         self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], name="observation")
-        self.action = tf.placeholder(tf.int32, [None], name="action")
 
         with tf.variable_scope("qnet"):
             x = tf.layers.dense(self.observation, 32, activation=tf.nn.relu, trainable=True)
@@ -25,11 +25,11 @@ class DistDQN(Base):
         with tf.variable_scope("target_qnet"):
             x = tf.layers.dense(self.observation, 32, activation=tf.nn.relu, trainable=False)
             x = tf.layers.dense(x, 32, activation=tf.nn.relu, trainable=False)
-            self.target_logits = tf.layers.dense(x, self.n_action * self.n_histogram,
-                                                 activation=tf.nn.relu, trainable=False)
+            self.target_logits = tf.layers.dense(x, self.n_action * self.n_histogram, activation=tf.nn.relu, trainable=False)
 
     def build_algorithm(self):
         self.optimizer = tf.train.AdamOptimizer(self.lr)
+        self.action = tf.placeholder(tf.int32, [None], name="action")
         self.target = tf.placeholder(tf.float32, [None], name="target")
         self.next_input = tf.placeholder(tf.float32, [None, self.n_histogram], name="next_input")
 
@@ -60,10 +60,6 @@ class DistDQN(Base):
 
         self.update_target_op = _update_target("target_qnet", "qnet")
 
-        # ------------------------------------------
-        # ------------- 需要记录的中间值 --------------
-        # ------------------------------------------
-
     def update(self, minibatch, update_ratio):
         s_batch, a_batch, r_batch, d_batch, next_s_batch = minibatch
 
@@ -90,9 +86,6 @@ class DistDQN(Base):
         target_batch = np.array(targets)
         _, global_step, loss = self.sess.run([self.train_op, tf.train.get_global_step(), self.loss],
                                              feed_dict={self.observation: s_batch, self.action: a_batch, self.next_input: target_batch})
-
-        # 存储结果。
-        self.summary_writer.add_scalar("loss", loss, global_step)
 
         # 存储模型。
         if global_step % self.save_model_freq == 0:

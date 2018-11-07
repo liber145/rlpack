@@ -25,22 +25,6 @@ class ContinuousPPO(Base):
         self.lr_schedule = config.lr_schedule
         self.clip_schedule = config.clip_schedule
 
-        # self.save_path = config.save_path
-        # self.save_model_freq = config.save_model_freq
-        #
-        # # ------------------------ 申请网络图 ------------------------
-        # tf.reset_default_graph()
-        # tf.Variable(0, name="global_step", trainable=False)
-        #
-        # # ------------------------ 搭建网络 ------------------------
-        # self.build_network()
-        #
-        # # ------------------------ 搭建算法 ------------------------
-        # self.build_algorithm()
-        #
-        # # ------------------------ 存储模型，存储训练信息，重载上回模型 ------------------------
-        # self._prepare()
-
         super().__init__(config)
 
     def build_network(self):

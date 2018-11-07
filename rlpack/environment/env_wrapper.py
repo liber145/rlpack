@@ -50,6 +50,9 @@ class CartpoleWrapper(StackEnv):
         self.trajectory_rewards = [0 for _ in range(self.n_env)]
         self.trajectory_length = [0 for _ in range(self.n_env)]
 
+        self._dim_observation = self.envs[0].observation_space.shape
+        self._n_action = self.envs[0].action_space.n
+
     def step(self, actions):
         obs, rewards, dones, _ = super().step(actions)
         epinfos = []
@@ -65,6 +68,14 @@ class CartpoleWrapper(StackEnv):
             else:
                 rewards[i] = 0.1
         return obs, rewards, dones, epinfos
+
+    @property
+    def dim_observation(self):
+        return self._dim_observation
+
+    @property
+    def n_action(self):
+        return self._n_action
 
     @property
     def is_continuous(self):

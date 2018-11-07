@@ -11,7 +11,7 @@ class A2C(Base):
 
     def __init__(self, config):
         self.tau = config.gae
-        self.n_env = config.n_env
+
         self.training_epoch = config.training_epoch
 
         super().__init__(config)
@@ -33,7 +33,6 @@ class A2C(Base):
             self.state_value = tf.squeeze(tf.layers.dense(x, 1, activation=None))
 
     def build_algorithm(self):
-        # ------------ Compute g of object. -------------
         self.actor_optimizer = tf.train.AdamOptimizer(self.lr)
         self.critic_optimizer = tf.train.AdamOptimizer(self.lr)
 
@@ -100,45 +99,13 @@ class A2C(Base):
         # Compute old terms for placeholder.
         old_mu_batch, old_log_var = self.sess.run([self.mu, self.log_var], feed_dict={self.observation: s_batch})
 
-        # data_batch = utils.trajectories_to_batch(trajectories, self.discount)
-        #
-        # old_mu_val, old_log_var_val = self.sess.run(
-        #     [self.mu, self.log_var], feed_dict={self.observation: data_batch["state"]})
-        #
-        # # log_var is a common parameter independent of states.
-        # # So there is no shuffle for it.
-        # data_batch["oldmu"] = old_mu_val
-
         # ---------- Update actor ----------
-
-        # Update actor.
         for _ in range(self.training_epoch):
             batch_generator = self._generator([s_batch, a_batch, advantage_batch, old_mu_batch, target_value_batch], batch_size=self.batch_size)
-
-            # batch_generator = utils.generator(data_batch, self.batch_size)
 
             while True:
                 try:
                     mb_s, mb_a, mb_advantage, mb_old_mu, mb_target_value = next(batch_generator)
-
-                    # sample_batch = next(batch_generator)
-
-                    # Compute advantage.
-                    # nextstate_val = self.sess.run(
-                    #     self.state_value, feed_dict={self.observation: sample_batch["nextstate"]})
-                    # state_val = self.sess.run(
-                    #     self.state_value, feed_dict={self.observation: sample_batch["state"]})
-                    #
-                    # advantage = (sample_batch["reward"] + self.discount *
-                    #              (1 - sample_batch["done"]) * nextstate_val) - state_val
-                    #
-                    # self.feeddict = {self.observation: sample_batch["state"],
-                    #                  self.action: sample_batch["action"],
-                    #                  self.span_reward: sample_batch["spanreward"],
-                    #                  self.old_mu: sample_batch["oldmu"],
-                    #                  self.old_log_var: old_log_var_val,
-                    #                  self.advantage: advantage
-                    #                  }
 
                     self.sess.run(self.train_actor_op, feed_dict={
                         self.observation: mb_s,
@@ -152,22 +119,12 @@ class A2C(Base):
                     break
 
         # ---------- Update critic ----------
-        # critic_loss = self.sess.run(self.critic_loss, feed_dict=self.feeddict)
-        # print("old critic loss:", critic_loss)
-
-        for _ in range(10):
+        for _ in range(self.training_epoch):
             batch_generator = self._generator([s_batch, target_value_batch], batch_size=self.batch_size)
-
-            # batch_generator = utils.generator(data_batch)
 
             while True:
                 try:
                     mb_s, mb_target_value = next(batch_generator)
-
-                    # sample_batch = next(batch_generator)
-
-                    # self.feeddict[self.observation] = sample_batch["state"]
-                    # self.feeddict[self.span_reward] = sample_batch["spanreward"]
 
                     _, global_step, critic_loss = self.sess.run([self.train_critic_op, tf.train.get_global_step(), self.critic_loss],
                                                                 feed_dict={
@@ -177,11 +134,10 @@ class A2C(Base):
                     del batch_generator
                     break
 
-        return {"loss": critic_loss, "global_step": global_step}
+        return {"critic_loss": critic_loss, "global_step": global_step}
 
-    def get_action(self, ob, epsilon=None):
-        action = self.sess.run(self.sampled_act, feed_dict={
-            self.observation: ob})
+    def get_action(self, ob):
+        action = self.sess.run(self.sampled_act, feed_dict={self.observation: ob})
         return action
 
     def _generator(self, data_batch, batch_size=32):

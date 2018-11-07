@@ -1,8 +1,10 @@
+import math
+
 import numpy as np
 import tensorflow as tf
-from .base import Base
+
 from ..common.utils import assert_shape
-import math
+from .base import Base
 
 
 class PPO(Base):
@@ -40,20 +42,9 @@ class PPO(Base):
         # ------------------------ 存储模型，存储训练信息，重载上回模型 ------------------------
         self._prepare()
 
-    # def build_network(self):
-    #     self.observation = tf.placeholder(tf.float32, [None, self.dim_observation], "observation")
-    #     with tf.variable_scope("policy_net"):
-    #         x = tf.layers.dense(self.observation, 64, activation=tf.nn.relu)
-    #         x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-    #         self.logit_action_probability = tf.layers.dense(x, self.n_action, activation=None)
-
-    #     with tf.variable_scope("value_net"):
-    #         x = tf.layers.dense(self.observation, 64, activation=tf.nn.relu)
-    #         x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-    #         self.state_value = tf.squeeze(tf.layers.dense(x, 1))
-
     def build_network(self):
         self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], name="observation")
+
         x = tf.layers.conv2d(self.observation, 32, 8, 4, activation=tf.nn.relu)
         x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu)
         x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu)
@@ -63,26 +54,6 @@ class PPO(Base):
             x, self.n_action, activation=None, kernel_initializer=tf.truncated_normal_initializer(0.0, 0.01))
         self.state_value = tf.squeeze(tf.layers.dense(
             x, 1, activation=None, kernel_initializer=tf.truncated_normal_initializer()))
-
-    # def build_network(self):
-    #     self.observation = tf.placeholder(tf.float32, [None, 224, 320, 4], name="observation")
-    #     with tf.variable_scope("policy_net"):
-    #         x = tf.layers.conv2d(self.observation, 32, 5, 2, activation=tf.nn.relu)
-    #         x = tf.layers.batch_normalization(x, training=True)
-    #         x = tf.layers.conv2d(x, 32, 5, 2, activation=tf.nn.relu)
-    #         x = tf.layers.batch_normalization(x, training=True)
-    #         x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
-    #         x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-    #         self.logit_action_probability = tf.layers.dense(x, self.n_action, activation=None)
-
-    #     with tf.variable_scope("value_net"):
-    #         x = tf.layers.conv2d(self.observation, 32, 5, 2, activation=tf.nn.relu)
-    #         x = tf.layers.batch_normalization(x, training=True)
-    #         x = tf.layers.conv2d(x, 32, 5, 2, activation=tf.nn.relu)
-    #         x = tf.layers.batch_normalization(x, training=True)
-    #         x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
-    #         x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-    #         self.state_value = tf.squeeze(tf.layers.dense(x, 1))
 
     def build_algorithm(self):
         self.init_clip_epsilon = 0.1
@@ -162,7 +133,7 @@ class PPO(Base):
             minibatch: n_env * trajectory_length * self.dim_observation
         """
         s_batch, a_batch, r_batch, d_batch = minibatch
-        assert s_batch.shape == (self.n_env, self.trajectory_length+1, *self.dim_observation)
+        assert s_batch.shape == (self.n_env, self.trajectory_length + 1, *self.dim_observation)
 
         # Compute advantage batch.
         advantage_batch = np.empty([self.n_env, self.trajectory_length], dtype=np.float32)
@@ -172,7 +143,7 @@ class PPO(Base):
             state_value_batch = self.sess.run(self.state_value, feed_dict={self.observation: s_batch[i, ...]})
 
             delta_value_batch = r_batch[i, :] + self.discount * (1 - d_batch[i, :]) * state_value_batch[1:] - state_value_batch[:-1]
-            assert state_value_batch.shape == (self.trajectory_length+1,)
+            assert state_value_batch.shape == (self.trajectory_length + 1,)
             assert delta_value_batch.shape == (self.trajectory_length,)
 
             last_advantage = 0
@@ -192,69 +163,16 @@ class PPO(Base):
         # Normalize Advantage.
         advantage_batch = (advantage_batch - advantage_batch.mean()) / (advantage_batch.std() + 1e-5)
 
-        # batch_size = s_batch.shape[0]
-        # next_state_value_batch = self.sess.run(self.state_value, feed_dict={self.observation: next_s_batch})
-        # state_value_batch = self.sess.run(self.state_value, feed_dict={self.observation: s_batch})
-
-        # assert next_state_value_batch.ndim == 1
-        # assert state_value_batch.ndim == 1
-
-        # # Compute generalized advantage.
-        # delta_batch = r_batch + self.discount * (1 - d_batch) * next_state_value_batch - state_value_batch
-        # assert delta_batch.shape == (batch_size,)
-        # advantage_batch = np.empty(batch_size, dtype=np.float32)
-        # last_advantage = 0
-        # for t in reversed(range(batch_size)):
-        #     advantage_batch[t] = delta_batch[t] + self.discount * self.tau * (1 - d_batch[t]) * last_advantage
-        #     last_advantage = advantage_batch[t].copy()
-
-        # # Compute target state value.
-        # target_state_value_batch = advantage_batch + state_value_batch
-
-        # # Normalization advantage. This must be done after target state value.
-        # advantage_batch = (advantage_batch - advantage_batch.mean()) / (advantage_batch.std() + 1e-5)
-
-        old_logit_action_probability_batch = self.sess.run(
-            self.logit_action_probability, feed_dict={self.observation: s_batch})
+        old_logit_action_probability_batch = self.sess.run(self.logit_action_probability, feed_dict={self.observation: s_batch})
 
         # Train network.
-        for _ in range(3):
+        for _ in range(self.training_epoch):
             # Get training sample generator.
             batch_generator = self._generator([s_batch, a_batch, advantage_batch, old_logit_action_probability_batch, target_value_batch], batch_size=self.batch_size)
-            # # Train actor.
-            # while True:
-            #     try:
-            #         mini_s_batch, mini_a_batch, mini_advantage_batch, mini_old_logit_action_probability_batch, mini_target_state_value_batch = next(
-            #             batch_generator)
-
-            #         # print(f"mini target state value shape: {mini_target_state_value_batch.shape}")
-
-            #         global_step = self.sess.run(tf.train.get_global_step())
-
-            #         # Train actor.
-            #         p_ratio, _ = self.sess.run([self.ratio, self.actor_train_op], feed_dict={
-            #             self.observation: mini_s_batch,
-            #             self.old_logit_action_probability: mini_old_logit_action_probability_batch,
-            #             self.action: mini_a_batch,
-            #             self.advantage: mini_advantage_batch,
-            #             self.actor_lr: exponential_decay(self.actor_init_lr, 0.9999, 100000, global_step)})
-
-            #         # print(f"p_ratio: {p_ratio}")
-
-            #         # Train Critic.
-            #         self.sess.run(self.critic_train_op, feed_dict={
-            #             self.observation: mini_s_batch,
-            #             self.target_state_value: mini_target_state_value_batch,
-            #             self.critic_lr: exponential_decay(self.critic_init_lr, 0.9999, 100000, global_step)})
-            #     except StopIteration:
-            #         del batch_generator
-            #         break
 
             while True:
                 try:
                     mini_s_batch, mini_a_batch, mini_advantage_batch, mini_old_logit_action_probability_batch, mini_target_state_value_batch = next(batch_generator)
-
-                    # print(f"mini target state value shape: {mini_target_state_value_batch.shape}")
 
                     global_step = self.sess.run(tf.train.get_global_step())
 
@@ -291,6 +209,6 @@ class PPO(Base):
         np.random.shuffle(index)
 
         for i in range(math.ceil(n_sample / batch_size)):
-            span_index = slice(i*batch_size, min((i+1)*batch_size, n_sample))
+            span_index = slice(i * batch_size, min((i + 1) * batch_size, n_sample))
             span_index = index[span_index]
             yield [x[span_index] if x.ndim == 1 else x[span_index, :] for x in data_batch]

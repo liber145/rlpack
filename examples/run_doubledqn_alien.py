@@ -1,13 +1,13 @@
-import numpy as np
 import os
-from tqdm import tqdm
 from collections import deque
-from tensorboardX import SummaryWriter
-import tensorflow as tf
 
-from rlpack.environment import AtariWrapper
+import numpy as np
+import tensorflow as tf
 from rlpack.algos import DoubleDQN
 from rlpack.common import Memory
+from rlpack.environment import AtariWrapper
+from tensorboardX import SummaryWriter
+from tqdm import tqdm
 
 
 class Config(object):
@@ -36,7 +36,7 @@ class Config(object):
         self.lr = 2.5e-4
         self.update_target_freq = 500
 
-        self.training_epochs = 3
+        self.training_epoch = 3
         self.discount = 0.99
         self.gae = 0.95
         self.vf_coef = 1.0

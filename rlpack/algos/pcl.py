@@ -1,8 +1,9 @@
-from .baseq import BaseQ
-import tensorflow as tf
 import numpy as np
 import scipy
+import tensorflow as tf
+
 from ..common.utils import assert_shape
+from .baseq import BaseQ
 
 
 class PCL(BaseQ):
@@ -15,7 +16,6 @@ class PCL(BaseQ):
 
     def build_network(self):
         self.observation = tf.placeholder(shape=[None, self.dim_observation], dtype=tf.float32, name="observation")
-        self.action = tf.placeholder(shape=[None], dtype=tf.int32, name="action")
 
         with tf.variable_scope("qnet"):
             x = tf.layers.dense(self.observation, 32, activation=tf.nn.relu, trainable=True)
@@ -29,6 +29,7 @@ class PCL(BaseQ):
 
     def build_algorithm(self):
         self.optimizer = tf.train.AdamOptimizer(0.001)
+        self.action = tf.placeholder(shape=[None], dtype=tf.int32, name="action")
         trainable_variables = tf.trainable_variables("qnet")
         self.td = tf.placeholder(tf.float32, [None], name="temporal_difference")
 
@@ -109,8 +110,6 @@ class PCL(BaseQ):
             newobs = obs
 
         qval, actionval, action_probability = self.sess.run([self.qvals, self.action_value, self.action_probability], feed_dict={self.observation: newobs})
-        # print(f"action_probability: {action_probability}")
-        # print(f"qval: {qval}  actionval: {actionval}")
         actions = [np.random.choice(self.n_action, p=action_probability[i]) for i in range(newobs.shape[0])]
 
         if obs.ndim == 1:

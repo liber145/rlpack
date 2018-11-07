@@ -1,12 +1,12 @@
-import numpy as np
 import os
-from tqdm import tqdm
 from collections import deque
-from tensorboardX import SummaryWriter
 
-from rlpack.environment import AtariWrapper
+import numpy as np
 from rlpack.algos import PPO
 from rlpack.common import Memory
+from rlpack.environment import AtariWrapper
+from tensorboardX import SummaryWriter
+from tqdm import tqdm
 
 
 class Config(object):
@@ -19,7 +19,8 @@ class Config(object):
         # 环境
         self.n_stack = 4
         self.dim_observation = None
-        self.n_action = None   # gym中不同环境的action数目不同。
+        self.dim_action = None   # For continuous action.
+        self.n_action = None   # For discrete action.
 
         # 训练长度
         self.n_env = 8
@@ -29,14 +30,14 @@ class Config(object):
         self.warm_start_length = 1
 
         # 训练参数
-        self.training_epochs = 3
+        self.training_epoch = 3
         self.discount = 0.99
         self.gae = 0.95
         self.vf_coef = 1.0
         self.entropy_coef = 0.01
         self.max_grad_norm = 0.5
-        self.lr_schedule = lambda x: (1-x) * 2.5e-4
-        self.clip_schedule = lambda x: (1-x) * 0.1
+        self.lr_schedule = lambda x: (1 - x) * 2.5e-4
+        self.clip_schedule = lambda x: (1 - x) * 0.1
         self.memory_size = 1000
 
 
@@ -84,7 +85,7 @@ def learn(env, agent, config):
             memory.store_sard(obs, actions, rewards, dones)
             obs = next_obs
 
-        update_ratio = i/config.n_trajectory
+        update_ratio = i / config.n_trajectory
         data_batch = memory.get_last_n_step(config.trajectory_length)
         agent.update(data_batch, update_ratio)
 
@@ -99,19 +100,9 @@ def learn(env, agent, config):
 
 
 if __name__ == "__main__":
-    n_stack = 4
-    n_env = 8
-    # env = SubprocVecEnv([make_env(i, 'BreakoutNoFrameskip-v4') for i in range(n_env)])
-    # env = FrameStack(env, n_stack)
-
-    env = AtariWrapper("BreakoutNoFrameskip-v4", n_env)
-
-    print("---------------")
-    print(f"action space: {env.action_space.n}")
-    print(f"observation space: {env.observation_space.shape}")
-    print("---------------")
-
-    config = process_config(env)  # 配置config
+    config = Config()
+    env = AtariWrapper("BreakoutNoFrameskip-v4", config.n_env)
+    config = process_config(env)
     pol = PPO(config)
 
     learn(env, pol, config)

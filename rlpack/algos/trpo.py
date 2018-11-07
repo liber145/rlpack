@@ -1,27 +1,25 @@
-import tensorflow as tf
-import numpy as np
 import math
-from .base import Base
+
+import numpy as np
+import tensorflow as tf
+
 from ..common.utils import assert_shape
+from .base import Base
 
 
 class TRPO(Base):
     def __init__(self, config):
         self.delta = config.delta
 
-        self.dim_observation = config.dim_observation
-        self.dim_action = config.dim_action
-
-        self.n_env = config.n_env
         self.gae = config.gae
         self.training_epoch = config.training_epoch
         self.max_grad_norm = config.max_grad_norm
         self.lr_schedule = config.lr_schedule
-        self.batch_size = config.batch_size
         super().__init__(config)
 
     def build_network(self):
         self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], "observation")
+
         with tf.variable_scope("policy_net"):
             x = tf.layers.dense(self.observation, 64, activation=tf.nn.tanh)
             x = tf.layers.dense(x, 64, activation=tf.nn.tanh)
@@ -49,12 +47,6 @@ class TRPO(Base):
 
         logp_old = -0.5 * tf.reduce_sum(self.old_log_var)
         logp_old += -0.5 * tf.reduce_sum(tf.square(self.action - self.old_mu) / tf.exp(self.old_log_var), axis=1, keepdims=True)
-
-        # # Object function, surrogate policy loss.
-        # ratio = tf.exp(logp - logp_old)
-        # surr1 = ratio * self.advantage
-        # surr2 = tf.clip_by_value(ratio, 1.0 - 0.1, 1.0 + 0.1) * self.advantage
-        # self.obj = -tf.reduce_mean(tf.minimum(surr1, surr2))
 
         self.obj = -tf.reduce_mean(self.advantage * tf.exp(logp - logp_old))
         self.p_pold = tf.exp(logp - logp_old)
@@ -90,7 +82,7 @@ class TRPO(Base):
 
     def update(self, minibatch, update_ratio):
         s_batch, a_batch, r_batch, d_batch = minibatch
-        assert s_batch.shape == (self.n_env, self.trajectory_length+1, *self.dim_observation)
+        assert s_batch.shape == (self.n_env, self.trajectory_length + 1, *self.dim_observation)
 
         advantage_batch = np.empty([self.n_env, self.trajectory_length], dtype=np.float32)
         target_value_batch = np.empty([self.n_env, self.trajectory_length], dtype=np.float32)
@@ -98,7 +90,7 @@ class TRPO(Base):
         for i in range(self.n_env):
             state_value_batch = self.sess.run(self.state_value, feed_dict={self.observation: s_batch[i, ...]})
             delta_value_batch = r_batch[i, :] + self.discount * (1 - d_batch[i, :]) * state_value_batch[1:] - state_value_batch[:-1]
-            assert state_value_batch.shape == (self.trajectory_length+1,)
+            assert state_value_batch.shape == (self.trajectory_length + 1,)
             assert delta_value_batch.shape == (self.trajectory_length,)
 
             last_advantage = 0
@@ -113,7 +105,7 @@ class TRPO(Base):
         advantage_batch = advantage_batch.reshape(self.n_env * self.trajectory_length)
         target_value_batch = target_value_batch.reshape(self.n_env * self.trajectory_length)
 
-        # Normalize advantage. # TODO
+        # Normalize advantage.
         # advantage_batch = (advantage_batch - advantage_batch.mean()) / (advantage_batch.std() + 1e-5)
 
         # Compute some values on old parameters.
@@ -131,16 +123,6 @@ class TRPO(Base):
         # Compute update direction.
         g_obj = self.sess.run(self.g, feed_dict={self.observation: s_batch, self.action: a_batch, self.advantage: advantage_batch, self.old_mu: old_mu_batch, self.old_log_var: old_log_var})
 
-        # print(f"g_obj: {g_obj}")
-        # print(f"advantage: {advantage_batch}")
-        # all_vars = tf.trainable_variables()
-        # obj_value, all_vars_value = self.sess.run([self.obj, all_vars], feed_dict=self.feed_dict)
-        # print(f"obj_value: {obj_value}")
-        # for va, va_value in zip(all_vars, all_vars_value):
-        # print(f"{va}: {va_value}")
-        # print(f"ratio: {ratio}")
-        # input()
-
         step_direction = self._conjudate_gradient(-g_obj)  # pylint: disable=E1130
 
         # Compute max step length.
@@ -154,8 +136,6 @@ class TRPO(Base):
 
         # Assign theta to actor parameters.
         self._recover_param_list(theta)
-
-        # obj_val, kl_val = self.sess.run([self.obj, self.kl], feed_dict=self.feed_dict)
 
         # ------------------ Update Critic ----------------------
         for _ in range(self.training_epoch):
@@ -194,7 +174,7 @@ class TRPO(Base):
         start = 0
         for param in self.actor_vars:
             shape = param.shape.as_list()
-            param_np = np.reshape(ts[start: start+np.prod(shape)], shape)
+            param_np = np.reshape(ts[start: start + np.prod(shape)], shape)
             res.append(param_np)
             start += np.prod(shape)
 
@@ -229,7 +209,7 @@ class TRPO(Base):
         np.random.shuffle(index)
 
         for i in range(math.ceil(n_sample / batch_size)):
-            span_index = slice(i*batch_size, min((i+1)*batch_size, n_sample))
+            span_index = slice(i * batch_size, min((i + 1) * batch_size, n_sample))
             span_index = index[span_index]
             yield [x[span_index] if x.ndim == 1 else x[span_index, :] for x in data_batch]
 
