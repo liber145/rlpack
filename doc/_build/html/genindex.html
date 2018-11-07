@@ -79,7 +79,6 @@
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="main.html">main module</a></li>
 <li class="toctree-l1"><a class="reference internal" href="rlpack.html">rlpack package</a></li>
 <li class="toctree-l1"><a class="reference internal" href="setup.html">setup module</a></li>
 </ul>
@@ -165,36 +164,21 @@
  | <a href="#S"><strong>S</strong></a>
  | <a href="#T"><strong>T</strong></a>
  | <a href="#U"><strong>U</strong></a>
- | <a href="#V"><strong>V</strong></a>
  | <a href="#W"><strong>W</strong></a>
  
 </div>
 <h2 id="A">A</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.estimator.a2c.html#rlpack.estimator.a2c.A2C">A2C (class in rlpack.estimator.a2c)</a>
+      <li><a href="rlpack.algos.a2c.html#rlpack.algos.a2c.A2C">A2C (class in rlpack.algos.a2c)</a>
 </li>
-      <li><a href="rlpack.environment.mujoco_wrapper.html#rlpack.environment.mujoco_wrapper.ActionNormalizedEnv">ActionNormalizedEnv (class in rlpack.environment.mujoco_wrapper)</a>
+      <li><a href="rlpack.environment.env_wrapper.html#rlpack.environment.env_wrapper.AtariWrapper.action_space">action_space (rlpack.environment.env_wrapper.AtariWrapper attribute)</a>
 </li>
-      <li><a href="rlpack.estimator.learner.html#rlpack.estimator.learner.ResultsBuffer.add_summary">add_summary() (rlpack.estimator.learner.ResultsBuffer method)</a>
-</li>
-      <li><a href="rlpack.common.memory.html#rlpack.common.memory.Memory.append">append() (rlpack.common.memory.Memory method)</a>
-
-      <ul>
-        <li><a href="rlpack.common.memory.html#rlpack.common.memory.Memory2.append">(rlpack.common.memory.Memory2 method)</a>
-</li>
-        <li><a href="rlpack.common.memory.html#rlpack.common.memory.Memory3.append">(rlpack.common.memory.Memory3 method)</a>
-</li>
-      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.environment.atari_wrapper.html#rlpack.environment.atari_wrapper.atari_env">atari_env() (in module rlpack.environment.atari_wrapper)</a>
-
-      <ul>
-        <li><a href="rlpack.environment.wrapper.html#rlpack.environment.wrapper.atari_env">(in module rlpack.environment.wrapper)</a>
+      <li><a href="rlpack.common.utils.html#rlpack.common.utils.assert_shape">assert_shape() (in module rlpack.common.utils)</a>
 </li>
-      </ul></li>
-      <li><a href="rlpack.estimator.avedqn.html#rlpack.estimator.avedqn.AveDQN">AveDQN (class in rlpack.estimator.avedqn)</a>
+      <li><a href="rlpack.environment.env_wrapper.html#rlpack.environment.env_wrapper.AtariWrapper">AtariWrapper (class in rlpack.environment.env_wrapper)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -202,65 +186,115 @@
 <h2 id="B">B</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.estimator.networker.html#rlpack.estimator.networker.Networker.build_action_net">build_action_net() (rlpack.estimator.networker.Networker static method)</a>
+      <li><a href="rlpack.algos.base.html#rlpack.algos.base.Base">Base (class in rlpack.algos.base)</a>
 </li>
-      <li><a href="rlpack.estimator.networker.html#rlpack.estimator.networker.Networker.build_cnn_net">build_cnn_net() (rlpack.estimator.networker.Networker static method)</a>
+      <li><a href="rlpack.algos.a2c.html#rlpack.algos.a2c.A2C.build_algorithm">build_algorithm() (rlpack.algos.a2c.A2C method)</a>
+
+      <ul>
+        <li><a href="rlpack.algos.base.html#rlpack.algos.base.Base.build_algorithm">(rlpack.algos.base.Base method)</a>
 </li>
-      <li><a href="rlpack.estimator.networker.html#rlpack.estimator.networker.Networker.build_dense_net">build_dense_net() (rlpack.estimator.networker.Networker static method)</a>
+        <li><a href="rlpack.algos.continuous_ppo.html#rlpack.algos.continuous_ppo.ContinuousPPO.build_algorithm">(rlpack.algos.continuous_ppo.ContinuousPPO method)</a>
 </li>
-      <li><a href="rlpack.estimator.networker.html#rlpack.estimator.networker.Networker.build_distdqn_net">build_distdqn_net() (rlpack.estimator.networker.Networker static method)</a>
+        <li><a href="rlpack.algos.dist_dqn.html#rlpack.algos.dist_dqn.DistDQN.build_algorithm">(rlpack.algos.dist_dqn.DistDQN method)</a>
 </li>
+        <li><a href="rlpack.algos.double_dqn.html#rlpack.algos.double_dqn.DoubleDQN.build_algorithm">(rlpack.algos.double_dqn.DoubleDQN method)</a>
+</li>
+        <li><a href="rlpack.algos.dqn.html#rlpack.algos.dqn.DQN.build_algorithm">(rlpack.algos.dqn.DQN method)</a>
+</li>
+        <li><a href="rlpack.algos.duel_dqn.html#rlpack.algos.duel_dqn.DuelDQN.build_algorithm">(rlpack.algos.duel_dqn.DuelDQN method)</a>
+</li>
+        <li><a href="rlpack.algos.ppo.html#rlpack.algos.ppo.PPO.build_algorithm">(rlpack.algos.ppo.PPO method)</a>
+</li>
+        <li><a href="rlpack.algos.ppo2.html#rlpack.algos.ppo2.PPO.build_algorithm">(rlpack.algos.ppo2.PPO method)</a>
+</li>
+        <li><a href="rlpack.algos.trpo.html#rlpack.algos.trpo.TRPO.build_algorithm">(rlpack.algos.trpo.TRPO method)</a>
+</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.estimator.networker.html#rlpack.estimator.networker.Networker.build_gauss_net">build_gauss_net() (rlpack.estimator.networker.Networker static method)</a>
+      <li><a href="rlpack.algos.a2c.html#rlpack.algos.a2c.A2C.build_network">build_network() (rlpack.algos.a2c.A2C method)</a>
+
+      <ul>
+        <li><a href="rlpack.algos.base.html#rlpack.algos.base.Base.build_network">(rlpack.algos.base.Base method)</a>
 </li>
-      <li><a href="rlpack.estimator.networker.html#rlpack.estimator.networker.Networker.build_pg_net">build_pg_net() (rlpack.estimator.networker.Networker static method)</a>
+        <li><a href="rlpack.algos.continuous_ppo.html#rlpack.algos.continuous_ppo.ContinuousPPO.build_network">(rlpack.algos.continuous_ppo.ContinuousPPO method)</a>
 </li>
-      <li><a href="rlpack.estimator.networker.html#rlpack.estimator.networker.Networker.build_qvalue_net">build_qvalue_net() (rlpack.estimator.networker.Networker static method)</a>
+        <li><a href="rlpack.algos.dist_dqn.html#rlpack.algos.dist_dqn.DistDQN.build_network">(rlpack.algos.dist_dqn.DistDQN method)</a>
 </li>
-      <li><a href="rlpack.estimator.networker.html#rlpack.estimator.networker.Networker.build_value_net">build_value_net() (rlpack.estimator.networker.Networker static method)</a>
+        <li><a href="rlpack.algos.double_dqn.html#rlpack.algos.double_dqn.DoubleDQN.build_network">(rlpack.algos.double_dqn.DoubleDQN method)</a>
 </li>
+        <li><a href="rlpack.algos.dqn.html#rlpack.algos.dqn.DQN.build_network">(rlpack.algos.dqn.DQN method)</a>
+</li>
+        <li><a href="rlpack.algos.duel_dqn.html#rlpack.algos.duel_dqn.DuelDQN.build_network">(rlpack.algos.duel_dqn.DuelDQN method)</a>
+</li>
+        <li><a href="rlpack.algos.ppo.html#rlpack.algos.ppo.PPO.build_network">(rlpack.algos.ppo.PPO method)</a>
+</li>
+        <li><a href="rlpack.algos.ppo2.html#rlpack.algos.ppo2.PPO.build_network">(rlpack.algos.ppo2.PPO method)</a>
+</li>
+        <li><a href="rlpack.algos.trpo.html#rlpack.algos.trpo.TRPO.build_network">(rlpack.algos.trpo.TRPO method)</a>
+</li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.common.memory.html#rlpack.common.memory.Memory.clear">clear() (rlpack.common.memory.Memory method)</a>
-
-      <ul>
-        <li><a href="rlpack.common.memory.html#rlpack.common.memory.Memory3.clear">(rlpack.common.memory.Memory3 method)</a>
+      <li><a href="rlpack.environment.env_wrapper.html#rlpack.environment.env_wrapper.CartpoleWrapper">CartpoleWrapper (class in rlpack.environment.env_wrapper)</a>
 </li>
-        <li><a href="rlpack.environment.sub_env.html#rlpack.environment.sub_env.GameInfo.clear">(rlpack.environment.sub_env.GameInfo method)</a>
-</li>
-      </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="rlpack.common.mq.html#rlpack.common.mq.Client">Client (class in rlpack.common.mq)</a>
-</li>
-      <li><a href="rlpack.environment.atari_wrappers.html#rlpack.environment.atari_wrappers.ClipRewardEnv">ClipRewardEnv (class in rlpack.environment.atari_wrappers)</a>
 </li>
       <li><a href="rlpack.common.mq.html#rlpack.common.mq.Client.close">close() (rlpack.common.mq.Client method)</a>
 
       <ul>
-        <li><a href="rlpack.environment.master_env.html#rlpack.environment.master_env.EnvMaker.close">(rlpack.environment.master_env.EnvMaker method)</a>
+        <li><a href="rlpack.environment.env_wrapper.html#rlpack.environment.env_wrapper.AtariWrapper.close">(rlpack.environment.env_wrapper.AtariWrapper method)</a>
+</li>
+        <li><a href="rlpack.environment.fake_env.html#rlpack.environment.fake_env.FakeBatchEnv.close">(rlpack.environment.fake_env.FakeBatchEnv method)</a>
+</li>
+        <li><a href="rlpack.environment.fake_env.html#rlpack.environment.fake_env.FakeSingleEnv.close">(rlpack.environment.fake_env.FakeSingleEnv method)</a>
+</li>
+        <li><a href="rlpack.environment.mq.html#rlpack.environment.mq.MasterEnv.close">(rlpack.environment.mq.MasterEnv method)</a>
+</li>
+        <li><a href="rlpack.environment.stack_env.html#rlpack.environment.stack_env.StackEnv.close">(rlpack.environment.stack_env.StackEnv method)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="rlpack.algos.continuous_ppo.html#rlpack.algos.continuous_ppo.ContinuousPPO">ContinuousPPO (class in rlpack.algos.continuous_ppo)</a>
+</li>
   </ul></td>
 </tr></table>
 
 <h2 id="D">D</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.estimator.ddpg.html#rlpack.estimator.ddpg.DDPG">DDPG (class in rlpack.estimator.ddpg)</a>
+      <li><a href="rlpack.environment.env_wrapper.html#rlpack.environment.env_wrapper.MujocoWrapper.dim_action">dim_action (rlpack.environment.env_wrapper.MujocoWrapper attribute)</a>
+
+      <ul>
+        <li><a href="rlpack.environment.stack_env.html#rlpack.environment.stack_env.StackEnv.dim_action">(rlpack.environment.stack_env.StackEnv attribute)</a>
 </li>
-      <li><a href="rlpack.estimator.distdqn.html#rlpack.estimator.distdqn.DistDQN">DistDQN (class in rlpack.estimator.distdqn)</a>
+      </ul></li>
+      <li><a href="rlpack.environment.env_wrapper.html#rlpack.environment.env_wrapper.CartpoleWrapper.dim_observation">dim_observation (rlpack.environment.env_wrapper.CartpoleWrapper attribute)</a>
+
+      <ul>
+        <li><a href="rlpack.environment.env_wrapper.html#rlpack.environment.env_wrapper.MujocoWrapper.dim_observation">(rlpack.environment.env_wrapper.MujocoWrapper attribute)</a>
 </li>
+        <li><a href="rlpack.environment.fake_env.html#rlpack.environment.fake_env.FakeBatchEnv.dim_observation">(rlpack.environment.fake_env.FakeBatchEnv attribute)</a>
+</li>
+        <li><a href="rlpack.environment.fake_env.html#rlpack.environment.fake_env.FakeSingleEnv.dim_observation">(rlpack.environment.fake_env.FakeSingleEnv attribute)</a>
+</li>
+        <li><a href="rlpack.environment.stack_env.html#rlpack.environment.stack_env.StackEnv.dim_observation">(rlpack.environment.stack_env.StackEnv attribute)</a>
+</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.estimator.doubledqn.html#rlpack.estimator.doubledqn.DoubleDQN">DoubleDQN (class in rlpack.estimator.doubledqn)</a>
+      <li><a href="rlpack.algos.dist_dqn.html#rlpack.algos.dist_dqn.DistDQN">DistDQN (class in rlpack.algos.dist_dqn)</a>
 </li>
-      <li><a href="rlpack.estimator.dqn.html#rlpack.estimator.dqn.DQN">DQN (class in rlpack.estimator.dqn)</a>
+      <li><a href="rlpack.algos.double_dqn.html#rlpack.algos.double_dqn.DoubleDQN">DoubleDQN (class in rlpack.algos.double_dqn)</a>
+</li>
+      <li><a href="rlpack.algos.dqn.html#rlpack.algos.dqn.DQN">DQN (class in rlpack.algos.dqn)</a>
+</li>
+      <li><a href="rlpack.algos.duel_dqn.html#rlpack.algos.duel_dqn.DuelDQN">DuelDQN (class in rlpack.algos.duel_dqn)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -268,95 +302,57 @@
 <h2 id="E">E</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.environment.master_env.html#rlpack.environment.master_env.EnvMaker">EnvMaker (class in rlpack.environment.master_env)</a>
+      <li><a href="rlpack.common.utils.html#rlpack.common.utils.exponential_decay">exponential_decay() (in module rlpack.common.utils)</a>
 </li>
-      <li><a href="rlpack.environment.atari_wrapper.html#rlpack.environment.atari_wrapper.EpisodicLifeEnv">EpisodicLifeEnv (class in rlpack.environment.atari_wrapper)</a>
-
-      <ul>
-        <li><a href="rlpack.environment.atari_wrappers.html#rlpack.environment.atari_wrappers.EpisodicLifeEnv">(class in rlpack.environment.atari_wrappers)</a>
-</li>
-        <li><a href="rlpack.environment.wrapper.html#rlpack.environment.wrapper.EpisodicLifeEnv">(class in rlpack.environment.wrapper)</a>
-</li>
-      </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.common.memory.html#rlpack.common.memory.Memory2.extend">extend() (rlpack.common.memory.Memory2 method)</a>
-
-      <ul>
-        <li><a href="rlpack.common.memory.html#rlpack.common.memory.Memory3.extend">(rlpack.common.memory.Memory3 method)</a>
-</li>
-      </ul></li>
   </ul></td>
 </tr></table>
 
 <h2 id="F">F</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.environment.atari_wrapper.html#rlpack.environment.atari_wrapper.FireResetEnv">FireResetEnv (class in rlpack.environment.atari_wrapper)</a>
-
-      <ul>
-        <li><a href="rlpack.environment.atari_wrappers.html#rlpack.environment.atari_wrappers.FireResetEnv">(class in rlpack.environment.atari_wrappers)</a>
+      <li><a href="rlpack.environment.fake_env.html#rlpack.environment.fake_env.FakeBatchEnv">FakeBatchEnv (class in rlpack.environment.fake_env)</a>
 </li>
-        <li><a href="rlpack.environment.wrapper.html#rlpack.environment.wrapper.FireResetEnv">(class in rlpack.environment.wrapper)</a>
-</li>
-      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.environment.atari_wrappers.html#rlpack.environment.atari_wrappers.FrameStack">FrameStack (class in rlpack.environment.atari_wrappers)</a>
+      <li><a href="rlpack.environment.fake_env.html#rlpack.environment.fake_env.FakeSingleEnv">FakeSingleEnv (class in rlpack.environment.fake_env)</a>
 </li>
-      <li><a href="rlpack.environment.mujoco_wrapper.html#rlpack.environment.mujoco_wrapper.FrameStackEnv">FrameStackEnv (class in rlpack.environment.mujoco_wrapper)</a>
-</li>
-      <li><a href="rlpack.environment.atari_wrapper.html#rlpack.environment.atari_wrapper.FrameWarpAndStack">FrameWarpAndStack (class in rlpack.environment.atari_wrapper)</a>
-
-      <ul>
-        <li><a href="rlpack.environment.wrapper.html#rlpack.environment.wrapper.FrameWarpAndStack">(class in rlpack.environment.wrapper)</a>
-</li>
-      </ul></li>
   </ul></td>
 </tr></table>
 
 <h2 id="G">G</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.environment.sub_env.html#rlpack.environment.sub_env.GameInfo">GameInfo (class in rlpack.environment.sub_env)</a>
-</li>
-      <li><a href="rlpack.estimator.utils.html#rlpack.estimator.utils.gen_batch">gen_batch() (in module rlpack.estimator.utils)</a>
-</li>
-      <li><a href="rlpack.estimator.utils.html#rlpack.estimator.utils.generator">generator() (in module rlpack.estimator.utils)</a>
-</li>
-      <li><a href="rlpack.estimator.a2c.html#rlpack.estimator.a2c.A2C.get_action">get_action() (rlpack.estimator.a2c.A2C method)</a>
+      <li><a href="rlpack.algos.a2c.html#rlpack.algos.a2c.A2C.get_action">get_action() (rlpack.algos.a2c.A2C method)</a>
 
       <ul>
-        <li><a href="rlpack.estimator.avedqn.html#rlpack.estimator.avedqn.AveDQN.get_action">(rlpack.estimator.avedqn.AveDQN method)</a>
+        <li><a href="rlpack.algos.base.html#rlpack.algos.base.Base.get_action">(rlpack.algos.base.Base method)</a>
 </li>
-        <li><a href="rlpack.estimator.ddpg.html#rlpack.estimator.ddpg.DDPG.get_action">(rlpack.estimator.ddpg.DDPG method)</a>
+        <li><a href="rlpack.algos.continuous_ppo.html#rlpack.algos.continuous_ppo.ContinuousPPO.get_action">(rlpack.algos.continuous_ppo.ContinuousPPO method)</a>
 </li>
-        <li><a href="rlpack.estimator.distdqn.html#rlpack.estimator.distdqn.DistDQN.get_action">(rlpack.estimator.distdqn.DistDQN method)</a>
+        <li><a href="rlpack.algos.dist_dqn.html#rlpack.algos.dist_dqn.DistDQN.get_action">(rlpack.algos.dist_dqn.DistDQN method)</a>
 </li>
-        <li><a href="rlpack.estimator.doubledqn.html#rlpack.estimator.doubledqn.DoubleDQN.get_action">(rlpack.estimator.doubledqn.DoubleDQN method)</a>
+        <li><a href="rlpack.algos.double_dqn.html#rlpack.algos.double_dqn.DoubleDQN.get_action">(rlpack.algos.double_dqn.DoubleDQN method)</a>
 </li>
-        <li><a href="rlpack.estimator.dqn.html#rlpack.estimator.dqn.DQN.get_action">(rlpack.estimator.dqn.DQN method)</a>
+        <li><a href="rlpack.algos.dqn.html#rlpack.algos.dqn.DQN.get_action">(rlpack.algos.dqn.DQN method)</a>
 </li>
-        <li><a href="rlpack.estimator.pg.html#rlpack.estimator.pg.PG.get_action">(rlpack.estimator.pg.PG method)</a>
+        <li><a href="rlpack.algos.duel_dqn.html#rlpack.algos.duel_dqn.DuelDQN.get_action">(rlpack.algos.duel_dqn.DuelDQN method)</a>
 </li>
-        <li><a href="rlpack.estimator.ppo.html#rlpack.estimator.ppo.PPO.get_action">(rlpack.estimator.ppo.PPO method)</a>
+        <li><a href="rlpack.algos.ppo.html#rlpack.algos.ppo.PPO.get_action">(rlpack.algos.ppo.PPO method)</a>
 </li>
-        <li><a href="rlpack.estimator.softdqn.html#rlpack.estimator.softdqn.SoftDQN.get_action">(rlpack.estimator.softdqn.SoftDQN method)</a>
+        <li><a href="rlpack.algos.ppo2.html#rlpack.algos.ppo2.PPO.get_action">(rlpack.algos.ppo2.PPO method)</a>
 </li>
-        <li><a href="rlpack.estimator.tfestimator.html#rlpack.estimator.tfestimator.TFEstimator.get_action">(rlpack.estimator.tfestimator.TFEstimator method)</a>
-</li>
-        <li><a href="rlpack.estimator.trpo.html#rlpack.estimator.trpo.TRPO.get_action">(rlpack.estimator.trpo.TRPO method)</a>
+        <li><a href="rlpack.algos.trpo.html#rlpack.algos.trpo.TRPO.get_action">(rlpack.algos.trpo.TRPO method)</a>
 </li>
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.environment.atari_wrapper.html#rlpack.environment.atari_wrapper.get_atari_env_fn">get_atari_env_fn() (in module rlpack.environment.atari_wrapper)</a>
+      <li><a href="rlpack.algos.double_dqn.html#rlpack.algos.double_dqn.DoubleDQN.get_action_boltzman">get_action_boltzman() (rlpack.algos.double_dqn.DoubleDQN method)</a>
 </li>
-      <li><a href="rlpack.environment.atari_wrapper.html#rlpack.environment.atari_wrapper.get_eval_atari_env_fn">get_eval_atari_env_fn() (in module rlpack.environment.atari_wrapper)</a>
+      <li><a href="rlpack.common.memory.html#rlpack.common.memory.Memory.get_last_n_step">get_last_n_step() (rlpack.common.memory.Memory method)</a>
 </li>
       <li><a href="rlpack.common.log.html#rlpack.common.log.get_logger">get_logger() (in module rlpack.common.log)</a>
 </li>
-      <li><a href="rlpack.environment.mujoco_wrapper.html#rlpack.environment.mujoco_wrapper.get_mujoco_env_fn">get_mujoco_env_fn() (in module rlpack.environment.mujoco_wrapper)</a>
+      <li><a href="rlpack.common.memory.html#rlpack.common.memory.NonBlockMemory.get_trajectory_and_clear">get_trajectory_and_clear() (rlpack.common.memory.NonBlockMemory method)</a>
 </li>
       <li><a href="rlpack.common.log.html#rlpack.common.log.getLogger">getLogger() (in module rlpack.common.log)</a>
 </li>
@@ -368,19 +364,25 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="rlpack.common.mq.html#rlpack.common.mq.Worker.initialize">initialize() (rlpack.common.mq.Worker method)</a>
 </li>
+      <li><a href="rlpack.environment.env_wrapper.html#rlpack.environment.env_wrapper.AtariWrapper.is_continuous">is_continuous (rlpack.environment.env_wrapper.AtariWrapper attribute)</a>
+
+      <ul>
+        <li><a href="rlpack.environment.env_wrapper.html#rlpack.environment.env_wrapper.CartpoleWrapper.is_continuous">(rlpack.environment.env_wrapper.CartpoleWrapper attribute)</a>
+</li>
+        <li><a href="rlpack.environment.env_wrapper.html#rlpack.environment.env_wrapper.MujocoWrapper.is_continuous">(rlpack.environment.env_wrapper.MujocoWrapper attribute)</a>
+</li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
 <h2 id="L">L</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.environment.atari_wrappers.html#rlpack.environment.atari_wrappers.LazyFrames">LazyFrames (class in rlpack.environment.atari_wrappers)</a>
+      <li><a href="rlpack.common.utils.html#rlpack.common.utils.linear_decay">linear_decay() (in module rlpack.common.utils)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.estimator.learner.html#rlpack.estimator.learner.Learner">Learner (class in rlpack.estimator.learner)</a>
-</li>
-      <li><a href="rlpack.estimator.tfestimator.html#rlpack.estimator.tfestimator.TFEstimator.load_model">load_model() (rlpack.estimator.tfestimator.TFEstimator method)</a>
+      <li><a href="rlpack.algos.base.html#rlpack.algos.base.Base.load_model">load_model() (rlpack.algos.base.Base method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -388,29 +390,13 @@
 <h2 id="M">M</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.environment.atari_wrappers.html#rlpack.environment.atari_wrappers.make_atari">make_atari() (in module rlpack.environment.atari_wrappers)</a>
+      <li><a href="rlpack.environment.mq.html#rlpack.environment.mq.MasterEnv">MasterEnv (class in rlpack.environment.mq)</a>
 </li>
-      <li><a href="rlpack.environment.atari_wrappers.html#rlpack.environment.atari_wrappers.make_deepmind_atari">make_deepmind_atari() (in module rlpack.environment.atari_wrappers)</a>
-</li>
-      <li><a href="rlpack.environment.atari_wrapper.html#rlpack.environment.atari_wrapper.MaxAndSkipEnv">MaxAndSkipEnv (class in rlpack.environment.atari_wrapper)</a>
-
-      <ul>
-        <li><a href="rlpack.environment.atari_wrappers.html#rlpack.environment.atari_wrappers.MaxAndSkipEnv">(class in rlpack.environment.atari_wrappers)</a>
-</li>
-        <li><a href="rlpack.environment.wrapper.html#rlpack.environment.wrapper.MaxAndSkipEnv">(class in rlpack.environment.wrapper)</a>
-</li>
-      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.environment.scaler.html#rlpack.environment.scaler.Scaler.mean">mean (rlpack.environment.scaler.Scaler attribute)</a>
-</li>
       <li><a href="rlpack.common.memory.html#rlpack.common.memory.Memory">Memory (class in rlpack.common.memory)</a>
 </li>
-      <li><a href="rlpack.common.memory.html#rlpack.common.memory.Memory2">Memory2 (class in rlpack.common.memory)</a>
-</li>
-      <li><a href="rlpack.common.memory.html#rlpack.common.memory.Memory3">Memory3 (class in rlpack.common.memory)</a>
-</li>
-      <li><a href="rlpack.environment.mujoco_wrapper.html#rlpack.environment.mujoco_wrapper.mujoco_env">mujoco_env() (in module rlpack.environment.mujoco_wrapper)</a>
+      <li><a href="rlpack.environment.env_wrapper.html#rlpack.environment.env_wrapper.MujocoWrapper">MujocoWrapper (class in rlpack.environment.env_wrapper)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -418,174 +404,130 @@
 <h2 id="N">N</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.estimator.networker.html#rlpack.estimator.networker.Networker">Networker (class in rlpack.estimator.networker)</a>
-</li>
-      <li><a href="rlpack.environment.atari_wrapper.html#rlpack.environment.atari_wrapper.NoopResetEnv">NoopResetEnv (class in rlpack.environment.atari_wrapper)</a>
+      <li><a href="rlpack.environment.env_wrapper.html#rlpack.environment.env_wrapper.CartpoleWrapper.n_action">n_action (rlpack.environment.env_wrapper.CartpoleWrapper attribute)</a>
 
       <ul>
-        <li><a href="rlpack.environment.atari_wrappers.html#rlpack.environment.atari_wrappers.NoopResetEnv">(class in rlpack.environment.atari_wrappers)</a>
+        <li><a href="rlpack.environment.fake_env.html#rlpack.environment.fake_env.FakeBatchEnv.n_action">(rlpack.environment.fake_env.FakeBatchEnv attribute)</a>
 </li>
-        <li><a href="rlpack.environment.wrapper.html#rlpack.environment.wrapper.NoopResetEnv">(class in rlpack.environment.wrapper)</a>
+        <li><a href="rlpack.environment.fake_env.html#rlpack.environment.fake_env.FakeSingleEnv.n_action">(rlpack.environment.fake_env.FakeSingleEnv attribute)</a>
+</li>
+        <li><a href="rlpack.environment.stack_env.html#rlpack.environment.stack_env.StackEnv.n_action">(rlpack.environment.stack_env.StackEnv attribute)</a>
 </li>
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.environment.atari_wrapper.html#rlpack.environment.atari_wrapper.NormalizedEnv">NormalizedEnv (class in rlpack.environment.atari_wrapper)</a>
+      <li><a href="rlpack.common.memory.html#rlpack.common.memory.NonBlockMemory.n_env">n_env (rlpack.common.memory.NonBlockMemory attribute)</a>
 
       <ul>
-        <li><a href="rlpack.environment.wrapper.html#rlpack.environment.wrapper.NormalizedEnv">(class in rlpack.environment.wrapper)</a>
+        <li><a href="rlpack.environment.fake_env.html#rlpack.environment.fake_env.FakeBatchEnv.n_env">(rlpack.environment.fake_env.FakeBatchEnv attribute)</a>
+</li>
+        <li><a href="rlpack.environment.stack_env.html#rlpack.environment.stack_env.StackEnv.n_env">(rlpack.environment.stack_env.StackEnv attribute)</a>
 </li>
       </ul></li>
+      <li><a href="rlpack.common.memory.html#rlpack.common.memory.NonBlockMemory">NonBlockMemory (class in rlpack.common.memory)</a>
+</li>
   </ul></td>
 </tr></table>
 
 <h2 id="O">O</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.environment.atari_wrapper.html#rlpack.environment.atari_wrapper.NormalizedEnv.observation">observation() (rlpack.environment.atari_wrapper.NormalizedEnv method)</a>
-
-      <ul>
-        <li><a href="rlpack.environment.atari_wrappers.html#rlpack.environment.atari_wrappers.ScaledFloatFrame.observation">(rlpack.environment.atari_wrappers.ScaledFloatFrame method)</a>
+      <li><a href="rlpack.environment.env_wrapper.html#rlpack.environment.env_wrapper.AtariWrapper.observation_space">observation_space (rlpack.environment.env_wrapper.AtariWrapper attribute)</a>
 </li>
-        <li><a href="rlpack.environment.atari_wrappers.html#rlpack.environment.atari_wrappers.WarpFrame.observation">(rlpack.environment.atari_wrappers.WarpFrame method)</a>
-</li>
-        <li><a href="rlpack.environment.wrapper.html#rlpack.environment.wrapper.NormalizedEnv.observation">(rlpack.environment.wrapper.NormalizedEnv method)</a>
-</li>
-      </ul></li>
   </ul></td>
 </tr></table>
 
 <h2 id="P">P</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.estimator.pg.html#rlpack.estimator.pg.PG">PG (class in rlpack.estimator.pg)</a>
+      <li><a href="rlpack.algos.ppo.html#rlpack.algos.ppo.PPO">PPO (class in rlpack.algos.ppo)</a>
+
+      <ul>
+        <li><a href="rlpack.algos.ppo2.html#rlpack.algos.ppo2.PPO">(class in rlpack.algos.ppo2)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.estimator.ppo.html#rlpack.estimator.ppo.PPO">PPO (class in rlpack.estimator.ppo)</a>
-</li>
-      <li><a href="rlpack.estimator.utils.html#rlpack.estimator.utils.process_traj">process_traj() (in module rlpack.estimator.utils)</a>
-</li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
 <h2 id="R">R</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.environment.atari_wrapper.html#rlpack.environment.atari_wrapper.EpisodicLifeEnv.reset">reset() (rlpack.environment.atari_wrapper.EpisodicLifeEnv method)</a>
+      <li><a href="rlpack.environment.mq.html#rlpack.environment.mq.RequestClient.recv">recv() (rlpack.environment.mq.RequestClient method)</a>
 
       <ul>
-        <li><a href="rlpack.environment.atari_wrapper.html#rlpack.environment.atari_wrapper.FireResetEnv.reset">(rlpack.environment.atari_wrapper.FireResetEnv method)</a>
-</li>
-        <li><a href="rlpack.environment.atari_wrapper.html#rlpack.environment.atari_wrapper.FrameWarpAndStack.reset">(rlpack.environment.atari_wrapper.FrameWarpAndStack method)</a>
-</li>
-        <li><a href="rlpack.environment.atari_wrapper.html#rlpack.environment.atari_wrapper.MaxAndSkipEnv.reset">(rlpack.environment.atari_wrapper.MaxAndSkipEnv method)</a>
-</li>
-        <li><a href="rlpack.environment.atari_wrapper.html#rlpack.environment.atari_wrapper.NoopResetEnv.reset">(rlpack.environment.atari_wrapper.NoopResetEnv method)</a>
-</li>
-        <li><a href="rlpack.environment.atari_wrapper.html#rlpack.environment.atari_wrapper.RewardClipEnv.reset">(rlpack.environment.atari_wrapper.RewardClipEnv method)</a>
-</li>
-        <li><a href="rlpack.environment.atari_wrapper.html#rlpack.environment.atari_wrapper.VisualizeEnv.reset">(rlpack.environment.atari_wrapper.VisualizeEnv method)</a>
-</li>
-        <li><a href="rlpack.environment.atari_wrappers.html#rlpack.environment.atari_wrappers.EpisodicLifeEnv.reset">(rlpack.environment.atari_wrappers.EpisodicLifeEnv method)</a>
-</li>
-        <li><a href="rlpack.environment.atari_wrappers.html#rlpack.environment.atari_wrappers.FireResetEnv.reset">(rlpack.environment.atari_wrappers.FireResetEnv method)</a>
-</li>
-        <li><a href="rlpack.environment.atari_wrappers.html#rlpack.environment.atari_wrappers.FrameStack.reset">(rlpack.environment.atari_wrappers.FrameStack method)</a>
-</li>
-        <li><a href="rlpack.environment.atari_wrappers.html#rlpack.environment.atari_wrappers.MaxAndSkipEnv.reset">(rlpack.environment.atari_wrappers.MaxAndSkipEnv method)</a>
-</li>
-        <li><a href="rlpack.environment.atari_wrappers.html#rlpack.environment.atari_wrappers.NoopResetEnv.reset">(rlpack.environment.atari_wrappers.NoopResetEnv method)</a>
-</li>
-        <li><a href="rlpack.environment.master_env.html#rlpack.environment.master_env.EnvMaker.reset">(rlpack.environment.master_env.EnvMaker method)</a>
-</li>
-        <li><a href="rlpack.environment.mujoco_wrapper.html#rlpack.environment.mujoco_wrapper.ActionNormalizedEnv.reset">(rlpack.environment.mujoco_wrapper.ActionNormalizedEnv method)</a>
-</li>
-        <li><a href="rlpack.environment.mujoco_wrapper.html#rlpack.environment.mujoco_wrapper.FrameStackEnv.reset">(rlpack.environment.mujoco_wrapper.FrameStackEnv method)</a>
-</li>
-        <li><a href="rlpack.environment.wrapper.html#rlpack.environment.wrapper.EpisodicLifeEnv.reset">(rlpack.environment.wrapper.EpisodicLifeEnv method)</a>
-</li>
-        <li><a href="rlpack.environment.wrapper.html#rlpack.environment.wrapper.FireResetEnv.reset">(rlpack.environment.wrapper.FireResetEnv method)</a>
-</li>
-        <li><a href="rlpack.environment.wrapper.html#rlpack.environment.wrapper.FrameWarpAndStack.reset">(rlpack.environment.wrapper.FrameWarpAndStack method)</a>
-</li>
-        <li><a href="rlpack.environment.wrapper.html#rlpack.environment.wrapper.MaxAndSkipEnv.reset">(rlpack.environment.wrapper.MaxAndSkipEnv method)</a>
-</li>
-        <li><a href="rlpack.environment.wrapper.html#rlpack.environment.wrapper.NoopResetEnv.reset">(rlpack.environment.wrapper.NoopResetEnv method)</a>
-</li>
-        <li><a href="rlpack.environment.wrapper.html#rlpack.environment.wrapper.VisualizeEnv.reset">(rlpack.environment.wrapper.VisualizeEnv method)</a>
+        <li><a href="rlpack.environment.mq.html#rlpack.environment.mq.RouterReceiver.recv">(rlpack.environment.mq.RouterReceiver method)</a>
 </li>
       </ul></li>
-      <li><a href="rlpack.estimator.learner.html#rlpack.estimator.learner.ResultsBuffer">ResultsBuffer (class in rlpack.estimator.learner)</a>
+      <li><a href="rlpack.environment.mq.html#rlpack.environment.mq.RouterReceiver.recv_batch">recv_batch() (rlpack.environment.mq.RouterReceiver method)</a>
 </li>
-      <li><a href="rlpack.environment.atari_wrappers.html#rlpack.environment.atari_wrappers.ClipRewardEnv.reward">reward() (rlpack.environment.atari_wrappers.ClipRewardEnv method)</a>
+      <li><a href="rlpack.environment.mq.html#rlpack.environment.mq.RequestClient">RequestClient (class in rlpack.environment.mq)</a>
 </li>
-      <li><a href="rlpack.environment.atari_wrapper.html#rlpack.environment.atari_wrapper.RewardClipEnv">RewardClipEnv (class in rlpack.environment.atari_wrapper)</a>
+      <li><a href="rlpack.environment.env_wrapper.html#rlpack.environment.env_wrapper.AtariWrapper.reset">reset() (rlpack.environment.env_wrapper.AtariWrapper method)</a>
+
+      <ul>
+        <li><a href="rlpack.environment.fake_env.html#rlpack.environment.fake_env.FakeBatchEnv.reset">(rlpack.environment.fake_env.FakeBatchEnv method)</a>
 </li>
+        <li><a href="rlpack.environment.fake_env.html#rlpack.environment.fake_env.FakeSingleEnv.reset">(rlpack.environment.fake_env.FakeSingleEnv method)</a>
+</li>
+        <li><a href="rlpack.environment.mq.html#rlpack.environment.mq.MasterEnv.reset">(rlpack.environment.mq.MasterEnv method)</a>
+</li>
+        <li><a href="rlpack.environment.mq.html#rlpack.environment.mq.SubEnv.reset">(rlpack.environment.mq.SubEnv method)</a>
+</li>
+        <li><a href="rlpack.environment.stack_env.html#rlpack.environment.stack_env.StackEnv.reset">(rlpack.environment.stack_env.StackEnv method)</a>
+</li>
+      </ul></li>
       <li><a href="rlpack.html#module-rlpack">rlpack (module)</a>
+</li>
+      <li><a href="rlpack.algos.html#module-rlpack.algos">rlpack.algos (module)</a>
+</li>
+      <li><a href="rlpack.algos.a2c.html#module-rlpack.algos.a2c">rlpack.algos.a2c (module)</a>
+</li>
+      <li><a href="rlpack.algos.base.html#module-rlpack.algos.base">rlpack.algos.base (module)</a>
+</li>
+      <li><a href="rlpack.algos.continuous_ppo.html#module-rlpack.algos.continuous_ppo">rlpack.algos.continuous_ppo (module)</a>
+</li>
+      <li><a href="rlpack.algos.dist_dqn.html#module-rlpack.algos.dist_dqn">rlpack.algos.dist_dqn (module)</a>
+</li>
+      <li><a href="rlpack.algos.double_dqn.html#module-rlpack.algos.double_dqn">rlpack.algos.double_dqn (module)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="rlpack.algos.dqn.html#module-rlpack.algos.dqn">rlpack.algos.dqn (module)</a>
+</li>
+      <li><a href="rlpack.algos.duel_dqn.html#module-rlpack.algos.duel_dqn">rlpack.algos.duel_dqn (module)</a>
+</li>
+      <li><a href="rlpack.algos.ppo.html#module-rlpack.algos.ppo">rlpack.algos.ppo (module)</a>
+</li>
+      <li><a href="rlpack.algos.ppo2.html#module-rlpack.algos.ppo2">rlpack.algos.ppo2 (module)</a>
+</li>
+      <li><a href="rlpack.algos.trpo.html#module-rlpack.algos.trpo">rlpack.algos.trpo (module)</a>
 </li>
       <li><a href="rlpack.common.html#module-rlpack.common">rlpack.common (module)</a>
 </li>
       <li><a href="rlpack.common.log.html#module-rlpack.common.log">rlpack.common.log (module)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="rlpack.common.memory.html#module-rlpack.common.memory">rlpack.common.memory (module)</a>
 </li>
       <li><a href="rlpack.common.mq.html#module-rlpack.common.mq">rlpack.common.mq (module)</a>
 </li>
+      <li><a href="rlpack.common.utils.html#module-rlpack.common.utils">rlpack.common.utils (module)</a>
+</li>
       <li><a href="rlpack.environment.html#module-rlpack.environment">rlpack.environment (module)</a>
 </li>
-      <li><a href="rlpack.environment.atari_wrapper.html#module-rlpack.environment.atari_wrapper">rlpack.environment.atari_wrapper (module)</a>
+      <li><a href="rlpack.environment.env_wrapper.html#module-rlpack.environment.env_wrapper">rlpack.environment.env_wrapper (module)</a>
 </li>
-      <li><a href="rlpack.environment.atari_wrappers.html#module-rlpack.environment.atari_wrappers">rlpack.environment.atari_wrappers (module)</a>
+      <li><a href="rlpack.environment.fake_env.html#module-rlpack.environment.fake_env">rlpack.environment.fake_env (module)</a>
 </li>
-      <li><a href="rlpack.environment.master_env.html#module-rlpack.environment.master_env">rlpack.environment.master_env (module)</a>
+      <li><a href="rlpack.environment.mq.html#module-rlpack.environment.mq">rlpack.environment.mq (module)</a>
 </li>
-      <li><a href="rlpack.environment.mujoco_wrapper.html#module-rlpack.environment.mujoco_wrapper">rlpack.environment.mujoco_wrapper (module)</a>
+      <li><a href="rlpack.environment.stack_env.html#module-rlpack.environment.stack_env">rlpack.environment.stack_env (module)</a>
 </li>
-      <li><a href="rlpack.environment.scaler.html#module-rlpack.environment.scaler">rlpack.environment.scaler (module)</a>
-</li>
-      <li><a href="rlpack.environment.sub_env.html#module-rlpack.environment.sub_env">rlpack.environment.sub_env (module)</a>
-</li>
-      <li><a href="rlpack.environment.wrapper.html#module-rlpack.environment.wrapper">rlpack.environment.wrapper (module)</a>
-</li>
-      <li><a href="rlpack.estimator.html#module-rlpack.estimator">rlpack.estimator (module)</a>
-</li>
-      <li><a href="rlpack.estimator.a2c.html#module-rlpack.estimator.a2c">rlpack.estimator.a2c (module)</a>
-</li>
-      <li><a href="rlpack.estimator.avedqn.html#module-rlpack.estimator.avedqn">rlpack.estimator.avedqn (module)</a>
-</li>
-      <li><a href="rlpack.estimator.ddpg.html#module-rlpack.estimator.ddpg">rlpack.estimator.ddpg (module)</a>
-</li>
-      <li><a href="rlpack.estimator.distdqn.html#module-rlpack.estimator.distdqn">rlpack.estimator.distdqn (module)</a>
-</li>
-      <li><a href="rlpack.estimator.doubledqn.html#module-rlpack.estimator.doubledqn">rlpack.estimator.doubledqn (module)</a>
-</li>
-      <li><a href="rlpack.estimator.dqn.html#module-rlpack.estimator.dqn">rlpack.estimator.dqn (module)</a>
-</li>
-      <li><a href="rlpack.estimator.learner.html#module-rlpack.estimator.learner">rlpack.estimator.learner (module)</a>
-</li>
-      <li><a href="rlpack.estimator.networker.html#module-rlpack.estimator.networker">rlpack.estimator.networker (module)</a>
-</li>
-      <li><a href="rlpack.estimator.pg.html#module-rlpack.estimator.pg">rlpack.estimator.pg (module)</a>
-</li>
-      <li><a href="rlpack.estimator.ppo.html#module-rlpack.estimator.ppo">rlpack.estimator.ppo (module)</a>
-</li>
-      <li><a href="rlpack.estimator.softdqn.html#module-rlpack.estimator.softdqn">rlpack.estimator.softdqn (module)</a>
-</li>
-      <li><a href="rlpack.estimator.tfestimator.html#module-rlpack.estimator.tfestimator">rlpack.estimator.tfestimator (module)</a>
-</li>
-      <li><a href="rlpack.estimator.trpo.html#module-rlpack.estimator.trpo">rlpack.estimator.trpo (module)</a>
-</li>
-      <li><a href="rlpack.estimator.utils.html#module-rlpack.estimator.utils">rlpack.estimator.utils (module)</a>
+      <li><a href="rlpack.environment.mq.html#rlpack.environment.mq.RouterReceiver">RouterReceiver (class in rlpack.environment.mq)</a>
 </li>
       <li><a href="rlpack.common.mq.html#rlpack.common.mq.Client.run">run() (rlpack.common.mq.Client method)</a>
 
       <ul>
         <li><a href="rlpack.common.mq.html#rlpack.common.mq.Worker.run">(rlpack.common.mq.Worker method)</a>
-</li>
-        <li><a href="rlpack.estimator.learner.html#rlpack.estimator.learner.Learner.run">(rlpack.estimator.learner.Learner method)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -594,81 +536,57 @@
 <h2 id="S">S</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.common.memory.html#rlpack.common.memory.Memory.sample">sample() (rlpack.common.memory.Memory method)</a>
+      <li><a href="rlpack.common.memory.html#rlpack.common.memory.Memory.sample_transition">sample_transition() (rlpack.common.memory.Memory method)</a>
+</li>
+      <li><a href="rlpack.algos.base.html#rlpack.algos.base.Base.save_model">save_model() (rlpack.algos.base.Base method)</a>
 
       <ul>
-        <li><a href="rlpack.common.memory.html#rlpack.common.memory.Memory2.sample">(rlpack.common.memory.Memory2 method)</a>
-</li>
-        <li><a href="rlpack.common.memory.html#rlpack.common.memory.Memory3.sample">(rlpack.common.memory.Memory3 method)</a>
+        <li><a href="rlpack.common.mq.html#rlpack.common.mq.Worker.save_model">(rlpack.common.mq.Worker method)</a>
 </li>
       </ul></li>
-      <li><a href="rlpack.common.mq.html#rlpack.common.mq.Worker.save_model">save_model() (rlpack.common.mq.Worker method)</a>
+      <li><a href="rlpack.environment.mq.html#rlpack.environment.mq.RequestClient.send">send() (rlpack.environment.mq.RequestClient method)</a>
 
       <ul>
-        <li><a href="rlpack.estimator.tfestimator.html#rlpack.estimator.tfestimator.TFEstimator.save_model">(rlpack.estimator.tfestimator.TFEstimator method)</a>
+        <li><a href="rlpack.environment.mq.html#rlpack.environment.mq.RouterReceiver.send">(rlpack.environment.mq.RouterReceiver method)</a>
 </li>
       </ul></li>
-      <li><a href="rlpack.environment.scaler.html#rlpack.environment.scaler.Scaler.scale">scale() (rlpack.environment.scaler.Scaler method)</a>
+      <li><a href="rlpack.environment.mq.html#rlpack.environment.mq.RouterReceiver.send_batch">send_batch() (rlpack.environment.mq.RouterReceiver method)</a>
 </li>
-      <li><a href="rlpack.environment.atari_wrappers.html#rlpack.environment.atari_wrappers.ScaledFloatFrame">ScaledFloatFrame (class in rlpack.environment.atari_wrappers)</a>
+      <li><a href="rlpack.common.memory.html#rlpack.common.memory.Memory.size">size (rlpack.common.memory.Memory attribute)</a>
 </li>
-      <li><a href="rlpack.environment.scaler.html#rlpack.environment.scaler.Scaler">Scaler (class in rlpack.environment.scaler)</a>
-</li>
-      <li><a href="rlpack.environment.sub_env.html#rlpack.environment.sub_env.set_seed">set_seed() (in module rlpack.environment.sub_env)</a>
-</li>
-      <li><a href="rlpack.estimator.softdqn.html#rlpack.estimator.softdqn.SoftDQN">SoftDQN (class in rlpack.estimator.softdqn)</a>
+      <li><a href="rlpack.environment.stack_env.html#rlpack.environment.stack_env.StackEnv">StackEnv (class in rlpack.environment.stack_env)</a>
 </li>
       <li><a href="rlpack.common.mq.html#rlpack.common.mq.Client.startsend">startsend() (rlpack.common.mq.Client method)</a>
 </li>
-      <li><a href="rlpack.environment.scaler.html#rlpack.environment.scaler.Scaler.std">std (rlpack.environment.scaler.Scaler attribute)</a>
-</li>
-      <li><a href="rlpack.environment.atari_wrapper.html#rlpack.environment.atari_wrapper.EpisodicLifeEnv.step">step() (rlpack.environment.atari_wrapper.EpisodicLifeEnv method)</a>
+      <li><a href="rlpack.environment.env_wrapper.html#rlpack.environment.env_wrapper.AtariWrapper.step">step() (rlpack.environment.env_wrapper.AtariWrapper method)</a>
 
       <ul>
-        <li><a href="rlpack.environment.atari_wrapper.html#rlpack.environment.atari_wrapper.FireResetEnv.step">(rlpack.environment.atari_wrapper.FireResetEnv method)</a>
+        <li><a href="rlpack.environment.env_wrapper.html#rlpack.environment.env_wrapper.CartpoleWrapper.step">(rlpack.environment.env_wrapper.CartpoleWrapper method)</a>
 </li>
-        <li><a href="rlpack.environment.atari_wrapper.html#rlpack.environment.atari_wrapper.FrameWarpAndStack.step">(rlpack.environment.atari_wrapper.FrameWarpAndStack method)</a>
+        <li><a href="rlpack.environment.env_wrapper.html#rlpack.environment.env_wrapper.MujocoWrapper.step">(rlpack.environment.env_wrapper.MujocoWrapper method)</a>
 </li>
-        <li><a href="rlpack.environment.atari_wrapper.html#rlpack.environment.atari_wrapper.MaxAndSkipEnv.step">(rlpack.environment.atari_wrapper.MaxAndSkipEnv method)</a>
+        <li><a href="rlpack.environment.fake_env.html#rlpack.environment.fake_env.FakeBatchEnv.step">(rlpack.environment.fake_env.FakeBatchEnv method)</a>
 </li>
-        <li><a href="rlpack.environment.atari_wrapper.html#rlpack.environment.atari_wrapper.NoopResetEnv.step">(rlpack.environment.atari_wrapper.NoopResetEnv method)</a>
+        <li><a href="rlpack.environment.fake_env.html#rlpack.environment.fake_env.FakeSingleEnv.step">(rlpack.environment.fake_env.FakeSingleEnv method)</a>
 </li>
-        <li><a href="rlpack.environment.atari_wrapper.html#rlpack.environment.atari_wrapper.RewardClipEnv.step">(rlpack.environment.atari_wrapper.RewardClipEnv method)</a>
+        <li><a href="rlpack.environment.mq.html#rlpack.environment.mq.MasterEnv.step">(rlpack.environment.mq.MasterEnv method)</a>
 </li>
-        <li><a href="rlpack.environment.atari_wrapper.html#rlpack.environment.atari_wrapper.VisualizeEnv.step">(rlpack.environment.atari_wrapper.VisualizeEnv method)</a>
+        <li><a href="rlpack.environment.mq.html#rlpack.environment.mq.SubEnv.step">(rlpack.environment.mq.SubEnv method)</a>
 </li>
-        <li><a href="rlpack.environment.atari_wrappers.html#rlpack.environment.atari_wrappers.EpisodicLifeEnv.step">(rlpack.environment.atari_wrappers.EpisodicLifeEnv method)</a>
-</li>
-        <li><a href="rlpack.environment.atari_wrappers.html#rlpack.environment.atari_wrappers.FireResetEnv.step">(rlpack.environment.atari_wrappers.FireResetEnv method)</a>
-</li>
-        <li><a href="rlpack.environment.atari_wrappers.html#rlpack.environment.atari_wrappers.FrameStack.step">(rlpack.environment.atari_wrappers.FrameStack method)</a>
-</li>
-        <li><a href="rlpack.environment.atari_wrappers.html#rlpack.environment.atari_wrappers.MaxAndSkipEnv.step">(rlpack.environment.atari_wrappers.MaxAndSkipEnv method)</a>
-</li>
-        <li><a href="rlpack.environment.atari_wrappers.html#rlpack.environment.atari_wrappers.NoopResetEnv.step">(rlpack.environment.atari_wrappers.NoopResetEnv method)</a>
-</li>
-        <li><a href="rlpack.environment.master_env.html#rlpack.environment.master_env.EnvMaker.step">(rlpack.environment.master_env.EnvMaker method)</a>
-</li>
-        <li><a href="rlpack.environment.mujoco_wrapper.html#rlpack.environment.mujoco_wrapper.ActionNormalizedEnv.step">(rlpack.environment.mujoco_wrapper.ActionNormalizedEnv method)</a>
-</li>
-        <li><a href="rlpack.environment.mujoco_wrapper.html#rlpack.environment.mujoco_wrapper.FrameStackEnv.step">(rlpack.environment.mujoco_wrapper.FrameStackEnv method)</a>
-</li>
-        <li><a href="rlpack.environment.wrapper.html#rlpack.environment.wrapper.EpisodicLifeEnv.step">(rlpack.environment.wrapper.EpisodicLifeEnv method)</a>
-</li>
-        <li><a href="rlpack.environment.wrapper.html#rlpack.environment.wrapper.FireResetEnv.step">(rlpack.environment.wrapper.FireResetEnv method)</a>
-</li>
-        <li><a href="rlpack.environment.wrapper.html#rlpack.environment.wrapper.FrameWarpAndStack.step">(rlpack.environment.wrapper.FrameWarpAndStack method)</a>
-</li>
-        <li><a href="rlpack.environment.wrapper.html#rlpack.environment.wrapper.MaxAndSkipEnv.step">(rlpack.environment.wrapper.MaxAndSkipEnv method)</a>
-</li>
-        <li><a href="rlpack.environment.wrapper.html#rlpack.environment.wrapper.NoopResetEnv.step">(rlpack.environment.wrapper.NoopResetEnv method)</a>
-</li>
-        <li><a href="rlpack.environment.wrapper.html#rlpack.environment.wrapper.VisualizeEnv.step">(rlpack.environment.wrapper.VisualizeEnv method)</a>
+        <li><a href="rlpack.environment.stack_env.html#rlpack.environment.stack_env.StackEnv.step">(rlpack.environment.stack_env.StackEnv method)</a>
 </li>
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.environment.sub_env.html#rlpack.environment.sub_env.sub_env">sub_env() (in module rlpack.environment.sub_env)</a>
+      <li><a href="rlpack.common.memory.html#rlpack.common.memory.Memory.store_sard">store_sard() (rlpack.common.memory.Memory method)</a>
+</li>
+      <li><a href="rlpack.common.memory.html#rlpack.common.memory.NonBlockMemory.store_tag_a">store_tag_a() (rlpack.common.memory.NonBlockMemory method)</a>
+</li>
+      <li><a href="rlpack.common.memory.html#rlpack.common.memory.NonBlockMemory.store_tag_rds">store_tag_rds() (rlpack.common.memory.NonBlockMemory method)</a>
+</li>
+      <li><a href="rlpack.common.memory.html#rlpack.common.memory.NonBlockMemory.store_tag_s">store_tag_s() (rlpack.common.memory.NonBlockMemory method)</a>
+</li>
+      <li><a href="rlpack.environment.mq.html#rlpack.environment.mq.SubEnv">SubEnv (class in rlpack.environment.mq)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -676,13 +594,7 @@
 <h2 id="T">T</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.estimator.tfestimator.html#rlpack.estimator.tfestimator.TFEstimator">TFEstimator (class in rlpack.estimator.tfestimator)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.estimator.utils.html#rlpack.estimator.utils.trajectories_to_batch">trajectories_to_batch() (in module rlpack.estimator.utils)</a>
-</li>
-      <li><a href="rlpack.estimator.trpo.html#rlpack.estimator.trpo.TRPO">TRPO (class in rlpack.estimator.trpo)</a>
+      <li><a href="rlpack.algos.trpo.html#rlpack.algos.trpo.TRPO">TRPO (class in rlpack.algos.trpo)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -690,56 +602,26 @@
 <h2 id="U">U</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.estimator.utils.html#rlpack.estimator.utils.unfold">unfold() (in module rlpack.estimator.utils)</a>
-</li>
-      <li><a href="rlpack.environment.scaler.html#rlpack.environment.scaler.Scaler.update">update() (rlpack.environment.scaler.Scaler method)</a>
+      <li><a href="rlpack.algos.a2c.html#rlpack.algos.a2c.A2C.update">update() (rlpack.algos.a2c.A2C method)</a>
 
       <ul>
-        <li><a href="rlpack.environment.sub_env.html#rlpack.environment.sub_env.GameInfo.update">(rlpack.environment.sub_env.GameInfo method)</a>
+        <li><a href="rlpack.algos.base.html#rlpack.algos.base.Base.update">(rlpack.algos.base.Base method)</a>
 </li>
-        <li><a href="rlpack.estimator.a2c.html#rlpack.estimator.a2c.A2C.update">(rlpack.estimator.a2c.A2C method)</a>
+        <li><a href="rlpack.algos.continuous_ppo.html#rlpack.algos.continuous_ppo.ContinuousPPO.update">(rlpack.algos.continuous_ppo.ContinuousPPO method)</a>
 </li>
-        <li><a href="rlpack.estimator.avedqn.html#rlpack.estimator.avedqn.AveDQN.update">(rlpack.estimator.avedqn.AveDQN method)</a>
+        <li><a href="rlpack.algos.dist_dqn.html#rlpack.algos.dist_dqn.DistDQN.update">(rlpack.algos.dist_dqn.DistDQN method)</a>
 </li>
-        <li><a href="rlpack.estimator.ddpg.html#rlpack.estimator.ddpg.DDPG.update">(rlpack.estimator.ddpg.DDPG method)</a>
+        <li><a href="rlpack.algos.double_dqn.html#rlpack.algos.double_dqn.DoubleDQN.update">(rlpack.algos.double_dqn.DoubleDQN method)</a>
 </li>
-        <li><a href="rlpack.estimator.distdqn.html#rlpack.estimator.distdqn.DistDQN.update">(rlpack.estimator.distdqn.DistDQN method)</a>
+        <li><a href="rlpack.algos.dqn.html#rlpack.algos.dqn.DQN.update">(rlpack.algos.dqn.DQN method)</a>
 </li>
-        <li><a href="rlpack.estimator.doubledqn.html#rlpack.estimator.doubledqn.DoubleDQN.update">(rlpack.estimator.doubledqn.DoubleDQN method)</a>
+        <li><a href="rlpack.algos.duel_dqn.html#rlpack.algos.duel_dqn.DuelDQN.update">(rlpack.algos.duel_dqn.DuelDQN method)</a>
 </li>
-        <li><a href="rlpack.estimator.dqn.html#rlpack.estimator.dqn.DQN.update">(rlpack.estimator.dqn.DQN method)</a>
+        <li><a href="rlpack.algos.ppo.html#rlpack.algos.ppo.PPO.update">(rlpack.algos.ppo.PPO method)</a>
 </li>
-        <li><a href="rlpack.estimator.pg.html#rlpack.estimator.pg.PG.update">(rlpack.estimator.pg.PG method)</a>
+        <li><a href="rlpack.algos.ppo2.html#rlpack.algos.ppo2.PPO.update">(rlpack.algos.ppo2.PPO method)</a>
 </li>
-        <li><a href="rlpack.estimator.ppo.html#rlpack.estimator.ppo.PPO.update">(rlpack.estimator.ppo.PPO method)</a>
-</li>
-        <li><a href="rlpack.estimator.softdqn.html#rlpack.estimator.softdqn.SoftDQN.update">(rlpack.estimator.softdqn.SoftDQN method)</a>
-</li>
-        <li><a href="rlpack.estimator.tfestimator.html#rlpack.estimator.tfestimator.TFEstimator.update">(rlpack.estimator.tfestimator.TFEstimator method)</a>
-</li>
-        <li><a href="rlpack.estimator.trpo.html#rlpack.estimator.trpo.TRPO.update">(rlpack.estimator.trpo.TRPO method)</a>
-</li>
-      </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.estimator.learner.html#rlpack.estimator.learner.ResultsBuffer.update_infos">update_infos() (rlpack.estimator.learner.ResultsBuffer method)</a>
-</li>
-      <li><a href="rlpack.estimator.learner.html#rlpack.estimator.learner.ResultsBuffer.update_summaries">update_summaries() (rlpack.estimator.learner.ResultsBuffer method)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="V">V</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.environment.scaler.html#rlpack.environment.scaler.Scaler.var">var (rlpack.environment.scaler.Scaler attribute)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.environment.atari_wrapper.html#rlpack.environment.atari_wrapper.VisualizeEnv">VisualizeEnv (class in rlpack.environment.atari_wrapper)</a>
-
-      <ul>
-        <li><a href="rlpack.environment.wrapper.html#rlpack.environment.wrapper.VisualizeEnv">(class in rlpack.environment.wrapper)</a>
+        <li><a href="rlpack.algos.trpo.html#rlpack.algos.trpo.TRPO.update">(rlpack.algos.trpo.TRPO method)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -748,13 +630,7 @@
 <h2 id="W">W</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="rlpack.environment.atari_wrappers.html#rlpack.environment.atari_wrappers.WarpFrame">WarpFrame (class in rlpack.environment.atari_wrappers)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="rlpack.common.mq.html#rlpack.common.mq.Worker">Worker (class in rlpack.common.mq)</a>
-</li>
-      <li><a href="rlpack.environment.atari_wrappers.html#rlpack.environment.atari_wrappers.wrap_deepmind">wrap_deepmind() (in module rlpack.environment.atari_wrappers)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -771,7 +647,7 @@
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, Author.
+        &copy; Copyright 2018, Author
 
     </p>
   </div>
@@ -790,20 +666,14 @@
 
   
 
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'./',
-            VERSION:'',
-            LANGUAGE:'en',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: '.txt'
-        };
-    </script>
-      <script type="text/javascript" src="_static/jquery.js"></script>
-      <script type="text/javascript" src="_static/underscore.js"></script>
-      <script type="text/javascript" src="_static/doctools.js"></script>
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
 
   
 

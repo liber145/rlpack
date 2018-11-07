@@ -28,8 +28,8 @@
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="rlpack.environment.agent module" href="rlpack.environment.agent.html" />
-    <link rel="prev" title="rlpack.common.mq module" href="rlpack.common.mq.html" /> 
+    <link rel="next" title="rlpack.environment.env_wrapper module" href="rlpack.environment.env_wrapper.html" />
+    <link rel="prev" title="rlpack.common.utils module" href="rlpack.common.utils.html" /> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -80,15 +80,14 @@
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="main.html">main module</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="rlpack.html">rlpack package</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="rlpack.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="rlpack.algos.html">rlpack.algos package</a></li>
 <li class="toctree-l3"><a class="reference internal" href="rlpack.common.html">rlpack.common package</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">rlpack.environment package</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#submodules">Submodules</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="rlpack.estimator.html">rlpack.estimator package</a></li>
 </ul>
 </li>
 </ul>
@@ -166,15 +165,10 @@
 <h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="rlpack.environment.agent.html">rlpack.environment.agent module</a></li>
-<li class="toctree-l1"><a class="reference internal" href="rlpack.environment.atari_wrapper.html">rlpack.environment.atari_wrapper module</a></li>
-<li class="toctree-l1"><a class="reference internal" href="rlpack.environment.atari_wrappers.html">rlpack.environment.atari_wrappers module</a></li>
-<li class="toctree-l1"><a class="reference internal" href="rlpack.environment.env.html">rlpack.environment.env module</a></li>
-<li class="toctree-l1"><a class="reference internal" href="rlpack.environment.master_env.html">rlpack.environment.master_env module</a></li>
-<li class="toctree-l1"><a class="reference internal" href="rlpack.environment.mujoco_wrapper.html">rlpack.environment.mujoco_wrapper module</a></li>
-<li class="toctree-l1"><a class="reference internal" href="rlpack.environment.scaler.html">rlpack.environment.scaler module</a></li>
-<li class="toctree-l1"><a class="reference internal" href="rlpack.environment.sub_env.html">rlpack.environment.sub_env module</a></li>
-<li class="toctree-l1"><a class="reference internal" href="rlpack.environment.wrapper.html">rlpack.environment.wrapper module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rlpack.environment.env_wrapper.html">rlpack.environment.env_wrapper module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rlpack.environment.fake_env.html">rlpack.environment.fake_env module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rlpack.environment.mq.html">rlpack.environment.mq module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rlpack.environment.stack_env.html">rlpack.environment.stack_env module</a></li>
 </ul>
 </div>
 </div>
@@ -188,10 +182,10 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="rlpack.environment.agent.html" class="btn btn-neutral float-right" title="rlpack.environment.agent module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="rlpack.environment.env_wrapper.html" class="btn btn-neutral float-right" title="rlpack.environment.env_wrapper module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="rlpack.common.mq.html" class="btn btn-neutral" title="rlpack.common.mq module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="rlpack.common.utils.html" class="btn btn-neutral" title="rlpack.common.utils module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -200,7 +194,7 @@
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, Author.
+        &copy; Copyright 2018, Author
 
     </p>
   </div>
@@ -219,20 +213,14 @@
 
   
 
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'./',
-            VERSION:'',
-            LANGUAGE:'en',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: '.txt'
-        };
-    </script>
-      <script type="text/javascript" src="_static/jquery.js"></script>
-      <script type="text/javascript" src="_static/underscore.js"></script>
-      <script type="text/javascript" src="_static/doctools.js"></script>
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
 
   
 

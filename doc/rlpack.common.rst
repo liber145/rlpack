@@ -14,4 +14,5 @@ Submodules
    rlpack.common.log
    rlpack.common.memory
    rlpack.common.mq
+   rlpack.common.utils
 

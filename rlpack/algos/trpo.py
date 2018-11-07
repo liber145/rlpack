@@ -24,7 +24,7 @@ class TRPO(Base):
             x = tf.layers.dense(self.observation, 64, activation=tf.nn.tanh)
             x = tf.layers.dense(x, 64, activation=tf.nn.tanh)
             self.mu = tf.layers.dense(x, self.dim_action, activation=None)
-            self.log_var = tf.get_variable("log_var", [self.mu.shape.as_list()[1]], tf.float32, tf.constant_initializer(0.0))
+            self.log_var = tf.get_variable("log_var", [self.mu.shape()[1]], tf.float32, tf.constant_initializer(0.0))
 
         with tf.variable_scope("value_net"):
             x = tf.layers.dense(self.observation, 64, activation=tf.nn.tanh)

@@ -20,6 +20,8 @@ class Base(ABC):
         # Training parameters.
         self.discount = config.discount
         self.batch_size = config.batch_size
+        self.training_epoch = config.training_epoch
+        self.max_grad_norm = config.max_grad_norm
 
         # Save.
         self.save_path = config.save_path
@@ -78,7 +80,7 @@ class Base(ABC):
     def update(self, minibatch, update_ratio):
         """Update policy using minibatch samples.
         :param minibatch: a minibatch of training data
-        :update_ratio: the ratio of current update step in total update step
+        :param update_ratio: the ratio of current update step in total update step
         :return: update info, i.e. loss.
         """
         pass

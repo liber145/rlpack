@@ -80,15 +80,14 @@
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="main.html">main module</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="rlpack.html">rlpack package</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="rlpack.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="rlpack.algos.html">rlpack.algos package</a></li>
 <li class="toctree-l3 current"><a class="reference internal" href="rlpack.common.html">rlpack.common package</a><ul class="current">
 <li class="toctree-l4 current"><a class="reference internal" href="rlpack.common.html#submodules">Submodules</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="rlpack.environment.html">rlpack.environment package</a></li>
-<li class="toctree-l3"><a class="reference internal" href="rlpack.estimator.html">rlpack.estimator package</a></li>
 </ul>
 </li>
 </ul>
@@ -166,84 +165,57 @@
 <span id="rlpack-common-memory-module"></span><h1>rlpack.common.memory module<a class="headerlink" href="#module-rlpack.common.memory" title="Permalink to this headline">¶</a></h1>
 <dl class="class">
 <dt id="rlpack.common.memory.Memory">
-<em class="property">class </em><code class="descclassname">rlpack.common.memory.</code><code class="descname">Memory</code><span class="sig-paren">(</span><em>capacity</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/common/memory.html#Memory"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.common.memory.Memory" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">rlpack.common.memory.</code><code class="descname">Memory</code><span class="sig-paren">(</span><em>capacity=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/common/memory.html#Memory"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.common.memory.Memory" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
-<p>储存SARS对。</p>
-<dl class="docutils">
-<dt>Method:</dt>
-<dd>append: 添加一个一个的SARS tuple。期望形式 state, action, reward, next_state, done.</dd>
-</dl>
 <dl class="method">
-<dt id="rlpack.common.memory.Memory.append">
-<code class="descname">append</code><span class="sig-paren">(</span><em>consecutive_transition</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/common/memory.html#Memory.append"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.common.memory.Memory.append" title="Permalink to this definition">¶</a></dt>
-<dd><p>consecutive_transition是sarsd对。</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="rlpack.common.memory.Memory.clear">
-<code class="descname">clear</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/common/memory.html#Memory.clear"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.common.memory.Memory.clear" title="Permalink to this definition">¶</a></dt>
+<dt id="rlpack.common.memory.Memory.get_last_n_step">
+<code class="descname">get_last_n_step</code><span class="sig-paren">(</span><em>n</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/common/memory.html#Memory.get_last_n_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.common.memory.Memory.get_last_n_step" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
-<dt id="rlpack.common.memory.Memory.sample">
-<code class="descname">sample</code><span class="sig-paren">(</span><em>batch_size</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/common/memory.html#Memory.sample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.common.memory.Memory.sample" title="Permalink to this definition">¶</a></dt>
+<dt id="rlpack.common.memory.Memory.sample_transition">
+<code class="descname">sample_transition</code><span class="sig-paren">(</span><em>n</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/common/memory.html#Memory.sample_transition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.common.memory.Memory.sample_transition" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="rlpack.common.memory.Memory.size">
+<code class="descname">size</code><a class="headerlink" href="#rlpack.common.memory.Memory.size" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="rlpack.common.memory.Memory.store_sard">
+<code class="descname">store_sard</code><span class="sig-paren">(</span><em>state</em>, <em>action</em>, <em>reward</em>, <em>done</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/common/memory.html#Memory.store_sard"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.common.memory.Memory.store_sard" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
 
 <dl class="class">
-<dt id="rlpack.common.memory.Memory2">
-<em class="property">class </em><code class="descclassname">rlpack.common.memory.</code><code class="descname">Memory2</code><span class="sig-paren">(</span><em>capacity</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/common/memory.html#Memory2"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.common.memory.Memory2" title="Permalink to this definition">¶</a></dt>
+<dt id="rlpack.common.memory.NonBlockMemory">
+<em class="property">class </em><code class="descclassname">rlpack.common.memory.</code><code class="descname">NonBlockMemory</code><span class="sig-paren">(</span><em>n_env</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/common/memory.html#NonBlockMemory"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.common.memory.NonBlockMemory" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <dl class="method">
-<dt id="rlpack.common.memory.Memory2.append">
-<code class="descname">append</code><span class="sig-paren">(</span><em>transition</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/common/memory.html#Memory2.append"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.common.memory.Memory2.append" title="Permalink to this definition">¶</a></dt>
+<dt id="rlpack.common.memory.NonBlockMemory.get_trajectory_and_clear">
+<code class="descname">get_trajectory_and_clear</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/common/memory.html#NonBlockMemory.get_trajectory_and_clear"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.common.memory.NonBlockMemory.get_trajectory_and_clear" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="rlpack.common.memory.NonBlockMemory.n_env">
+<code class="descname">n_env</code><a class="headerlink" href="#rlpack.common.memory.NonBlockMemory.n_env" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
-<dt id="rlpack.common.memory.Memory2.extend">
-<code class="descname">extend</code><span class="sig-paren">(</span><em>transitions</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/common/memory.html#Memory2.extend"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.common.memory.Memory2.extend" title="Permalink to this definition">¶</a></dt>
+<dt id="rlpack.common.memory.NonBlockMemory.store_tag_a">
+<code class="descname">store_tag_a</code><span class="sig-paren">(</span><em>tag: List[int], action</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/common/memory.html#NonBlockMemory.store_tag_a"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.common.memory.NonBlockMemory.store_tag_a" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
-<dt id="rlpack.common.memory.Memory2.sample">
-<code class="descname">sample</code><span class="sig-paren">(</span><em>batch_size</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/common/memory.html#Memory2.sample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.common.memory.Memory2.sample" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
-<dl class="class">
-<dt id="rlpack.common.memory.Memory3">
-<em class="property">class </em><code class="descclassname">rlpack.common.memory.</code><code class="descname">Memory3</code><span class="sig-paren">(</span><em>capacity</em>, <em>n_step=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/common/memory.html#Memory3"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.common.memory.Memory3" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
-<dl class="method">
-<dt id="rlpack.common.memory.Memory3.append">
-<code class="descname">append</code><span class="sig-paren">(</span><em>transition</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/common/memory.html#Memory3.append"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.common.memory.Memory3.append" title="Permalink to this definition">¶</a></dt>
+<dt id="rlpack.common.memory.NonBlockMemory.store_tag_rds">
+<code class="descname">store_tag_rds</code><span class="sig-paren">(</span><em>tag: List[int], reward, done, state</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/common/memory.html#NonBlockMemory.store_tag_rds"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.common.memory.NonBlockMemory.store_tag_rds" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
-<dt id="rlpack.common.memory.Memory3.clear">
-<code class="descname">clear</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/common/memory.html#Memory3.clear"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.common.memory.Memory3.clear" title="Permalink to this definition">¶</a></dt>
-<dd><p>Empty memory.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="rlpack.common.memory.Memory3.extend">
-<code class="descname">extend</code><span class="sig-paren">(</span><em>states</em>, <em>actions</em>, <em>rewards</em>, <em>next_states</em>, <em>dones</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/common/memory.html#Memory3.extend"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.common.memory.Memory3.extend" title="Permalink to this definition">¶</a></dt>
-<dd><p>Store SARSD tuples.</p>
-<dl class="docutils">
-<dt>Args:</dt>
-<dd>states: current states.
-actions: current actions.
-rewards: received rewards.
-next_states: next states.
-dones: dones.</dd>
-</dl>
-</dd></dl>
-
-<dl class="method">
-<dt id="rlpack.common.memory.Memory3.sample">
-<code class="descname">sample</code><span class="sig-paren">(</span><em>batch_size</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/common/memory.html#Memory3.sample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.common.memory.Memory3.sample" title="Permalink to this definition">¶</a></dt>
+<dt id="rlpack.common.memory.NonBlockMemory.store_tag_s">
+<code class="descname">store_tag_s</code><span class="sig-paren">(</span><em>tag: List[int], state</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/rlpack/common/memory.html#NonBlockMemory.store_tag_s"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.common.memory.NonBlockMemory.store_tag_s" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
@@ -270,7 +242,7 @@ dones: dones.</dd>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, Author.
+        &copy; Copyright 2018, Author
 
     </p>
   </div>
@@ -289,20 +261,14 @@ dones: dones.</dd>
 
   
 
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'./',
-            VERSION:'',
-            LANGUAGE:'en',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: '.txt'
-        };
-    </script>
-      <script type="text/javascript" src="_static/jquery.js"></script>
-      <script type="text/javascript" src="_static/underscore.js"></script>
-      <script type="text/javascript" src="_static/doctools.js"></script>
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
 
   
 

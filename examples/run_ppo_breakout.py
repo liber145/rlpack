@@ -12,12 +12,12 @@ from tqdm import tqdm
 class Config(object):
     def __init__(self):
         self.seed = 1
-        self.save_path = "./log/breakout"
+        self.save_path = "./log/ppo_breakout"
         self.save_model_freq = 0.001
         self.log_freq = 10
 
         # 环境
-        self.n_stack = 4
+        self.n_env = 1
         self.dim_observation = None
         self.dim_action = None   # For continuous action.
         self.n_action = None   # For discrete action.
@@ -59,7 +59,7 @@ def learn(env, agent, config):
     epinfobuf = deque(maxlen=100)
     summary_writer = SummaryWriter(os.path.join(config.save_path, "summary"))
 
-    # 热启动，随机收集数据。
+    # ------------ Warm start --------------
     obs = env.reset()
     print(f"observation: max={np.max(obs)} min={np.min(obs)}")
     for i in tqdm(range(config.warm_start_length)):
@@ -71,6 +71,7 @@ def learn(env, agent, config):
 
     print("Finish warm start.")
     print("Start training.")
+    # --------------- Interaction, Train and Log ------------------
     for i in tqdm(range(config.n_trajectory)):
         epinfos = []
         for _ in range(config.trajectory_length):
@@ -82,9 +83,11 @@ def learn(env, agent, config):
                 if maybeepinfo:
                     epinfos.append(maybeepinfo)
 
+            # Save to memory.
             memory.store_sard(obs, actions, rewards, dones)
             obs = next_obs
 
+        # Get the last trajectory from memory and train the algorithm.
         update_ratio = i / config.n_trajectory
         data_batch = memory.get_last_n_step(config.trajectory_length)
         agent.update(data_batch, update_ratio)

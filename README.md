@@ -19,20 +19,18 @@
 
 
 ## 特点
-- 多个环境并行
+- 一个Agent和多个Environment进行交互，加快探索。
 - 方便重现结果
 
 ## 算法涵盖
 - DQN
 - DoubleDQN
-- SoftDQN
-- AveDQN
+- DuelDQN
 - DistDQN
-- PG
 - A2C
 - TRPO
 - PPO
-- DDPG
+- DiscretePPO
 
 
 ## 实验结果
@@ -45,11 +43,11 @@ DoubleDQN的结果，Rainbow的结果和我们的结果。
 
 |    	   		 | DoubledQN |Rainbow | RLPack |
 |---------------|-----------|--------|---------|
-| Breakout 		 |	         |        |        | 
+| Breakout 		 |	         |        |        |
 | Seaquest 		 |           |        |    	   |
 | SpaceInvaders |           |        |		   |
 | Mujoco        |           |        |  	   |	 
- 
+
 ![space invaders](figures/space_invaders.png)
 
 
@@ -57,7 +55,7 @@ DoubleDQN的结果，Rainbow的结果和我们的结果。
 依赖：
 
 - gym
-- tensorflow or tensorflow-gpu
+- tensorflow-gpu=1.8
 
 依赖项可通过pip安装。
 注意，`gym.mujoco`的使用需要额外的许可，请参考[gym](https://github.com/openai/gym)。
@@ -65,8 +63,8 @@ DoubleDQN的结果，Rainbow的结果和我们的结果。
 
 ```bash
 $ pip install "gym[atari,mujoco]"
-$ pip install tensorflow 
-$ pip install tensorflow-gpu
+$ pip install tensorflow
+$ pip install tensorflow-gpu==
 ```
 
 安装依赖后，使用下属方式安装在本地。建议使用Anaconda环境。
@@ -80,7 +78,7 @@ $ pip install -e .
 ## 使用示例
 
 ```bash
-$ python main.py --env Atari.SpaceInvadersNoFrameskip-v4 --model dqn
+$ python examples/run_ppo_contppo_reacher.py
 ```
 
 
@@ -89,7 +87,7 @@ $ python main.py --env Atari.SpaceInvadersNoFrameskip-v4 --model dqn
 - `batch_size`：batch size。
 - `memory_size`：存储中间操作的大小。
 - `lr`：学习率。
-- `n_env`：多少个env并行。
+- `n_env`：从多个env处拿到Obervation。
 - `n_action`：actiond的数目（离散动作）。
 - `dim_action`：action维数（连续动作）。
 - `dim_ob`：observation的维数。
@@ -100,12 +98,11 @@ $ python main.py --env Atari.SpaceInvadersNoFrameskip-v4 --model dqn
 
 
 
-## 引用
+## 参考
 
 - [Human-level control through deep reinforcement learning](https://www.nature.com/articles/nature14236)
 - [Deep Reinforcement Learning with Double Q-learning](https://arxiv.org/abs/1509.06461)
-- [Averaged-DQN: Variance Reduction and Stabilization
-for Deep Reinforcement Learning](https://arxiv.org/pdf/1611.01929)
+- [Averaged-DQN: Variance Reduction and Stabilization for Deep Reinforcement Learning](https://arxiv.org/pdf/1611.01929)
 - [A Distributional Perspective on Reinforcement Learning](https://arxiv.org/abs/1707.06887)
 - [Reinforcement Learning with Deep Energy-Based Policies](https://arxiv.org/abs/1702.08165)
 - [Trust Region Policy Optimization](https://arxiv.org/abs/1502.05477)
@@ -124,16 +121,19 @@ for Deep Reinforcement Learning](https://arxiv.org/pdf/1611.01929)
 
 ## 代码组成
 ### 代码主要部分
-- Estimator：构建算法，包括搭建网络，更新策略。
-- Middleware：存取交互数据；负责通信。
-- Environment：包装游戏环境（主要是gym），即step-reset这种离散模式。
+- algos：构建算法，包括搭建网络，更新策略。
+- common：存取交互数据；负责通信。
+- environment：包装游戏环境（主要是gym），即step-reset这种离散模式。
 
-### Estimator主要部分
-- `build_model`
+### 算法的主要成分
+- `build_network`
 构建算法迭代更新中的基本tensorflow操作：loss；state_value；等等。
 
+- `build-algorithm`
+使用上面构建的tensorflow opration构建算法。
+
 - `update`
-使用`build_model`中的tensorflow模块更新算法。这一阶段大量调用`sess.run`，但不会使用tensorflow搭建模块。
+使用memory返回的minibatch样本更新算法。
 
 - `get_action`
 根据obsevation得到下一个动作。
@@ -141,5 +141,3 @@ for Deep Reinforcement Learning](https://arxiv.org/pdf/1611.01929)
 ## 信息传递流程图
 
 ![flow](figures/flow.png)
-
-

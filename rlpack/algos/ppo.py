@@ -9,6 +9,16 @@ from .base import Base
 
 class PPO(Base):
     def __init__(self, config):
+        """A implementation of PPO algself.
+
+        A PPO ......skdjfpeself.
+
+        Params:
+            param config: xxx
+
+        Return:
+            None
+        """
         self.tau = config.gae
         self.entropy_coefficient = config.entropy_coef
         self.critic_coefficient = config.vf_coef
@@ -16,31 +26,11 @@ class PPO(Base):
 
         self.n_trajectory = config.n_trajectory
         self.trajectory_length = config.trajectory_length
-        self.n_env = config.n_env
-
-        self.dim_observation = config.dim_observation
-        self.n_action = config.n_action
-        self.discount = config.discount
-        self.batch_size = config.batch_size
 
         self.lr_schedule = config.lr_schedule
         self.clip_schedule = config.clip_schedule
 
-        self.save_path = config.save_path
-        self.save_model_freq = config.save_model_freq
-
-        # ------------------------ 申请网络图 ------------------------
-        tf.reset_default_graph()
-        tf.Variable(0, name="global_step", trainable=False)
-
-        # ------------------------ 搭建网络 ------------------------
-        self.build_network()
-
-        # ------------------------ 搭建算法 ------------------------
-        self.build_algorithm()
-
-        # ------------------------ 存储模型，存储训练信息，重载上回模型 ------------------------
-        self._prepare()
+        super().__init__(config)
 
     def build_network(self):
         self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], name="observation")
@@ -82,7 +72,7 @@ class PPO(Base):
         assert_shape(prob_1, [None, self.n_action])
         assert_shape(prob_2, [None, self.n_action])
 
-        self.entropy = - tf.reduce_sum(log_prob_1 * prob_1, axis=1)   # entropy = - \sum_i p_i \log(p_i)
+        self.entropy = - tf.reduce_sum(log_prob_1 * prob_1, axis=1)
         assert_shape(self.entropy, [None])
 
         # Compute ratio of the action probability.
@@ -127,7 +117,7 @@ class PPO(Base):
         return np.array(action)
 
     def update(self, minibatch, update_ratio):
-        """minibatch is a trajectory.
+        """Update the policy.
 
         Arguments:
             minibatch: n_env * trajectory_length * self.dim_observation
@@ -191,15 +181,14 @@ class PPO(Base):
                         self.moved_lr: self.lr_schedule(update_ratio),
                         self.clip_epsilon: self.clip_schedule(update_ratio)})
 
-                    if global_step % 100 == 0:
-                        print(f"c_loss: {c_loss}  surr: {surr}  entro: {entro[0]}  ratio: {p_ratio[0]} at step {global_step}")
-
                 except StopIteration:
                     del batch_generator
                     break
 
         if (update_ratio / self.save_model_freq) % 1 == 0:
             self.save_model()
+
+        return {"critic_loss": c_loss, "surrogate": surr, "entropy": entro, "training_step": global_step, "sample_ratio": p_ratio[0]}
 
     def _generator(self, data_batch, batch_size=32):
         n_sample = data_batch[0].shape[0]

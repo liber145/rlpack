@@ -11,7 +11,7 @@ Subpackages
 
 .. toctree::
 
+    rlpack.algos
     rlpack.common
     rlpack.environment
-    rlpack.estimator
 
