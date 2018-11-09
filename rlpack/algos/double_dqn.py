@@ -74,7 +74,7 @@ class DoubleDQN(Base):
         idx = np.random.uniform(size=batch_size) > self.epsilon
         actions[idx] = best_action[idx]
 
-        if obs.ndim == 1:
+        if obs.ndim == 1 or obs.ndim == 3:
             actions = actions[0]
         return actions
 
