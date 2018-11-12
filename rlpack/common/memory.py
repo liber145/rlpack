@@ -5,6 +5,9 @@ from typing import List
 import numpy as np
 
 
+import numpy as np
+
+
 class Memory(object):
     def __init__(self, capacity=0):
         """ state_queue 存储交互得到的state，假设state是(84*84*4)，有8个env同时传递，那么每个state存储格式为$(8*84*84*4)$。

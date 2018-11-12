@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+
 from tensorboardX import SummaryWriter
 
 from .base import Base

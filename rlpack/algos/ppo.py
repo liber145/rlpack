@@ -100,7 +100,8 @@ class PPO(Base):
 
         # Clip gradients.
         clipped_grads, _ = tf.clip_by_global_norm(grads, self.max_grad_norm)
-        self.total_train_op = self.optimizer.apply_gradients(zip(clipped_grads, tf.trainable_variables()), global_step=tf.train.get_global_step())
+        self.total_train_op = self.optimizer.apply_gradients(
+            zip(clipped_grads, tf.trainable_variables()), global_step=tf.train.get_global_step())
 
     def get_action(self, obs):
         if obs.ndim == 1 or obs.ndim == 3:
@@ -162,7 +163,8 @@ class PPO(Base):
 
             while True:
                 try:
-                    mini_s_batch, mini_a_batch, mini_advantage_batch, mini_old_logit_action_probability_batch, mini_target_state_value_batch = next(batch_generator)
+                    mini_s_batch, mini_a_batch, mini_advantage_batch, mini_old_logit_action_probability_batch, mini_target_state_value_batch = next(
+                        batch_generator)
 
                     global_step = self.sess.run(tf.train.get_global_step())
 

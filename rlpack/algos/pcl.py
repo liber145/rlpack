@@ -5,6 +5,9 @@ import tensorflow as tf
 from ..common.utils import assert_shape
 from .baseq import BaseQ
 
+from .utils import assert_shape
+from .baseq import BaseQ
+
 
 class PCL(BaseQ):
     def __init__(self, config):
@@ -57,11 +60,13 @@ class PCL(BaseQ):
         assert_shape(self.selected_action_probability, [None])
 
         # 计算梯度。
-        grad_actor = tf.gradients(tf.log(self.selected_action_probability), trainable_variables, grad_ys=self.td / tf.to_float(batch_size))
+        grad_actor = tf.gradients(tf.log(self.selected_action_probability),
+                                  trainable_variables, grad_ys=self.td / tf.to_float(batch_size))
         grad_critic = tf.gradients(self.action_value, trainable_variables, grad_ys=self.td / tf.to_float(batch_size))
 
         grad_composed = [-(self.lr_actor * ga + self.lr_critic * gc) for ga, gc in zip(grad_actor, grad_critic)]
-        self.train_op = self.optimizer.apply_gradients(zip(grad_composed, trainable_variables), global_step=tf.train.get_global_step())
+        self.train_op = self.optimizer.apply_gradients(
+            zip(grad_composed, trainable_variables), global_step=tf.train.get_global_step())
 
         # 更新目标网络。
         def _update_target(new_net, old_net):
@@ -83,7 +88,8 @@ class PCL(BaseQ):
 
         batch_size = s_batch.shape[0]
 
-        action_value, target_action_value = self.sess.run([self.action_value, self.target_action_value], feed_dict={self.observation: next_s_batch})
+        action_value, target_action_value = self.sess.run(
+            [self.action_value, self.target_action_value], feed_dict={self.observation: next_s_batch})
         td_batch = r_batch + (1 - d_batch) * self.discount * target_action_value
 
         _, global_step = self.sess.run([self.train_op, tf.train.get_global_step()],

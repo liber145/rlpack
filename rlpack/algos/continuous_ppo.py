@@ -56,14 +56,16 @@ class ContinuousPPO(Base):
         logp += -0.5 * tf.reduce_sum(tf.square(self.action - self.mu) / tf.exp(self.log_var), axis=1, keepdims=True)
 
         logp_old = -0.5 * tf.reduce_sum(self.old_log_var)
-        logp_old += -0.5 * tf.reduce_sum(tf.square(self.action - self.old_mu) / tf.exp(self.old_log_var), axis=1, keepdims=True)
+        logp_old += -0.5 * tf.reduce_sum(tf.square(self.action - self.old_mu) /
+                                         tf.exp(self.old_log_var), axis=1, keepdims=True)
 
         # Compute KL divergence.
         log_det_cov_old = tf.reduce_sum(self.old_log_var)
         log_det_cov_new = tf.reduce_sum(self.log_var)
         tr_old_new = tf.reduce_sum(tf.exp(self.old_log_var - self.log_var))
 
-        self.kl = 0.5 * tf.reduce_mean(log_det_cov_new - log_det_cov_old + tr_old_new + tf.reduce_sum(tf.square(self.mu - self.old_mu) / tf.exp(self.log_var), axis=1) - self.dim_action)
+        self.kl = 0.5 * tf.reduce_mean(log_det_cov_new - log_det_cov_old + tr_old_new + tf.reduce_sum(
+            tf.square(self.mu - self.old_mu) / tf.exp(self.log_var), axis=1) - self.dim_action)
 
         self.entropy = 0.5 * (self.dim_action + self.dim_action * tf.log(2 * np.pi) + tf.exp(tf.reduce_sum(self.log_var)))
 
