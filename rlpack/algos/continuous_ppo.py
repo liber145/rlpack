@@ -11,6 +11,9 @@ class ContinuousPPO(Base):
     def __init__(self, config):
         self.tau = config.gae
 
+        self.lr = config.lr
+        self.trajectory_length = config.trajectory_length
+
         self.entropy_coef = config.entropy_coef
         self.critic_coef = config.vf_coef
 
@@ -159,12 +162,12 @@ class ContinuousPPO(Base):
                         self.advantage: mb_advantage,
                         self.old_mu: mb_old_mu,
                         self.old_log_var: old_log_var,
-                        self.clip_epsilon: self.clip_schedule(update_ratio)})
+                        self.clip_epsilon: 0.2})
 
                     self.sess.run(self.train_critic_op, feed_dict={
                         self.observation: mb_s,
                         self.span_reward: mb_target_value,
-                        self.clip_epsilon: self.clip_schedule(update_ratio)})
+                        self.clip_epsilon: 0.2})
 
                 except StopIteration:
                     del batch_generator

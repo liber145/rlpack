@@ -49,8 +49,8 @@ class MujocoWrapper(StackEnv):
         return True
 
 
-class DistMujocoWrapper(object):
-    def __init__(self, env_id: str, n_env: int):
+class DistributedMujocoWrapper(object):
+    def __init__(self, env_name: str, n_env: int):
         self.n_env = n_env
         self.env_ids = None
         self.env_manager = DistributedEnvManager(n_env)
@@ -60,27 +60,33 @@ class DistMujocoWrapper(object):
         # p.join()
         self.env_manager.start()
 
-        print("63 >>>>")
-
         processes = []
         for _ in range(n_env):
-            p = DistributedEnvClient()
+            p = DistributedEnvClient(env_name)
             p.daemon = True
             p.start()
             processes.append(p)
 
-        print("72 >>>")
-
-        for p in processes:
-            p.join()
+        self._dim_action = p.dim_action
+        self._dim_observation = p.dim_observation
 
     def step(self, actions: List):
-        return {env_id: act for env_id, act in zip(self.env_ids, actions)}
+        act_dict = {env_id: act for env_id, act in zip(self.env_ids, actions)}
+        self.env_manager.step(act_dict)
+        self.env_ids, obs, rewards, dones, infos = self.env_manager.get_envs_to_inference(n=self.n_env)
+        return np.asarray(obs, dtype=np.float32), np.asarray(rewards, dtype=np.float32), np.asarray(dones, dtype=np.float32), infos
 
     def reset(self):
-        print("77 >>> ")
         self.env_ids, states = self.env_manager.get_envs_to_inference(n=self.n_env, state_only=True)
-        return states
+        return np.asarray(states, dtype=np.float32)
+
+    @property
+    def dim_observation(self):
+        return self._dim_observation
+
+    @property
+    def dim_action(self):
+        return self._dim_action
 
 
 class CartpoleWrapper(StackEnv):

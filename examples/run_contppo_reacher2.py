@@ -6,7 +6,7 @@ import numpy as np
 import tensorflow as tf
 from rlpack.algos import ContinuousPPO
 from rlpack.common import Memory
-from rlpack.environment import MujocoWrapper
+from rlpack.environment import DistributedMujocoWrapper
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
 
@@ -14,7 +14,7 @@ from tqdm import tqdm
 class Config(object):
     def __init__(self):
         self.seed = 1
-        self.save_path = "./log/ppo_reacher_2"
+        self.save_path = "./log/ppo_reacher_4"
         self.save_model_freq = 0.001
         self.log_freq = 10
 
@@ -26,7 +26,7 @@ class Config(object):
 
         # 训练长度
         self.n_env = 8
-        self.trajectory_length = 128
+        self.trajectory_length = 256
         self.n_trajectory = 1000   # for each env
         self.batch_size = 64
         self.warm_start_length = 1
@@ -51,7 +51,7 @@ class Config(object):
 def process_env(env):
     config = Config()
     config.dim_observation = env.dim_observation
-    config.dim_action = env.dim_action
+    config.dim_action = env.dim_action[0]
 
     print(f"dim_action: {env.dim_action}")
     return config
@@ -108,7 +108,7 @@ def learn(env, agent, config):
 
 
 if __name__ == "__main__":
-    env = MujocoWrapper("Reacher-v2", 8)
+    env = DistributedMujocoWrapper("Reacher-v2", 8)
     config = process_env(env)
     agent = ContinuousPPO(config)
     learn(env, agent, config)

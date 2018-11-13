@@ -3,6 +3,8 @@
 通过共享内存的方式实现多机多进程并行Env.
 
 """
+import signal
+import sys
 import time
 from multiprocessing.managers import BaseManager
 from queue import Empty, Queue
@@ -10,6 +12,15 @@ from threading import Thread
 from typing import Dict, List
 
 import numpy as np
+
+from ..common.log import logger
+
+
+def exit_gracefully(signum, frame):
+    sys.exit(0)
+
+
+signal.signal(signal.SIGINT, exit_gracefully)
 
 
 class DistributedEnvManager(Thread):
@@ -39,7 +50,6 @@ class DistributedEnvManager(Thread):
         self.s = m.get_server()
 
     def run(self):
-        print("42 >>>>")
         self.s.serve_forever()
 
     def get_envs_to_inference(self, n: int, state_only: bool = False):
@@ -55,6 +65,7 @@ class DistributedEnvManager(Thread):
                 time.sleep(0.0001)
             try:
                 srdi = self.srd_pad[p].get(block=False)
+
                 env_ids.append(p)
                 m += 1
                 srdis.append(srdi)
@@ -62,10 +73,11 @@ class DistributedEnvManager(Thread):
             except Empty:
                 p = (p + 1) % self.n_env
 
-        next_obs = np.stack(srdis[i][0] for i in range(n))
+        next_obs = [srdis[i][0] for i in range(n)]
+
         if state_only:
             return env_ids, next_obs
-        rewards = np.array([srdis[i][1] for i in range(n)])
+        rewards = [srdis[i][1] for i in range(n)]
         dones = [srdis[i][2] for i in range(n)]
         infos = [srdis[i][3] for i in range(n)]
         return env_ids, next_obs, rewards, dones, infos
