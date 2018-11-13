@@ -39,6 +39,7 @@ class DistributedEnvManager(Thread):
         self.s = m.get_server()
 
     def run(self):
+        print("42 >>>>")
         self.s.serve_forever()
 
     def get_envs_to_inference(self, n: int, state_only: bool = False):

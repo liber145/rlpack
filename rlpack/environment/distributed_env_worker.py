@@ -14,6 +14,7 @@ class DistributedEnvClient(Process):
     def __init__(self, hostname='localhost', port=50000):
         super().__init__()
         self.gym_env = gym.make("Breakout-v0")
+        self.last_done = False
 
         class SharedMemoryManager(BaseManager):
             pass
@@ -33,9 +34,23 @@ class DistributedEnvClient(Process):
         self.srd_queue.put(self.gym_env.reset())
 
     def run(self):
+        print("37 >>>")
         while True:
             action = self.a_queue.get()
-            self.srd_queue.put(self.gym_env.step(action))
+
+            print("41 >>>")
+
+            if self.last_done:
+                ob = self.gym_env.reset()
+                reward = 0
+                done = True
+                info = None
+                self.last_done = False
+            else:
+                ob, reward, done, info = self.gym_env.step(action)
+                self.last_done = done
+
+            self.srd_queue.put((ob, reward, done, info))
 
 
 if __name__ == '__main__':
