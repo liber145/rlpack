@@ -12,7 +12,7 @@ from tqdm import tqdm
 class Config(object):
     def __init__(self):
         self.seed = 1
-        self.save_path = "./log/ppo_breakout"
+        self.save_path = "./log/ppo_breakout_v2"
         self.save_model_freq = 0.001
         self.log_freq = 10
 
@@ -90,7 +90,10 @@ def learn(env, agent, config):
         # Get the last trajectory from memory and train the algorithm.
         update_ratio = i / config.n_trajectory
         data_batch = memory.get_last_n_step(config.trajectory_length)
-        agent.update(data_batch, update_ratio)
+        # {"critic_loss": c_loss, "surrogate": surr, "entropy": entro, "training_step": global_step, "sample_ratio": p_ratio[0]}
+        loginfo = agent.update(data_batch, update_ratio)
+
+        print(f"critic_loss: {loginfo['critic_loss']}   surrogate: {loginfo['surrogate']}   entropy: {loginfo['entropy']}   sample ratio: {loginfo['sample_ratio']} ")
 
         epinfobuf.extend(epinfos)
         summary_writer.add_scalar("eprewmean", safemean([epinfo["r"] for epinfo in epinfobuf]), global_step=i)

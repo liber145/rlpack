@@ -14,7 +14,7 @@ from tqdm import tqdm
 class Config(object):
     def __init__(self):
         self.seed = 1
-        self.save_path = "./log/ppo_reacher_4"
+        self.save_path = "./log/ppo_reacher_8"
         self.save_model_freq = 0.001
         self.log_freq = 10
 
@@ -27,7 +27,7 @@ class Config(object):
         # 训练长度
         self.n_env = 8
         self.trajectory_length = 256
-        self.n_trajectory = 1000   # for each env
+        self.n_trajectory = 1000   # for each env  update_step
         self.batch_size = 64
         self.warm_start_length = 1
         self.memory_size = 1000

@@ -9,7 +9,7 @@ from baselines.common.vec_env import VecEnv
 from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
 from gym import spaces
 
-from ..common.log import logger
+# from ..common.log import logger
 from .distributed_env_worker import DistributedEnvClient
 from .distributed_env_wrapper import DistributedEnvManager
 from .stack_env import StackEnv

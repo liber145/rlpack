@@ -91,10 +91,23 @@ class ContinuousPPO(Base):
         # self.total_train_op = self.optimizer.apply_gradients(zip(clipped_grads, tf.trainable_variables()), global_step=tf.train.get_global_step())
 
         # Build actor operation.
-        self.train_actor_op = self.actor_optimizer.minimize(self.surrogate)
+        actor_vars = tf.trainable_variables("policy_net")
+        grads = tf.gradients(self.surrogate, actor_vars)
+        clipped_grads, _ = tf.clip_by_global_norm(grads, 40)
+        self.train_actor_op = self.actor_optimizer.apply_gradients(zip(clipped_grads, actor_vars))
+
+        # self.train_actor_op = self.actor_optimizer.minimize(self.surrogate)
 
         # Build critic operation.
-        self.train_critic_op = self.critic_optimizer.minimize(self.critic_loss)
+        critic_vars = tf.trainable_variables("value_net")
+        regularization = 0.001 * tf.reduce_sum([tf.nn.l2_loss(c_var) for c_var in critic_vars])
+        self.critic_loss += regularization
+
+        grads = tf.gradients(self.critic_loss, critic_vars)
+        clipped_grads, _ = tf.clip_by_global_norm(grads, 40)
+        self.train_critic_op = self.critic_optimizer.apply_gradients(zip(clipped_grads, critic_vars))
+
+        # self.train_critic_op = self.critic_optimizer.minimize(self.critic_loss)
 
         # Build action sample.
         self.sample_action = self.mu + tf.exp(self.log_var / 2.0) * tf.random_normal(shape=[self.dim_action], dtype=tf.float32)

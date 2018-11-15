@@ -1,20 +1,20 @@
+import os
+from collections import deque
+
 import gym
-from tqdm import tqdm
 import numpy as np
 import tensorflow as tf
-from tensorboardX import SummaryWriter
-from collections import deque
-import os
-
+from rlpack.algos import TRPO
 from rlpack.common import Memory
 from rlpack.environment import MujocoWrapper
-from rlpack.algos import TRPO
+from tensorboardX import SummaryWriter
+from tqdm import tqdm
 
 
 class Config(object):
     def __init__(self):
         self.seed = 1
-        self.save_path = "./log/trpo_reacher"
+        self.save_path = "./log/trpo_reacher_2"
         self.save_model_freq = 0.001
         self.log_freq = 10
 
@@ -26,7 +26,7 @@ class Config(object):
 
         # 训练长度
         self.n_env = 8
-        self.trajectory_length = 128
+        self.trajectory_length = 256
         self.n_trajectory = 10000   # for each env
         self.batch_size = 64
         self.warm_start = 1
@@ -36,8 +36,8 @@ class Config(object):
         self.training_epoch = 10
         self.discount = 0.99
         self.gae = 0.95
-        self.lr_schedule = lambda x: (1-x) * 2.5e-4
-        self.clip_schedule = lambda x: (1-x) * 0.1
+        self.lr_schedule = lambda x: (1 - x) * 2.5e-4
+        self.clip_schedule = lambda x: (1 - x) * 0.1
         self.vf_coef = 1.0
         self.entropy_coef = 0.01
         self.max_grad_norm = 5
@@ -51,7 +51,7 @@ class Config(object):
 def process_env(env):
     config = Config()
     config.dim_observation = env.dim_observation
-    config.dim_action = env.dim_action[0]
+    config.dim_action = env.dim_action
 
     print(f"dim_action: {env.dim_action}")
     return config
@@ -107,7 +107,7 @@ def learn(env, agent, config):
             memory.store_sard(obs, actions, rewards, dones)
             obs = next_obs
 
-        update_ratio = i/config.n_trajectory
+        update_ratio = i / config.n_trajectory
         data_batch = memory.get_last_n_step(config.trajectory_length)
         agent.update(data_batch, update_ratio)
 
