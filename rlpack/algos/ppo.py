@@ -9,14 +9,12 @@ from .base import Base
 
 class PPO(Base):
     def __init__(self, config):
-        """A implementation of PPO algself.
+        """An implementation of PPO.
 
-        A PPO ......skdjfpeself.
+        Parameters:
+            config: a dictionary for training config.
 
-        Params:
-            param config: xxx
-
-        Return:
+        Returns:
             None
         """
         self.tau = config.gae

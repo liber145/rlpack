@@ -7,7 +7,7 @@ from ..common.utils import assert_shape
 from .base import Base
 
 
-class PPO(Base):
+class PPO2(Base):
     def __init__(self, config):
         self.tau = config.gae
         self.entropy_coefficient = config.entropy_coef

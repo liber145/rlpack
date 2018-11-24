@@ -31,6 +31,7 @@
 - TRPO
 - PPO
 - DiscretePPO
+- DDPG
 
 
 ## 实验结果
@@ -64,7 +65,7 @@ DoubleDQN的结果，Rainbow的结果和我们的结果。
 ```bash
 $ pip install "gym[atari,mujoco]"
 $ pip install tensorflow
-$ pip install tensorflow-gpu==
+$ pip install tensorflow-gpu==1.8.0
 ```
 
 安装依赖后，使用下属方式安装在本地。建议使用Anaconda环境。
@@ -140,4 +141,4 @@ $ python examples/run_ppo_contppo_reacher.py
 
 ## 信息传递流程图
 
-![flow](figures/flow.png)
+![flow](figures/interaction.png)

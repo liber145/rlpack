@@ -3,10 +3,6 @@ from abc import ABC, abstractmethod
 
 import tensorflow as tf
 
-from tensorboardX import SummaryWriter
-
-from ..common.log import logger
-
 
 class Base(ABC):
     """Algorithm base class."""
@@ -53,7 +49,7 @@ class Base(ABC):
 
     def _prepare(self):
         # ------------------------ Initialize saver. ------------------------
-        self.saver = tf.train.Saver(max_to_keep=5)
+        self.saver = tf.train.Saver(max_to_keep=50000)
 
         # ------------------------ Initialize Session. ------------------------
         conf = tf.ConfigProto(allow_soft_placement=True)
@@ -100,7 +96,7 @@ class Base(ABC):
         """Load model from `save_path` if there exists."""
         latest_checkpoint = tf.train.latest_checkpoint(os.path.join(self.save_path, "model"))
         if latest_checkpoint:
-            logger.info("Loading model checkpoint {} ...".format(latest_checkpoint))
+            print("## Loading model checkpoint {} ...".format(latest_checkpoint))
             self.saver.restore(self.sess, latest_checkpoint)
         else:
-            logger.info("New start!")
+            print("## New start!")
