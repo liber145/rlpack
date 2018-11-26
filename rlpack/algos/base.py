@@ -49,7 +49,7 @@ class Base(ABC):
 
     def _prepare(self):
         # ------------------------ Initialize saver. ------------------------
-        self.saver = tf.train.Saver(max_to_keep=50000)
+        self.saver = tf.train.Saver(max_to_keep=5)
 
         # ------------------------ Initialize Session. ------------------------
         conf = tf.ConfigProto(allow_soft_placement=True)
