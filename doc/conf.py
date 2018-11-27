@@ -14,20 +14,20 @@
 #
 import os
 import sys
-sys.path.insert(0, '/home/liyujun/Programs/rl-algo')
+sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath('.'))
 
 
 # -- Project information -----------------------------------------------------
 
-project = 'rl-algo'
-copyright = '2018, Author'
-author = 'Author'
-sys.path.insert(0, '/home/liyujun/Programs')
+project = 'rlpack'
+copyright = '2018, x'
+author = 'x'
 
 # The short X.Y version
-version = ''
+version = '1.0'
 # The full version, including alpha/beta/rc tags
-release = ''
+release = '0.1'
 
 
 # -- General configuration ---------------------------------------------------
@@ -41,15 +41,12 @@ release = ''
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinx.ext.viewcode',
     'sphinx.ext.todo',
-    'sphinx.ext.autodoc',
-    'sphinx.ext.doctest',
     'sphinx.ext.intersphinx',
-    'sphinx.ext.todo',
-    'sphinx.ext.coverage',
-    'sphinx.ext.imgmath',
+    'sphinx.ext.mathjax',
+    'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
+    'sphinx.ext.githubpages',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -69,7 +66,7 @@ master_doc = 'index'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = 'en'
+language = None
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -112,7 +109,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'rl-algodoc'
+htmlhelp_basename = 'rlpackdoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -139,8 +136,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'rl-algo.tex', 'rl-algo Documentation',
-     'Author', 'manual'),
+    (master_doc, 'rlpack.tex', 'rlpack Documentation',
+     'x', 'manual'),
 ]
 
 
@@ -149,7 +146,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'rl-algo', 'rl-algo Documentation',
+    (master_doc, 'rlpack', 'rlpack Documentation',
      [author], 1)
 ]
 
@@ -160,8 +157,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'rl-algo', 'rl-algo Documentation',
-     author, 'rl-algo', 'One line description of project.',
+    (master_doc, 'rlpack', 'rlpack Documentation',
+     author, 'rlpack', 'One line description of project.',
      'Miscellaneous'),
 ]
 
@@ -190,8 +187,3 @@ epub_exclude_files = ['search.html']
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}
-
-# -- Options for todo extension ----------------------------------------------
-
-# If true, `todo` and `todoList` produce output, else they produce nothing.
-todo_include_todos = True

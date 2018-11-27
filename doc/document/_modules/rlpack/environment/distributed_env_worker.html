@@ -1,0 +1,308 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>rlpack.environment.distributed_env_worker &mdash; rlpack 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+
+  
+  <script src="../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> rlpack
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html#usage">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html#installation">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../benchmarks.html">Benchmarks</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Algorithms</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../algos/dqn.html">DQN</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../algos/a2c.html">A2C</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../algos/trpo.html">TRPO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../algos/ppo.html">PPO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../algos/ddpg.html">DDPG</a></li>
+</ul>
+<p class="caption"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/rlpack.algos.html">rlpack.algos package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/rlpack.environment.html">rlpack.environment package</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">rlpack</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>rlpack.environment.distributed_env_worker</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for rlpack.environment.distributed_env_worker</h1><div class="highlight"><pre>
+<span></span>
+
+<span class="kn">import</span> <span class="nn">signal</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="k">import</span> <span class="n">Process</span>
+<span class="kn">from</span> <span class="nn">multiprocessing.managers</span> <span class="k">import</span> <span class="n">BaseManager</span>
+
+<span class="kn">import</span> <span class="nn">gym</span>
+
+<span class="kn">from</span> <span class="nn">..common.log</span> <span class="k">import</span> <span class="n">logger</span>
+
+
+<div class="viewcode-block" id="exit_gracefully"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.distributed_env_worker.exit_gracefully">[docs]</a><span class="k">def</span> <span class="nf">exit_gracefully</span><span class="p">(</span><span class="n">signum</span><span class="p">,</span> <span class="n">frame</span><span class="p">):</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span></div>
+
+
+<span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGINT</span><span class="p">,</span> <span class="n">exit_gracefully</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="DistributedEnvClient"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.distributed_env_worker.DistributedEnvClient">[docs]</a><span class="k">class</span> <span class="nc">DistributedEnvClient</span><span class="p">(</span><span class="n">Process</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    start on worker client.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">hostname</span><span class="o">=</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">50000</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gym_env</span> <span class="o">=</span> <span class="n">gym</span><span class="o">.</span><span class="n">make</span><span class="p">(</span><span class="n">env_name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dim_observation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gym_env</span><span class="o">.</span><span class="n">observation_space</span><span class="o">.</span><span class="n">shape</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dim_action</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gym_env</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">shape</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">last_done</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_length</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_reward</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">class</span> <span class="nc">SharedMemoryManager</span><span class="p">(</span><span class="n">BaseManager</span><span class="p">):</span>
+            <span class="k">pass</span>
+
+        <span class="n">SharedMemoryManager</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="s1">&#39;get_config&#39;</span><span class="p">)</span>
+        <span class="n">SharedMemoryManager</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="s1">&#39;get_srd&#39;</span><span class="p">)</span>
+        <span class="n">SharedMemoryManager</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="s1">&#39;get_a&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">m</span> <span class="o">=</span> <span class="n">SharedMemoryManager</span><span class="p">(</span><span class="n">address</span><span class="o">=</span><span class="p">(</span><span class="n">hostname</span><span class="p">,</span> <span class="n">port</span><span class="p">),</span> <span class="n">authkey</span><span class="o">=</span><span class="sa">b</span><span class="s1">&#39;abab&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+        <span class="n">config_queue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">get_config</span><span class="p">()</span>
+        <span class="n">config_json</span> <span class="o">=</span> <span class="n">config_queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">env_id</span> <span class="o">=</span> <span class="n">config_json</span><span class="p">[</span><span class="s1">&#39;env_id&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">srd_queue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">get_srd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">env_id</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">a_queue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">get_a</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">env_id</span><span class="p">)</span>
+
+        <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gym_env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+        <span class="c1"># logger.info(f&quot;s: {s.shape}  {type(s)}&quot;)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">srd_queue</span><span class="o">.</span><span class="n">put</span><span class="p">([</span><span class="n">s</span><span class="p">])</span>
+
+<div class="viewcode-block" id="DistributedEnvClient.run"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.distributed_env_worker.DistributedEnvClient.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">action</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">epinfo</span> <span class="o">=</span> <span class="p">{}</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_done</span><span class="p">:</span>
+                <span class="n">ob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gym_env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+                <span class="n">reward</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">done</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">info</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">last_done</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="n">epinfo</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;episode&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;r&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_reward</span><span class="p">,</span> <span class="s2">&quot;l&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_length</span><span class="p">}}</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_length</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_reward</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ob</span><span class="p">,</span> <span class="n">reward</span><span class="p">,</span> <span class="n">done</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gym_env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">last_done</span> <span class="o">=</span> <span class="n">done</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_length</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_reward</span> <span class="o">+=</span> <span class="n">reward</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">srd_queue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="n">ob</span><span class="p">,</span> <span class="n">reward</span><span class="p">,</span> <span class="n">done</span><span class="p">,</span> <span class="n">epinfo</span><span class="p">))</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">dim_observation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dim_observation</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">dim_action</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dim_action</span></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">n_env</span> <span class="o">=</span> <span class="mi">8</span>
+    <span class="n">processes</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_env</span><span class="p">):</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">DistributedEnvClient</span><span class="p">()</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">daemon</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="n">processes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">processes</span><span class="p">:</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, x
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+  
+
+  <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

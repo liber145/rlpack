@@ -1,0 +1,286 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Introduction &mdash; rlpack 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Benchmarks" href="benchmarks.html" />
+    <link rel="prev" title="Welcome to rlpack’s documentation!" href="index.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> rlpack
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#installation">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="benchmarks.html">Benchmarks</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Algorithms</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="algos/dqn.html">DQN</a></li>
+<li class="toctree-l1"><a class="reference internal" href="algos/a2c.html">A2C</a></li>
+<li class="toctree-l1"><a class="reference internal" href="algos/trpo.html">TRPO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="algos/ppo.html">PPO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="algos/ddpg.html">DDPG</a></li>
+</ul>
+<p class="caption"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api/rlpack.algos.html">rlpack.algos package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/rlpack.environment.html">rlpack.environment package</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">rlpack</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Introduction</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/overview.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="introduction">
+<h1>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h1>
+<p><strong>rlpack</strong> is an intuitive, lightweight and flexible reinforcement learning library.
+It bundles will solve your problem of where to start with documentation,
+by providing a basic explanation of how to do it easily.</p>
+<p><strong>Features:</strong></p>
+<ul class="simple">
+<li>Lightweight, depending only on TensorFlow and Numpy</li>
+<li>Decoupling agent and environment, making it easy to integrate and use</li>
+<li>Easy to reproduce up-to-date RL algorithms</li>
+</ul>
+</div>
+<div class="section" id="usage">
+<h1>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h1>
+<p>Look how easy it is to use:</p>
+<div class="code python highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">tqdm</span> <span class="k">import</span> <span class="n">tqdm</span>
+<span class="kn">from</span> <span class="nn">rlpack.algos</span> <span class="k">import</span> <span class="n">PPO</span>
+<span class="kn">from</span> <span class="nn">rlpack.environment</span> <span class="k">import</span> <span class="n">AtariWrapper</span>
+<span class="c1"># Get your stuff done</span>
+
+<span class="n">env</span> <span class="o">=</span> <span class="n">AtariWrapper</span><span class="p">(</span><span class="s2">&quot;BreakoutNoFrameskip-v4&quot;</span><span class="p">)</span>
+<span class="n">pol</span> <span class="o">=</span> <span class="n">PPO</span><span class="p">()</span>
+
+<span class="n">obs</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">10000</span><span class="p">)):</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">128</span><span class="p">):</span>
+        <span class="n">actions</span> <span class="o">=</span> <span class="n">agent</span><span class="o">.</span><span class="n">get_action</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
+        <span class="n">next_obs</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">,</span> <span class="n">infos</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">actions</span><span class="p">)</span>
+
+        <span class="n">memory</span><span class="o">.</span><span class="n">store_sard</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">actions</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">)</span>
+        <span class="n">obs</span> <span class="o">=</span> <span class="n">next_obs</span>
+
+    <span class="n">data_batch</span> <span class="o">=</span> <span class="n">memory</span><span class="o">.</span><span class="n">get_last_traj</span><span class="p">()</span>
+    <span class="n">update_ratio</span> <span class="o">=</span> <span class="n">i</span> <span class="o">/</span> <span class="mi">10000</span>
+    <span class="n">agent</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">data_batch</span><span class="p">,</span> <span class="n">update_ratio</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="installation">
+<h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
+<p>Python3.6+ is required.</p>
+<ol class="arabic simple">
+<li>Install the dependencies using <cite>environment.yml</cite>:</li>
+</ol>
+<div class="code bash highlight-default notranslate"><div class="highlight"><pre><span></span>$ conda env create -f environment.yml
+$ conda activate py36
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li>Install <cite>rlpack</cite> by running:</li>
+</ol>
+<div class="code bash highlight-default notranslate"><div class="highlight"><pre><span></span>$ git clone https://github.com/smsxgz/rl-algo.git
+$ cd rl-algo
+$ python setup.py install
+</pre></div>
+</div>
+<p>It will install a basic learning environment in <cite>gym</cite>.
+To install more environments in <cite>gym</cite>, please refer to <a class="reference external" href="https://github.com/openai/gym">https://github.com/openai/gym</a>.</p>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="benchmarks.html" class="btn btn-neutral float-right" title="Benchmarks" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="index.html" class="btn btn-neutral" title="Welcome to rlpack’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, x
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+  
+
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
