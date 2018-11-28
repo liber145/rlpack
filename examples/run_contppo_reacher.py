@@ -5,8 +5,8 @@ import gym
 import numpy as np
 import tensorflow as tf
 from rlpack.algos import ContinuousPPO
-from rlpack.common import Memory
-from rlpack.environment import MujocoWrapper
+from rlpack.common import DistributedMemory
+from rlpack.environment import DistributedMujocoWrapper
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
 
@@ -14,7 +14,7 @@ from tqdm import tqdm
 class Config(object):
     def __init__(self):
         self.seed = 1
-        self.save_path = "./log/ppo_reacher_2"
+        self.save_path = "./log/ppo_reacher_v16"
         self.save_model_freq = 0.001
         self.log_freq = 10
 
@@ -51,7 +51,7 @@ class Config(object):
 def process_env(env):
     config = Config()
     config.dim_observation = env.dim_observation
-    config.dim_action = env.dim_action
+    config.dim_action = env.dim_action[0]
 
     print(f"dim_action: {env.dim_action}")
     return config
@@ -63,18 +63,21 @@ def safemean(x):
 
 def learn(env, agent, config):
 
-    memory = Memory(config.memory_size)
+    memory = DistributedMemory(config.memory_size)
+    memory.register(env)
     epinfobuf = deque(maxlen=100)
     summary_writer = SummaryWriter(os.path.join(config.save_path, "summary"))
 
     # 热启动，随机收集数据。
     obs = env.reset()
+    memory.store_s(obs)
     print(f"observation: max={np.max(obs)} min={np.min(obs)}")
     for i in tqdm(range(config.warm_start_length)):
         actions = agent.get_action(obs)
+        memory.store_a(actions)
         next_obs, rewards, dones, infos = env.step(actions)
 
-        memory.store_sard(obs, actions, rewards, dones)
+        memory.store_rds(rewards, dones, next_obs)
         obs = next_obs
 
     print("Finish warm start.")
@@ -83,6 +86,7 @@ def learn(env, agent, config):
         epinfos = []
         for _ in range(config.trajectory_length):
             actions = agent.get_action(obs)
+            memory.store_a(actions)
             next_obs, rewards, dones, infos = env.step(actions)
 
             for info in infos:
@@ -90,11 +94,11 @@ def learn(env, agent, config):
                 if maybeepinfo:
                     epinfos.append(maybeepinfo)
 
-            memory.store_sard(obs, actions, rewards, dones)
+            memory.store_rds(rewards, dones, next_obs)
             obs = next_obs
 
         update_ratio = i / config.n_trajectory
-        data_batch = memory.get_last_n_step(config.trajectory_length)
+        data_batch = memory.get_all_and_clear()
         agent.update(data_batch, update_ratio)
 
         epinfobuf.extend(epinfos)
@@ -108,7 +112,7 @@ def learn(env, agent, config):
 
 
 if __name__ == "__main__":
-    env = MujocoWrapper("Reacher-v2", 8)
+    env = DistributedMujocoWrapper("Reacher-v2", 8)
     config = process_env(env)
     agent = ContinuousPPO(config)
     learn(env, agent, config)

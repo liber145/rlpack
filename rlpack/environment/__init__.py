@@ -1,3 +1,1 @@
-from .env_wrapper import (AtariWrapper, CartpoleWrapper,
-                          DistributedMujocoWrapper, MujocoWrapper)
-from .stack_env import StackEnv
+from .env_wrapper import DistributedAtariWrapper, CartpoleWrapper, DistributedMujocoWrapper

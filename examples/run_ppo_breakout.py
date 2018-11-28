@@ -3,8 +3,8 @@ from collections import deque
 
 import numpy as np
 from rlpack.algos import PPO
-from rlpack.common import Memory
-from rlpack.environment import AtariWrapper
+from rlpack.common import DistributedMemory
+from rlpack.environment import DistributedAtariWrapper
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
 
@@ -12,14 +12,14 @@ from tqdm import tqdm
 class Config(object):
     def __init__(self):
         self.seed = 1
-        self.save_path = "./log/ppo_breakout_v12"
+        self.save_path = "./log/ppo_breakout_v16"
         self.save_model_freq = 0.001
         self.log_freq = 10
 
         # 环境
-        self.dim_observation = None
+        self.dim_observation = (84, 84, 4)
         self.dim_action = None   # For continuous action.
-        self.n_action = None   # For discrete action.
+        self.n_action = 4   # For discrete action.
 
         # 训练长度
         self.n_env = 8
@@ -54,19 +54,21 @@ def safemean(x):
 
 def learn(env, agent, config):
 
-    memory = Memory(config.memory_size)
+    memory = DistributedMemory(maxlen=1000)
+    memory.register(env)
     epinfobuf = deque(maxlen=100)
     summary_writer = SummaryWriter(os.path.join(config.save_path, "summary"))
 
     # ------------ Warm start --------------
     obs = env.reset()
+    print(obs.shape)
+    memory.store_s(obs)
     print(f"observation: max={np.max(obs)} min={np.min(obs)}")
     for i in tqdm(range(config.warm_start_length)):
         actions = agent.get_action(obs)
-        next_obs, rewards, dones, infos = env.step(actions)
-
-        memory.store_sard(obs, actions, rewards, dones)
-        obs = next_obs
+        memory.store_a(actions)
+        obs, rewards, dones, infos = env.step(actions)
+        memory.store_rds(rewards, dones, obs)
 
     print("Finish warm start.")
     print("Start training.")
@@ -75,23 +77,19 @@ def learn(env, agent, config):
         epinfos = []
         for _ in range(config.trajectory_length):
             actions = agent.get_action(obs)
-            next_obs, rewards, dones, infos = env.step(actions)
+            memory.store_a(actions)
+            obs, rewards, dones, infos = env.step(actions)
+            memory.store_rds(rewards, dones, obs)
 
             for info in infos:
                 maybeepinfo = info.get('episode')
                 if maybeepinfo:
                     epinfos.append(maybeepinfo)
 
-            # Save to memory.
-            memory.store_sard(obs, actions, rewards, dones)
-            obs = next_obs
-
         # Get the last trajectory from memory and train the algorithm.
         update_ratio = i / config.n_trajectory
-        data_batch = memory.get_last_n_step(config.trajectory_length)
-        # {"critic_loss": c_loss, "surrogate": surr, "entropy": entro, "training_step": global_step, "sample_ratio": p_ratio[0]}
+        data_batch = memory.get_all_and_clear()
         loginfo = agent.update(data_batch, update_ratio)
-
         # print(f"critic_loss: {loginfo['critic_loss']}   surrogate: {loginfo['surrogate']}   entropy: {loginfo['entropy']}   sample ratio: {loginfo['sample_ratio']} ")
 
         epinfobuf.extend(epinfos)
@@ -106,8 +104,7 @@ def learn(env, agent, config):
 
 if __name__ == "__main__":
     config = Config()
-    env = AtariWrapper("BreakoutNoFrameskip-v4", config.n_env)
-    config = process_config(env)
+    env = DistributedAtariWrapper("BreakoutNoFrameskip-v4", config.n_env)
     pol = PPO(config)
 
     learn(env, pol, config)

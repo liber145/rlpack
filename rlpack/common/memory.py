@@ -1,9 +1,6 @@
 import random
-from collections import deque
+from collections import defaultdict, deque
 from typing import List
-
-import numpy as np
-
 
 import numpy as np
 
@@ -66,6 +63,48 @@ class Memory(object):
     @property
     def size(self):
         return len(self.done_queue)
+
+
+class DistributedMemory(object):
+    def __init__(self, maxlen: int = 128):
+        self.env_wrapper = None
+        self.state_queue = defaultdict(lambda: deque(maxlen=maxlen + 1))
+        self.action_queue = defaultdict(lambda: deque(maxlen=maxlen))
+        self.reward_queue = defaultdict(lambda: deque(maxlen=maxlen))
+        self.done_queue = defaultdict(lambda: deque(maxlen=maxlen))
+
+    def register(self, env_wrapper):
+        self.env_wrapper = env_wrapper
+
+    @property
+    def _env_ids(self):
+        assert self.env_wrapper is not None
+        return self.env_wrapper.env_id
+
+    def store_s(self, states):
+        for env_id, s in zip(self._env_ids, states):
+            self.state_queue[env_id].append(s)
+
+    def store_a(self, actions):
+        for env_id, a in zip(self._env_ids, actions):
+            self.action_queue[env_id].append(a)
+
+    def store_rds(self, rewards, dones, states):
+        for env_id, r, d, s in zip(self._env_ids, rewards, dones, states):
+            self.reward_queue[env_id].append(r)
+            self.done_queue[env_id].append(d)
+            self.state_queue[env_id].append(s)
+
+    def get_all_and_clear(self):
+        state_batch, action_batch, reward_batch, done_batch = [], [], [], []
+
+        for env_id in self.done_queue.keys():
+            state_batch.append(np.asarray([self.state_queue[env_id][i] for i in reversed(range(129))]))
+            action_batch.append(np.asarray([self.action_queue[env_id][i] for i in reversed(range(128))]))
+            reward_batch.append(np.asarray([self.reward_queue[env_id][i] for i in reversed(range(128))]))
+            done_batch.append(np.asarray([self.done_queue[env_id][i] for i in reversed(range(128))]))
+
+        return np.stack(state_batch), np.stack(action_batch), np.stack(reward_batch), np.stack(done_batch)
 
 
 class NonBlockMemory(object):

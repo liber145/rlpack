@@ -13,8 +13,6 @@ from typing import Dict, List
 
 import numpy as np
 
-from ..common.log import logger
-
 
 def exit_gracefully(signum, frame):
     sys.exit(0)
