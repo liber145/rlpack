@@ -45,6 +45,56 @@ from .stack_env import StackEnv
 #         return True
 
 
+class AsyncMujocoWrapper(object):
+    def __init__(self, env_name: str, n_env: int = 8, n_inference: int = 6):
+        self.n_env = n_env
+        self.n_inference = n_inference
+        self.env_ids = None
+        self.env_manager = DistributedEnvManager(n_env)
+        self.env_manager.configure()
+        # p = Process(target=self.env_manager.start)
+        # p.start()
+        # p.join()
+        self.env_manager.start()
+
+        processes = []
+        for i in range(n_env):
+            p = DistributedEnvClient(self._make_env(i, env_name))
+            p.daemon = True
+            p.start()
+            processes.append(p)
+
+        self._dim_action = p.dim_action
+        self._dim_observation = p.dim_observation
+
+    def _make_env(self, rank, env_name):
+        env = gym.make(env_name)
+        env.seed(1 + rank)
+        return env
+
+    def step(self, actions: List):
+        act_dict = {env_id: act for env_id, act in zip(self.env_ids, actions)}
+        self.env_manager.step(act_dict)
+        self.env_ids, obs, rewards, dones, infos = self.env_manager.get_envs_to_inference(n=self.n_inference)
+        return np.asarray(obs, dtype=np.float32), np.asarray(rewards, dtype=np.float32), np.asarray(dones, dtype=np.float32), infos
+
+    def reset(self):
+        self.env_ids, states = self.env_manager.get_envs_to_inference(n=self.n_env, state_only=True)
+        return np.asarray(states, dtype=np.float32)
+
+    @property
+    def dim_observation(self):
+        return self._dim_observation
+
+    @property
+    def dim_action(self):
+        return self._dim_action
+
+    @property
+    def env_id(self):
+        return self.env_ids
+
+
 class DistributedMujocoWrapper(object):
     def __init__(self, env_name: str, n_env: int):
         self.n_env = n_env

@@ -55,22 +55,24 @@ class DistributedEnvClient(Process):
                 done = True
                 info = {"real_reward": 0, "real_done": False}
                 self.last_done = False
-                # epinfo = {"episode": {"r": self.trajectory_reward, "l": self.trajectory_length}}
-                # self.trajectory_length = 0
-                # self.trajectory_reward = 0
-            else:
-                ob, reward, done, info = self.env.step(action)
-                self.last_done = done
-                # self.trajectory_length += 1
-                # self.trajectory_reward += reward
 
-            if info["real_done"]:
                 info["episode"] = {"r": self.trajectory_reward, "l": self.trajectory_length}
                 self.trajectory_length = 0
                 self.trajectory_reward = 0
             else:
+                ob, reward, done, info = self.env.step(action)
+                self.last_done = done
                 self.trajectory_length += 1
-                self.trajectory_reward += info["real_reward"]
+                self.trajectory_reward += reward
+
+            if "real_done" in info:
+                if info["real_done"]:
+                    info["episode"] = {"r": self.trajectory_reward, "l": self.trajectory_length}
+                    self.trajectory_length = 0
+                    self.trajectory_reward = 0
+                else:
+                    self.trajectory_length += 1
+                    self.trajectory_reward += info["real_reward"]
 
             self.srd_queue.put((ob, reward, done, info))
 
