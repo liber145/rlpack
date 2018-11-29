@@ -12,14 +12,14 @@ from tqdm import tqdm
 class Config(object):
     def __init__(self):
         self.seed = 1
-        self.save_path = "./log/ppo_breakout_v16"
+        self.save_path = "./log/ppo_breakout_v17"
         self.save_model_freq = 0.001
         self.log_freq = 10
 
         # 环境
-        self.dim_observation = (84, 84, 4)
+        self.dim_observation = None
         self.dim_action = None   # For continuous action.
-        self.n_action = 4   # For discrete action.
+        self.n_action = None   # For discrete action.
 
         # 训练长度
         self.n_env = 8
@@ -42,8 +42,8 @@ class Config(object):
 
 def process_config(env):
     config = Config()
-    config.dim_observation = env.observation_space.shape
-    config.n_action = env.action_space.n
+    config.dim_observation = env.dim_observation
+    config.n_action = env.dim_action
 
     return config
 
@@ -61,8 +61,8 @@ def learn(env, agent, config):
 
     # ------------ Warm start --------------
     obs = env.reset()
-    print(obs.shape)
     memory.store_s(obs)
+    print(obs.shape)
     print(f"observation: max={np.max(obs)} min={np.min(obs)}")
     for i in tqdm(range(config.warm_start_length)):
         actions = agent.get_action(obs)
@@ -103,8 +103,8 @@ def learn(env, agent, config):
 
 
 if __name__ == "__main__":
-    config = Config()
-    env = AsyncAtariWrapper("BreakoutNoFrameskip-v4", config.n_env)
+    env = AsyncAtariWrapper("BreakoutNoFrameskip-v4", 8, 6)
+    config = process_config(env)
     pol = PPO(config)
 
     learn(env, pol, config)

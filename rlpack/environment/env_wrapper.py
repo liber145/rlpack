@@ -199,6 +199,9 @@ class AsyncAtariWrapper(object):
             p.start()
             processes.append(p)
 
+        self._dim_observation = p.dim_observation
+        self._dim_action = p.dim_action
+
     def _make_env(self, rank, env_name):
         env = make_atari(env_name)
         env.seed(1 + rank)
@@ -221,6 +224,13 @@ class AsyncAtariWrapper(object):
     def env_id(self):
         return self.env_ids
 
+    @property
+    def dim_observation(self):
+        return self._dim_observation
+
+    @property
+    def dim_action(self):
+        return self._dim_action
 
 # class CartpoleWrapper(StackEnv):
 #     def __init__(self, n_env):

@@ -193,6 +193,9 @@ class FrameStack(gym.Wrapper):
         shp = env.observation_space.shape
         self.observation_space = spaces.Box(low=0, high=255, shape=(shp[:-1] + (shp[-1] * k,)), dtype=env.observation_space.dtype)
 
+        self._dim_action = self.env.action_space.n
+        self._dim_observation = self.observation_space.shape
+
     def reset(self):
         ob = self.env.reset()
         for _ in range(self.k):
@@ -207,6 +210,14 @@ class FrameStack(gym.Wrapper):
     def _get_ob(self):
         assert len(self.frames) == self.k
         return LazyFrames(list(self.frames))
+
+    @property
+    def dim_action(self):
+        return self._dim_action
+
+    @property
+    def dim_observation(self):
+        return self._dim_observation
 
 
 class ScaledFloatFrame(gym.ObservationWrapper):
