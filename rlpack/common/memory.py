@@ -114,6 +114,9 @@ class DistributedMemory(object):
         state_batch, action_batch, reward_batch, done_batch = [], [], [], []
 
         for env_id in self.done_queue.keys():
+            if len(self.done_queue[env_id]) < n_sample:
+                assert False, "Not enough warm steps or requiring too many samples."
+
             state_batch.append(np.asarray([self.state_queue[env_id][-i - 1] for i in reversed(range(n_sample + 1))]))
             reward_batch.append(np.asarray([self.reward_queue[env_id][-i - 1] for i in reversed(range(n_sample))]))
             done_batch.append(np.asarray([self.done_queue[env_id][-i - 1] for i in reversed(range(n_sample))]))

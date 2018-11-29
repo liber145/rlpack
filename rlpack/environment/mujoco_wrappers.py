@@ -1,7 +1,7 @@
 import gym
 
 
-class LogTraj(gym.Wrapper):
+class LogTrajectory(gym.Wrapper):
     def __init__(self, env):
         self.env = env
         self.trajectory_length = 0
@@ -30,8 +30,12 @@ class LogTraj(gym.Wrapper):
     def dim_action(self):
         return self.env.action_space.shape
 
+    @property
+    def action_range(self):
+        return self.env.action_space.low, self.env.action_space.high
+
 
 def make_mujoco(env_name):
     env = gym.make(env_name)
-    env = LogTraj(env)
+    env = LogTrajectory(env)
     return env

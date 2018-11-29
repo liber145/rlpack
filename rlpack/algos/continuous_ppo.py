@@ -104,7 +104,7 @@ class ContinuousPPO(Base):
         self.critic_loss += regularization
 
         grads = tf.gradients(self.critic_loss, critic_vars)
-        clipped_grads, _ = tf.clip_by_global_norm(grads, 40)
+        clipped_grads, _ = tf.clip_by_global_norm(grads, self.max_grad_norm)
         self.train_critic_op = self.critic_optimizer.apply_gradients(zip(clipped_grads, critic_vars))
 
         # self.train_critic_op = self.critic_optimizer.minimize(self.critic_loss)

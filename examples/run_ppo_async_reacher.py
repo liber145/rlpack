@@ -110,7 +110,7 @@ def learn(env, agent, config):
 
 
 if __name__ == "__main__":
-    env = AsyncMujocoWrapper("Reacher-v2", 8, 8)
+    env = AsyncMujocoWrapper("Reacher-v2", 8, 6)
     config = process_env(env)
     agent = ContinuousPPO(config)
     learn(env, agent, config)
