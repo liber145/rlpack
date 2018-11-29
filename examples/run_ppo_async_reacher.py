@@ -52,8 +52,6 @@ def process_env(env):
     config = Config()
     config.dim_observation = env.dim_observation
     config.dim_action = env.dim_action[0]
-
-    print(f"dim_action: {env.dim_action}")
     return config
 
 

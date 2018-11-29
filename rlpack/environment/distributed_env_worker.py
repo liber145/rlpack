@@ -20,11 +20,8 @@ class DistributedEnvClient(Process):
     def __init__(self, env, hostname='localhost', port=50000):
         super().__init__()
         self.env = env
-        self._dim_observation = self.env.observation_space.shape
-        self._dim_action = self.env.action_space.shape
-        self.last_done = False
-        self.trajectory_length = 0
-        self.trajectory_reward = 0
+        self._dim_observation = self.env.dim_observation
+        self._dim_action = self.env.dim_action
 
         class SharedMemoryManager(BaseManager):
             pass
@@ -49,30 +46,10 @@ class DistributedEnvClient(Process):
             action = self.a_queue.get()
             info = {}
 
-            if self.last_done:
+            ob, reward, done, info = self.env.step(action)
+
+            if done:
                 ob = self.env.reset()
-                reward = 0
-                done = True
-                info = {"real_reward": 0, "real_done": False}
-                self.last_done = False
-
-                info["episode"] = {"r": self.trajectory_reward, "l": self.trajectory_length}
-                self.trajectory_length = 0
-                self.trajectory_reward = 0
-            else:
-                ob, reward, done, info = self.env.step(action)
-                self.last_done = done
-                self.trajectory_length += 1
-                self.trajectory_reward += reward
-
-            if "real_done" in info:
-                if info["real_done"]:
-                    info["episode"] = {"r": self.trajectory_reward, "l": self.trajectory_length}
-                    self.trajectory_length = 0
-                    self.trajectory_reward = 0
-                else:
-                    self.trajectory_length += 1
-                    self.trajectory_reward += info["real_reward"]
 
             self.srd_queue.put((ob, reward, done, info))
 

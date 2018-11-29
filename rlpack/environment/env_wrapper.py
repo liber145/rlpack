@@ -9,6 +9,7 @@ from gym import spaces
 from .atari_wrappers import make_atari, wrap_deepmind
 from .distributed_env_worker import DistributedEnvClient
 from .distributed_env_wrapper import DistributedEnvManager
+from .mujoco_wrappers import make_mujoco
 from .stack_env import StackEnv
 
 # class MujocoWrapper(StackEnv):
@@ -68,7 +69,7 @@ class AsyncMujocoWrapper(object):
         self._dim_observation = p.dim_observation
 
     def _make_env(self, rank, env_name):
-        env = gym.make(env_name)
+        env = make_mujoco(env_name)
         env.seed(1 + rank)
         return env
 
@@ -117,7 +118,7 @@ class DistributedMujocoWrapper(object):
         self._dim_observation = p.dim_observation
 
     def _make_env(self, rank, env_name):
-        env = gym.make(env_name)
+        env = make_mujoco(env_name)
         env.seed(1 + rank)
         return env
 
@@ -169,6 +170,8 @@ class DistributedAtariWrapper(object):
         act_dict = {env_id: act for env_id, act in zip(self.env_ids, actions)}
         self.env_manager.step(act_dict)
         self.env_ids, obs, rewards, dones, infos = self.env_manager.get_envs_to_inference(n=self.n_env)
+        """Bin reward to {+1, 0, -1} by its sign."""
+        rewards = [np.sign(r) for r in rewards]
         return np.asarray(obs, dtype=np.float32), np.asarray(rewards, dtype=np.float32), dones, infos
 
     def reset(self):
@@ -199,13 +202,15 @@ class AsyncAtariWrapper(object):
     def _make_env(self, rank, env_name):
         env = make_atari(env_name)
         env.seed(1 + rank)
-        env = wrap_deepmind(env, frame_stack=True, scale=True)
+        env = wrap_deepmind(env, episode_life=True, clip_rewards=False, frame_stack=True, scale=True)
         return env
 
     def step(self, actions: List):
         act_dict = {env_id: act for env_id, act in zip(self.env_ids, actions)}
         self.env_manager.step(act_dict)
         self.env_ids, obs, rewards, dones, infos = self.env_manager.get_envs_to_inference(n=self.n_inference)
+        """Bin reward to {+1, 0, -1} by its sign."""
+        rewards = [np.sign(r) for r in rewards]
         return np.asarray(obs, dtype=np.float32), np.asarray(rewards, dtype=np.float32), dones, infos
 
     def reset(self):
@@ -217,38 +222,38 @@ class AsyncAtariWrapper(object):
         return self.env_ids
 
 
-class CartpoleWrapper(StackEnv):
-    def __init__(self, n_env):
-        super().__init__("CartPole-v1", n_env)
-        self.trajectory_rewards = [0 for _ in range(self.n_env)]
-        self.trajectory_length = [0 for _ in range(self.n_env)]
-
-        self._dim_observation = self.envs[0].observation_space.shape
-        self._n_action = self.envs[0].action_space.n
-
-    def step(self, actions):
-        obs, rewards, dones, _ = super().step(actions)
-        epinfos = []
-        for i in range(self.n_env):
-            self.trajectory_length[i] += 1
-            self.trajectory_rewards[i] += rewards[i]
-
-            if self.last_dones[i]:
-                epinfos.append({"episode": {"r": self.trajectory_rewards[i], "l": self.trajectory_length[i]}})
-                self.trajectory_length[i] = 0
-                self.trajectory_rewards[i] = 0
-                rewards[i] = -1
-            else:
-                rewards[i] = 0.1
-        return obs, rewards, dones, epinfos
-
-    @property
-    def dim_observation(self):
-        return self._dim_observation
-
-    @property
-    def n_action(self):
-        return self._n_action
+# class CartpoleWrapper(StackEnv):
+#     def __init__(self, n_env):
+#         super().__init__("CartPole-v1", n_env)
+#         self.trajectory_rewards = [0 for _ in range(self.n_env)]
+#         self.trajectory_length = [0 for _ in range(self.n_env)]
+#
+#         self._dim_observation = self.envs[0].observation_space.shape
+#         self._n_action = self.envs[0].action_space.n
+#
+#     def step(self, actions):
+#         obs, rewards, dones, _ = super().step(actions)
+#         epinfos = []
+#         for i in range(self.n_env):
+#             self.trajectory_length[i] += 1
+#             self.trajectory_rewards[i] += rewards[i]
+#
+#             if self.last_dones[i]:
+#                 epinfos.append({"episode": {"r": self.trajectory_rewards[i], "l": self.trajectory_length[i]}})
+#                 self.trajectory_length[i] = 0
+#                 self.trajectory_rewards[i] = 0
+#                 rewards[i] = -1
+#             else:
+#                 rewards[i] = 0.1
+#         return obs, rewards, dones, epinfos
+#
+#     @property
+#     def dim_observation(self):
+#         return self._dim_observation
+#
+#     @property
+#     def n_action(self):
+#         return self._n_action
 
 
 class AtariWrapper2(StackEnv):
@@ -266,16 +271,16 @@ class AtariWrapper2(StackEnv):
 
     def step(self, actions):
         obs, rewards, dones, infos = super().step(actions)
-        epinfos = []
-        for i in range(self.n_env):
-            if infos[i]["real_done"]:
-                epinfos.append({"episode": {"r": self.trajectory_rewards[i], "l": self.trajectory_length[i]}})
-                self.trajectory_length[i] = 0
-                self.trajectory_rewards[i] = 0
-            else:
-                self.trajectory_length[i] += 1
-                self.trajectory_rewards[i] += infos[i]["real_reward"]
-        return obs, rewards, dones, epinfos
+        # epinfos = []
+        # for i in range(self.n_env):
+        #     if infos[i]["real_done"]:
+        #         epinfos.append({"episode": {"r": self.trajectory_rewards[i], "l": self.trajectory_length[i]}})
+        #         self.trajectory_length[i] = 0
+        #         self.trajectory_rewards[i] = 0
+        #     else:
+        #         self.trajectory_length[i] += 1
+        #         self.trajectory_rewards[i] += infos[i]["real_reward"]
+        return obs, rewards, dones, infos
 
 
 # class AtariWrapper(object):

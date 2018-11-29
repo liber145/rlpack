@@ -70,10 +70,22 @@ class EpisodicLifeEnv(gym.Wrapper):
         self.lives = 0
         self.was_real_done = True
 
+        self.trajectory_length = 0
+        self.trajectory_reward = 0
+
     def step(self, action):
 
         obs, reward, done, info = self.env.step(action)
         self.was_real_done = done
+
+        # Log trajectory length and trajectory reward.
+        self.trajectory_length += 1
+        self.trajectory_reward += reward
+        if done:
+            info["episode"] = {"r": self.trajectory_reward, "l": self.trajectory_length}
+            self.trajectory_reward = 0
+            self.trajectory_length = 0
+
         # check current lives, make loss of life terminal,
         # then update lives to handle bonus lives
         lives = self.env.unwrapped.ale.lives()
