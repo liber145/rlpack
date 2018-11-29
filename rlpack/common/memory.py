@@ -115,21 +115,15 @@ class DistributedMemory(object):
 
         for env_id in self.done_queue.keys():
             state_batch.append(np.asarray([self.state_queue[env_id][-i - 1] for i in reversed(range(n_sample + 1))]))
-            action_batch.append(np.asarray([self.action_queue[env_id][-i - 1] for i in reversed(range(n_sample))]))
             reward_batch.append(np.asarray([self.reward_queue[env_id][-i - 1] for i in reversed(range(n_sample))]))
             done_batch.append(np.asarray([self.done_queue[env_id][-i - 1] for i in reversed(range(n_sample))]))
 
-        # self.cnt += 1
-        # if self.cnt == 1:
-        #     for i in self._env_ids:
-        #         f = open(f"state{i}.p", "wb")
-        #         pickle.dump(list(self.state_queue[i]), f)
-        #         f = open(f"reward{i}.p", "wb")
-        #         pickle.dump(list(self.reward_queue[i]), f)
-        #         f = open(f"done{i}.p", "wb")
-        #         pickle.dump(list(self.done_queue[i]), f)
-        #         f = open(f"action{i}.p", "wb")
-        #         pickle.dump(list(self.action_queue[i]), f)
+            # Sometimes, we have n_action = n_state due to the asynchronism.
+            if len(self.action_queue[env_id]) + 1 == len(self.state_queue[env_id]):
+                action_batch.append(np.asarray([self.action_queue[env_id][-i - 1] for i in reversed(range(n_sample))]))
+            else:
+                assert len(self.action_queue[env_id]) == len(self.state_queue[env_id])
+                action_batch.append(np.asarray([self.action_queue[env_id][-i - 2] for i in reversed(range(n_sample))]))
 
         return np.stack(state_batch), np.stack(action_batch), np.stack(reward_batch), np.stack(done_batch)
 

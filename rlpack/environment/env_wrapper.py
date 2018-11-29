@@ -130,6 +130,43 @@ class DistributedAtariWrapper(object):
         return self.env_ids
 
 
+class AsyncAtariWrapper(object):
+    def __init__(self, env_name: str, n_env: int = 8, n_inference: int = 6):
+        self.n_env = n_env
+        self.n_inference = n_inference
+        self.env_ids = None
+        self.env_manager = DistributedEnvManager(n_env)
+        self.env_manager.configure()
+        self.env_manager.start()
+
+        processes = []
+        for i in range(n_env):
+            p = DistributedEnvClient(self._make_env(i, env_name))
+            p.daemon = True
+            p.start()
+            processes.append(p)
+
+    def _make_env(self, rank, env_name):
+        env = make_atari(env_name)
+        env.seed(1 + rank)
+        env = wrap_deepmind(env, frame_stack=True, scale=True)
+        return env
+
+    def step(self, actions: List):
+        act_dict = {env_id: act for env_id, act in zip(self.env_ids, actions)}
+        self.env_manager.step(act_dict)
+        self.env_ids, obs, rewards, dones, infos = self.env_manager.get_envs_to_inference(n=self.n_inference)
+        return np.asarray(obs, dtype=np.float32), np.asarray(rewards, dtype=np.float32), dones, infos
+
+    def reset(self):
+        self.env_ids, states = self.env_manager.get_envs_to_inference(n=self.n_env, state_only=True)
+        return np.asarray(states, dtype=np.float32)
+
+    @property
+    def env_id(self):
+        return self.env_ids
+
+
 class CartpoleWrapper(StackEnv):
     def __init__(self, n_env):
         super().__init__("CartPole-v1", n_env)
