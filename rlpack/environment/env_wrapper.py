@@ -47,11 +47,11 @@ from .stack_env import StackEnv
 
 
 class AsyncMujocoWrapper(object):
-    def __init__(self, env_name: str, n_env: int = 8, n_inference: int = 6):
+    def __init__(self, env_name: str, port: int, n_env: int = 8, n_inference: int = 6):
         self.n_env = n_env
         self.n_inference = n_inference
         self._env_ids = None
-        self.env_manager = DistributedEnvManager(n_env)
+        self.env_manager = DistributedEnvManager(n_env, port=port)
         self.env_manager.configure()
         # p = Process(target=self.env_manager.start)
         # p.start()
@@ -60,7 +60,7 @@ class AsyncMujocoWrapper(object):
 
         processes = []
         for i in range(n_env):
-            p = DistributedEnvClient(self._make_env(i, env_name))
+            p = DistributedEnvClient(self._make_env(i, env_name), port=port)
             p.daemon = True
             p.start()
             processes.append(p)

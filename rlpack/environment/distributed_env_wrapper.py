@@ -26,7 +26,7 @@ class DistributedEnvManager(Thread):
     start on main learning process.
     """
 
-    def __init__(self, n_env):
+    def __init__(self, n_env, port=50000):
         super().__init__()
         self.n_env = n_env
         self.config_queue = Queue()
@@ -44,7 +44,7 @@ class DistributedEnvManager(Thread):
         SharedMemoryManager.register('get_srd', callable=lambda x: self.srd_pad[x])
         SharedMemoryManager.register('get_a', callable=lambda x: self.a_pad[x])
 
-        m = SharedMemoryManager(address=('', 50000), authkey=b'abab')
+        m = SharedMemoryManager(address=('', port), authkey=b'abab')
         self.s = m.get_server()
 
     def run(self):

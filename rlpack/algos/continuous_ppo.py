@@ -33,6 +33,8 @@ class ContinuousPPO(Base):
     def build_network(self):
         self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], name="observation")
 
+        assert_shape(self.observation, [None, *self.dim_observation])
+
         with tf.variable_scope("policy_net"):
             x = tf.layers.dense(self.observation, 64, activation=tf.nn.tanh)
             x = tf.layers.dense(x, 64, activation=tf.nn.tanh)
@@ -93,7 +95,7 @@ class ContinuousPPO(Base):
         # Build actor operation.
         actor_vars = tf.trainable_variables("policy_net")
         grads = tf.gradients(self.surrogate, actor_vars)
-        clipped_grads, _ = tf.clip_by_global_norm(grads, 40)
+        clipped_grads, _ = tf.clip_by_global_norm(grads, self.max_grad_norm)
         self.train_actor_op = self.actor_optimizer.apply_gradients(zip(clipped_grads, actor_vars))
 
         # self.train_actor_op = self.actor_optimizer.minimize(self.surrogate)
