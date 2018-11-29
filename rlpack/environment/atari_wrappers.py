@@ -71,6 +71,7 @@ class EpisodicLifeEnv(gym.Wrapper):
         self.was_real_done = True
 
     def step(self, action):
+
         obs, reward, done, info = self.env.step(action)
         self.was_real_done = done
         # check current lives, make loss of life terminal,
@@ -122,6 +123,9 @@ class MaxAndSkipEnv(gym.Wrapper):
         # Note that the observation on the done=True frame
         # doesn't matter
         max_frame = self._obs_buffer.max(axis=0)
+
+        info["real_reward"] = total_reward
+        info["real_done"] = done
 
         return max_frame, total_reward, done, info
 

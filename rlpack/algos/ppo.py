@@ -111,8 +111,8 @@ class PPO(Base):
         logit = self.sess.run(self.logit_action_probability, feed_dict={self.observation: newobs})
         logit = logit - np.max(logit, axis=1, keepdims=True)
         prob = np.exp(logit) / np.sum(np.exp(logit), axis=1, keepdims=True)
-        action = [np.random.choice(self.n_action, p=prob[i, :]) for i in range(self.n_env)]
-        assert len(action) == self.n_env
+        action = [np.random.choice(self.n_action, p=prob[i, :]) for i in range(newobs.shape[0])]
+        assert len(action) == newobs.shape[0]
         return np.array(action)
 
     def update(self, minibatch, update_ratio):

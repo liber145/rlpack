@@ -1,5 +1,5 @@
-import numpy as np
 import gym
+import numpy as np
 
 
 class StackEnv(object):
@@ -30,6 +30,7 @@ class StackEnv(object):
                 rewards.append(0)
                 dones.append(True)
                 self.last_dones[i] = False
+                infos.append({"real_reward": 0, "real_done": False})
             else:
                 ob, reward, done, info = self.envs[i].step(actions[i])
                 obs.append(ob)

@@ -17,9 +17,9 @@ class DistributedEnvClient(Process):
     start on worker client.
     """
 
-    def __init__(self, make_env: Callable, hostname='localhost', port=50000):
+    def __init__(self, env, hostname='localhost', port=50000):
         super().__init__()
-        self.env = make_env() 
+        self.env = env
         self._dim_observation = self.env.observation_space.shape
         self._dim_action = self.env.action_space.shape
         self.last_done = False
@@ -47,24 +47,32 @@ class DistributedEnvClient(Process):
     def run(self):
         while True:
             action = self.a_queue.get()
-            epinfo = {}
+            info = {}
 
             if self.last_done:
                 ob = self.env.reset()
                 reward = 0
                 done = True
-                info = None
+                info = {"real_reward": 0, "real_done": False}
                 self.last_done = False
-                epinfo = {"episode": {"r": self.trajectory_reward, "l": self.trajectory_length}}
-                self.trajectory_length = 0
-                self.trajectory_reward = 0
+                # epinfo = {"episode": {"r": self.trajectory_reward, "l": self.trajectory_length}}
+                # self.trajectory_length = 0
+                # self.trajectory_reward = 0
             else:
                 ob, reward, done, info = self.env.step(action)
                 self.last_done = done
-                self.trajectory_length += 1
-                self.trajectory_reward += reward
+                # self.trajectory_length += 1
+                # self.trajectory_reward += reward
 
-            self.srd_queue.put((ob, reward, done, epinfo))
+            if info["real_done"]:
+                info["episode"] = {"r": self.trajectory_reward, "l": self.trajectory_length}
+                self.trajectory_length = 0
+                self.trajectory_reward = 0
+            else:
+                self.trajectory_length += 1
+                self.trajectory_reward += info["real_reward"]
+
+            self.srd_queue.put((ob, reward, done, info))
 
     @property
     def dim_observation(self):

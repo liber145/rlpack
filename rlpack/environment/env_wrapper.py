@@ -2,15 +2,14 @@ import os
 from multiprocessing import Process
 from typing import List
 
+import gym
 import numpy as np
 from gym import spaces
-import gym
-from .atari_wrappers import make_atari, wrap_deepmind
 
+from .atari_wrappers import make_atari, wrap_deepmind
 from .distributed_env_worker import DistributedEnvClient
 from .distributed_env_wrapper import DistributedEnvManager
 from .stack_env import StackEnv
-
 
 # class MujocoWrapper(StackEnv):
 #     def __init__(self, env_id: str, n_env: int):
@@ -19,7 +18,7 @@ from .stack_env import StackEnv
 #         self.trajectory_length = [0 for _ in range(self.n_env)]
 #         self._dim_observation = self.envs[0].observation_space.shape
 #         self._dim_action = self.envs[0].action_space.shape[0]
-# 
+#
 #     def step(self, actions):
 #         obs, rewards, dones, _ = super().step(actions)
 #         epinfos = []
@@ -32,15 +31,15 @@ from .stack_env import StackEnv
 #                 self.trajectory_length[i] += 1
 #                 self.trajectory_rewards[i] += rewards[i]
 #         return obs, rewards, dones, epinfos
-# 
+#
 #     @property
 #     def dim_observation(self):
 #         return self._dim_observation
-# 
+#
 #     @property
 #     def dim_action(self):
 #         return self._dim_action
-# 
+#
 #     @property
 #     def is_continuous(self):
 #         return True
@@ -59,7 +58,7 @@ class DistributedMujocoWrapper(object):
 
         processes = []
         for i in range(n_env):
-            p = DistributedEnvClient(lambda: self._make_env(i, env_name)) 
+            p = DistributedEnvClient(self._make_env(i, env_name))
             p.daemon = True
             p.start()
             processes.append(p)
@@ -105,7 +104,7 @@ class DistributedAtariWrapper(object):
 
         processes = []
         for i in range(n_env):
-            p = DistributedEnvClient(lambda: self._make_env(i, env_name))
+            p = DistributedEnvClient(self._make_env(i, env_name))
             p.daemon = True
             p.start()
             processes.append(p)
@@ -120,7 +119,7 @@ class DistributedAtariWrapper(object):
         act_dict = {env_id: act for env_id, act in zip(self.env_ids, actions)}
         self.env_manager.step(act_dict)
         self.env_ids, obs, rewards, dones, infos = self.env_manager.get_envs_to_inference(n=self.n_env)
-        return np.asarray(obs, dtype=np.float32), np.asarray(rewards, dtype=np.float32), np.asarray(dones, dtype=np.float32), infos
+        return np.asarray(obs, dtype=np.float32), np.asarray(rewards, dtype=np.float32), dones, infos
 
     def reset(self):
         self.env_ids, states = self.env_manager.get_envs_to_inference(n=self.n_env, state_only=True)
@@ -165,6 +164,33 @@ class CartpoleWrapper(StackEnv):
         return self._n_action
 
 
+class AtariWrapper2(StackEnv):
+    def __init__(self, env_id: str, n_env: int):
+        super().__init__(env_id, n_env)
+        self.envs = [self._make_env(1 + i, env_id) for i in range(n_env)]
+        self.trajectory_length = [0 for i in range(n_env)]
+        self.trajectory_rewards = [0 for i in range(n_env)]
+
+    def _make_env(self, rank, env_id):
+        env = make_atari(env_id)
+        env.seed(1 + rank)
+        env = wrap_deepmind(env, frame_stack=True, scale=True)
+        return env
+
+    def step(self, actions):
+        obs, rewards, dones, infos = super().step(actions)
+        epinfos = []
+        for i in range(self.n_env):
+            if infos[i]["real_done"]:
+                epinfos.append({"episode": {"r": self.trajectory_rewards[i], "l": self.trajectory_length[i]}})
+                self.trajectory_length[i] = 0
+                self.trajectory_rewards[i] = 0
+            else:
+                self.trajectory_length[i] += 1
+                self.trajectory_rewards[i] += infos[i]["real_reward"]
+        return obs, rewards, dones, epinfos
+
+
 # class AtariWrapper(object):
 #     def __init__(self, env_id: str, n_env: int):
 #         self.env = SubprocVecEnv([self._make_env(i, env_id) for i in range(n_env)])
@@ -174,7 +200,7 @@ class CartpoleWrapper(StackEnv):
 #         self.stackedobs = np.zeros((n_env,) + low.shape, low.dtype)
 #         self._observation_space = spaces.Box(low=low, high=high)
 #         self._action_space = self.env.action_space
-# 
+#
 #     def _make_env(self, rank, env_id):
 #         def env_fn():
 #             env = make_atari(env_id)
@@ -183,7 +209,7 @@ class CartpoleWrapper(StackEnv):
 #             env = wrap_deepmind(env)
 #             return env
 #         return env_fn
-# 
+#
 #     def step(self, actions):
 #         obs, rewards, dones, infos = self.env.step(actions)
 #         self.stackedobs = np.roll(self.stackedobs, shift=-1, axis=-1)
@@ -192,24 +218,24 @@ class CartpoleWrapper(StackEnv):
 #                 self.stackedobs[i] = 0
 #         self.stackedobs[..., -obs.shape[-1]:] = obs
 #         return self.stackedobs.astype(np.float32) / 255.0, rewards, dones, infos
-# 
+#
 #     def reset(self):
 #         obs = self.env.reset()
 #         self.stackedobs[...] = 0
 #         self.stackedobs[..., -obs.shape[-1]:] = obs
 #         return self.stackedobs.astype(np.float32) / 255.0
-# 
+#
 #     def close(self):
 #         self.env.close()
-# 
+#
 #     @property
 #     def action_space(self):
 #         return self._action_space
-# 
+#
 #     @property
 #     def observation_space(self):
 #         return self._observation_space
-# 
+#
 #     @property
 #     def is_continuous(self):
 #         return False

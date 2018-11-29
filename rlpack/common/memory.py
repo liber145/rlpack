@@ -1,3 +1,4 @@
+import pickle
 import random
 from collections import defaultdict, deque
 from typing import List
@@ -14,11 +15,23 @@ class Memory(object):
         self.reward_queue = deque(maxlen=capacity)
         self.done_queue = deque(maxlen=capacity)
 
+        self.cnt = 0
+
     def store_sard(self, state, action, reward, done):
         self.state_queue.append(state)
         self.action_queue.append(action)
         self.reward_queue.append(reward)
         self.done_queue.append(done)
+
+        self.cnt += 1
+        if self.cnt == 200:
+            for j in range(8):
+                f = open(f"naive_state{j}.p", "wb")
+                pickle.dump([self.state_queue[i][j] for i in range(200)], f)
+                f = open(f"naive_reward{j}.p", "wb")
+                pickle.dump([self.reward_queue[i][j] for i in range(200)], f)
+                f = open(f"naive_done{j}.p", "wb")
+                pickle.dump([self.done_queue[i][j] for i in range(200)], f)
 
     def get_last_n_step(self, n):
         assert n < self.size, "No enough sample in memory."
@@ -73,6 +86,8 @@ class DistributedMemory(object):
         self.reward_queue = defaultdict(lambda: deque(maxlen=maxlen))
         self.done_queue = defaultdict(lambda: deque(maxlen=maxlen))
 
+        self.cnt = 0
+
     def register(self, env_wrapper):
         self.env_wrapper = env_wrapper
 
@@ -95,14 +110,26 @@ class DistributedMemory(object):
             self.done_queue[env_id].append(d)
             self.state_queue[env_id].append(s)
 
-    def get_all_and_clear(self):
+    def get_last_n_samples(self, n_sample):
         state_batch, action_batch, reward_batch, done_batch = [], [], [], []
 
         for env_id in self.done_queue.keys():
-            state_batch.append(np.asarray([self.state_queue[env_id][i] for i in reversed(range(129))]))
-            action_batch.append(np.asarray([self.action_queue[env_id][i] for i in reversed(range(128))]))
-            reward_batch.append(np.asarray([self.reward_queue[env_id][i] for i in reversed(range(128))]))
-            done_batch.append(np.asarray([self.done_queue[env_id][i] for i in reversed(range(128))]))
+            state_batch.append(np.asarray([self.state_queue[env_id][-i - 1] for i in reversed(range(n_sample + 1))]))
+            action_batch.append(np.asarray([self.action_queue[env_id][-i - 1] for i in reversed(range(n_sample))]))
+            reward_batch.append(np.asarray([self.reward_queue[env_id][-i - 1] for i in reversed(range(n_sample))]))
+            done_batch.append(np.asarray([self.done_queue[env_id][-i - 1] for i in reversed(range(n_sample))]))
+
+        # self.cnt += 1
+        # if self.cnt == 1:
+        #     for i in self._env_ids:
+        #         f = open(f"state{i}.p", "wb")
+        #         pickle.dump(list(self.state_queue[i]), f)
+        #         f = open(f"reward{i}.p", "wb")
+        #         pickle.dump(list(self.reward_queue[i]), f)
+        #         f = open(f"done{i}.p", "wb")
+        #         pickle.dump(list(self.done_queue[i]), f)
+        #         f = open(f"action{i}.p", "wb")
+        #         pickle.dump(list(self.action_queue[i]), f)
 
         return np.stack(state_batch), np.stack(action_batch), np.stack(reward_batch), np.stack(done_batch)
 
