@@ -68,7 +68,7 @@ class PPO(Base):
         prob_1 = tf.nn.softmax(log_prob_1)
         prob_2 = tf.stop_gradient(tf.nn.softmax(log_prob_2))
         assert_shape(prob_1, [None, self.n_action])
-        assert_shape(prob_2, [None, self.n_action])
+        # assert_shape(prob_2, [None, self.n_action])
 
         self.entropy = - tf.reduce_sum(log_prob_1 * prob_1, axis=1)
         assert_shape(self.entropy, [None])

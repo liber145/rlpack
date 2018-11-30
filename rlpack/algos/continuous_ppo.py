@@ -48,22 +48,20 @@ class ContinuousPPO(Base):
         self.old_mu = tf.placeholder(tf.float32, [None, self.dim_action], "old_mu")
         self.old_log_var = tf.placeholder(tf.float32, [self.dim_action], "old_var")
 
-        # logp = -0.5 * tf.reduce_sum(self.log_var)
-        # logp += -0.5 * tf.reduce_sum(tf.square(self.action - self.mu) / tf.exp(self.log_var), axis=1, keepdims=True)
+        logp = -0.5 * tf.reduce_sum(self.log_var * 2)
+        logp += -0.5 * tf.reduce_sum(tf.square(self.action - self.mu) / tf.exp(self.log_var * 2), axis=1)  # 　- 0.5 * math.log(2 * math.pi)
 
-        var = tf.exp(self.log_var) ** 2
-        logp = - (self.action - self.mu) ** 2 / (2 * var) - 0.5 * math.log(2 * math.pi) - self.log_var
-        logp = tf.reduce_sum(logp, axis=1)
-        print(f"logp shape: {logp.shape}")
+        # var = tf.exp(self.log_var * 2)
+        # logp = - (self.action - self.mu) ** 2 / (2 * var) - self.log_var  # - 0.5 * math.log(2 * math.pi)
+        # logp = tf.reduce_sum(logp, axis=1)
+        # print(f"logp shape: {logp.shape}")
 
-        # var =
+        logp_old = -0.5 * tf.reduce_sum(self.old_log_var * 2)
+        logp_old += -0.5 * tf.reduce_sum(tf.square(self.action - self.old_mu) / tf.exp(self.old_log_var * 2), axis=1)  # - 0.5 * math.log(2 * math.pi)
 
-        # logp_old = -0.5 * tf.reduce_sum(self.old_log_var)
-        # logp_old += -0.5 * tf.reduce_sum(tf.square(self.action - self.old_mu) / tf.exp(self.old_log_var), axis=1, keepdims=True)
-
-        var_old = tf.exp(self.old_log_var) ** 2
-        logp_old = - (self.action - self.old_mu) ** 2 / (2 * var_old) - 0.5 * math.log(2 * math.pi) - self.old_log_var
-        logp_old = tf.reduce_sum(logp_old, axis=1)
+        # var_old = tf.exp(self.old_log_var * 2)
+        # logp_old = - (self.action - self.old_mu) ** 2 / (2 * var_old) - self.old_log_var
+        # logp_old = tf.reduce_sum(logp_old, axis=1)
 
         # Compute KL divergence.
         log_det_cov_old = tf.reduce_sum(self.old_log_var)
@@ -107,10 +105,8 @@ class ContinuousPPO(Base):
         self.critic_loss += regularization
 
         grads = tf.gradients(self.critic_loss, critic_vars)
-        # clipped_grads, _ = tf.clip_by_global_norm(grads, self.max_grad_norm)
-        # self.train_critic_op = self.critic_optimizer.apply_gradients(zip(clipped_grads, critic_vars))
-        self.train_critic_op = self.critic_optimizer.apply_gradients(zip(grads, critic_vars))
-
+        clipped_grads, _ = tf.clip_by_global_norm(grads, self.max_grad_norm)
+        self.train_critic_op = self.critic_optimizer.apply_gradients(zip(clipped_grads, critic_vars))
         # self.train_critic_op = self.critic_optimizer.minimize(self.critic_loss)
 
         # Build action sample.
@@ -172,7 +168,7 @@ class ContinuousPPO(Base):
                 try:
                     mb_s, mb_a, mb_advantage, mb_old_mu, mb_target_value = next(batch_generator)
 
-                    self.sess.run(self.train_actor_op, feed_dict={
+                    log_var_val, _ = self.sess.run([self.log_var, self.train_actor_op], feed_dict={
                         self.observation: mb_s,
                         self.action: mb_a,
                         self.span_reward: mb_target_value,
@@ -191,6 +187,7 @@ class ContinuousPPO(Base):
                 except StopIteration:
                     del batch_generator
                     break
+        # print("log_var_val: ", log_var_val)
         if (update_ratio / self.save_model_freq) % 1 == 0:
             self.save_model()
 

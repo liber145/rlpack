@@ -1,6 +1,7 @@
 import os
 from abc import ABC, abstractmethod
 
+import numpy as np
 import tensorflow as tf
 
 
@@ -13,6 +14,7 @@ class Base(ABC):
         assert hasattr(config, "dim_action")
         self.dim_observation = config.dim_observation
         self.dim_action = config.dim_action
+        self.rnd = config.rnd if hasattr(config, "rnd") else 1
 
         # Training parameters.
         self.discount = config.discount if hasattr(config, "discount") else 0.99
@@ -31,7 +33,9 @@ class Base(ABC):
 
         # ------------------------ Reset graph ------------------------
         tf.reset_default_graph()
+        tf.set_random_seed(self.rnd)
         tf.Variable(0, name="global_step", trainable=False)
+        np.random.seed(self.rnd)
 
         # ------------------------ Build network ------------------------
         self.build_network()

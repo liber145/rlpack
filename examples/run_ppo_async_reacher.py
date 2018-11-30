@@ -16,7 +16,7 @@ class Config(object):
         self.seed = 1
         self.save_path = "./log/ppo_reacher_v25"
         self.save_model_freq = 0.001
-        self.log_freq = 1
+        self.log_freq = 10
 
         # 环境
         self.dim_observation = None
@@ -26,9 +26,9 @@ class Config(object):
         # 训练长度
         self.n_env = 1
         self.trajectory_length = 2048
-        self.update_step = 1000   # for each env
+        self.update_step = 5000   # for each env
         self.batch_size = 64
-        self.warm_start_length = 100
+        self.warm_start_length = 200
         self.memory_size = 2049
 
         # 训练参数
@@ -97,7 +97,6 @@ def learn(env, agent, config):
 
         update_ratio = i / config.update_step
         data_batch = memory.get_last_n_samples(config.trajectory_length)
-        print(f"state shape: {data_batch[0].shape}")
         agent.update(data_batch, update_ratio)
 
         epinfobuf.extend(epinfos)
