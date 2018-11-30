@@ -9,24 +9,12 @@ from .base import Base
 
 class ContinuousPPO(Base):
     def __init__(self, config):
-        self.tau = config.gae
 
-        self.lr = config.lr
+        self.n_env = config.n_env
         self.trajectory_length = config.trajectory_length
 
         self.entropy_coef = config.entropy_coef
         self.critic_coef = config.vf_coef
-
-        self.max_grad_norm = config.max_grad_norm
-
-        self.training_epoch = config.training_epoch
-
-        self.n_trajectory = config.n_trajectory
-
-        self.n_env = config.n_env
-
-        self.lr_schedule = config.lr_schedule
-        self.clip_schedule = config.clip_schedule
 
         super().__init__(config)
 
@@ -39,7 +27,7 @@ class ContinuousPPO(Base):
             x = tf.layers.dense(self.observation, 64, activation=tf.nn.tanh)
             x = tf.layers.dense(x, 64, activation=tf.nn.tanh)
             self.mu = tf.layers.dense(x, self.dim_action, activation=tf.nn.tanh)
-            self.log_var = tf.get_variable("logvars", [self.mu.shape.as_list()[1]], tf.float32, tf.constant_initializer(0.0)) - 1
+            self.log_var = tf.get_variable("logvars", [self.mu.shape.as_list()[1]], tf.float32, tf.constant_initializer(0.0))
 
         with tf.variable_scope("value_net"):
             x = tf.layers.dense(self.observation, 64, activation=tf.nn.tanh)
@@ -48,8 +36,11 @@ class ContinuousPPO(Base):
 
     def build_algorithm(self):
         self.clip_epsilon = tf.placeholder(tf.float32)
-        self.actor_optimizer = tf.train.AdamOptimizer(self.lr)
-        self.critic_optimizer = tf.train.AdamOptimizer(self.lr)
+
+        self.policy_lr = tf.placeholder(tf.float32)
+        self.value_lr = tf.placeholder(tf.float32)
+        self.actor_optimizer = tf.train.AdamOptimizer(self.policy_lr)
+        self.critic_optimizer = tf.train.AdamOptimizer(self.value_lr)
 
         self.action = tf.placeholder(tf.float32, [None, self.dim_action], "action")
         self.span_reward = tf.placeholder(tf.float32, [None], "span_reward")
@@ -57,12 +48,22 @@ class ContinuousPPO(Base):
         self.old_mu = tf.placeholder(tf.float32, [None, self.dim_action], "old_mu")
         self.old_log_var = tf.placeholder(tf.float32, [self.dim_action], "old_var")
 
-        logp = -0.5 * tf.reduce_sum(self.log_var)
-        logp += -0.5 * tf.reduce_sum(tf.square(self.action - self.mu) / tf.exp(self.log_var), axis=1, keepdims=True)
+        # logp = -0.5 * tf.reduce_sum(self.log_var)
+        # logp += -0.5 * tf.reduce_sum(tf.square(self.action - self.mu) / tf.exp(self.log_var), axis=1, keepdims=True)
 
-        logp_old = -0.5 * tf.reduce_sum(self.old_log_var)
-        logp_old += -0.5 * tf.reduce_sum(tf.square(self.action - self.old_mu) /
-                                         tf.exp(self.old_log_var), axis=1, keepdims=True)
+        var = tf.exp(self.log_var) ** 2
+        logp = - (self.action - self.mu) ** 2 / (2 * var) - 0.5 * math.log(2 * math.pi) - self.log_var
+        logp = tf.reduce_sum(logp, axis=1)
+        print(f"logp shape: {logp.shape}")
+
+        # var =
+
+        # logp_old = -0.5 * tf.reduce_sum(self.old_log_var)
+        # logp_old += -0.5 * tf.reduce_sum(tf.square(self.action - self.old_mu) / tf.exp(self.old_log_var), axis=1, keepdims=True)
+
+        var_old = tf.exp(self.old_log_var) ** 2
+        logp_old = - (self.action - self.old_mu) ** 2 / (2 * var_old) - 0.5 * math.log(2 * math.pi) - self.old_log_var
+        logp_old = tf.reduce_sum(logp_old, axis=1)
 
         # Compute KL divergence.
         log_det_cov_old = tf.reduce_sum(self.old_log_var)
@@ -106,13 +107,14 @@ class ContinuousPPO(Base):
         self.critic_loss += regularization
 
         grads = tf.gradients(self.critic_loss, critic_vars)
-        clipped_grads, _ = tf.clip_by_global_norm(grads, self.max_grad_norm)
-        self.train_critic_op = self.critic_optimizer.apply_gradients(zip(clipped_grads, critic_vars))
+        # clipped_grads, _ = tf.clip_by_global_norm(grads, self.max_grad_norm)
+        # self.train_critic_op = self.critic_optimizer.apply_gradients(zip(clipped_grads, critic_vars))
+        self.train_critic_op = self.critic_optimizer.apply_gradients(zip(grads, critic_vars))
 
         # self.train_critic_op = self.critic_optimizer.minimize(self.critic_loss)
 
         # Build action sample.
-        self.sample_action = self.mu + tf.exp(self.log_var / 2.0) * tf.random_normal(shape=[self.dim_action], dtype=tf.float32)
+        self.sample_action = self.mu + tf.exp(self.log_var) * tf.random_normal(shape=[self.dim_action], dtype=tf.float32)
 
     def get_action(self, obs):
         if obs.ndim == 1 or obs.ndim == 3:
@@ -146,7 +148,7 @@ class ContinuousPPO(Base):
 
             last_advantage = 0
             for t in reversed(range(self.trajectory_length)):
-                advantage_batch[i, t] = delta_value_batch[t] + self.discount * self.tau * (1 - d_batch[i, t]) * last_advantage
+                advantage_batch[i, t] = delta_value_batch[t] + self.discount * self.gae * (1 - d_batch[i, t]) * last_advantage
                 last_advantage = advantage_batch[i, t]
 
             # Compute target value.
@@ -159,7 +161,7 @@ class ContinuousPPO(Base):
         target_value_batch = target_value_batch.reshape(self.n_env * self.trajectory_length)
 
         # Normalize advantage.
-        advantage_batch = (advantage_batch - advantage_batch.mean()) / (advantage_batch.std() + 1e-5)
+        advantage_batch = (advantage_batch - advantage_batch.mean()) / (advantage_batch.std() + 1e-10)
 
         # Compute old terms for placeholder.
         old_mu_batch, old_log_var = self.sess.run([self.mu, self.log_var], feed_dict={self.observation: s_batch})
@@ -177,12 +179,14 @@ class ContinuousPPO(Base):
                         self.advantage: mb_advantage,
                         self.old_mu: mb_old_mu,
                         self.old_log_var: old_log_var,
-                        self.clip_epsilon: 0.2})
+                        self.clip_epsilon: 0.2,
+                        self.policy_lr: self.policy_lr_schedule(update_ratio)})
 
                     self.sess.run(self.train_critic_op, feed_dict={
                         self.observation: mb_s,
                         self.span_reward: mb_target_value,
-                        self.clip_epsilon: 0.2})
+                        self.clip_epsilon: 0.2,
+                        self.value_lr: self.value_lr_schedule(update_ratio)})
 
                 except StopIteration:
                     del batch_generator

@@ -47,7 +47,7 @@ from .stack_env import StackEnv
 
 
 class AsyncMujocoWrapper(object):
-    def __init__(self, env_name: str, port: int, n_env: int = 8, n_inference: int = 6):
+    def __init__(self, env_name: str, n_env: int = 8, n_inference: int = 6, port: int = 50000):
         self.n_env = n_env
         self.n_inference = n_inference
         self._env_ids = None
