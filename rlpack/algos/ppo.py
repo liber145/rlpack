@@ -38,10 +38,8 @@ class PPO(Base):
         x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu)
         x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
         x = tf.layers.dense(x, 512, activation=tf.nn.relu)
-        self.logit_action_probability = tf.layers.dense(
-            x, self.n_action, activation=None, kernel_initializer=tf.truncated_normal_initializer(0.0, 0.01))
-        self.state_value = tf.squeeze(tf.layers.dense(
-            x, 1, activation=None, kernel_initializer=tf.truncated_normal_initializer()))
+        self.logit_action_probability = tf.layers.dense(x, self.n_action, activation=None, kernel_initializer=tf.truncated_normal_initializer(0.0, 0.01))
+        self.state_value = tf.squeeze(tf.layers.dense(x, 1, activation=None, kernel_initializer=tf.truncated_normal_initializer()))
 
     def build_algorithm(self):
         self.init_clip_epsilon = 0.1

@@ -2,7 +2,6 @@ import signal
 import sys
 from multiprocessing import Process
 from multiprocessing.managers import BaseManager
-from typing import Callable
 
 
 def exit_gracefully(signum, frame):

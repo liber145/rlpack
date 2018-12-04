@@ -89,7 +89,7 @@ class AsyncMujocoWrapper(object):
 
     @property
     def dim_action(self):
-        return self._dim_action
+        return self._dim_action[0]
 
     @property
     def env_id(self):

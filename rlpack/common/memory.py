@@ -2,6 +2,7 @@ import pickle
 import random
 from collections import defaultdict, deque
 from typing import List
+import math
 
 import numpy as np
 
@@ -129,6 +130,31 @@ class DistributedMemory(object):
                 action_batch.append(np.asarray([self.action_queue[env_id][-i - 2] for i in reversed(range(n_sample))]))
 
         return np.stack(state_batch), np.stack(action_batch), np.stack(reward_batch), np.stack(done_batch)
+
+    def sample_transition(self, n):
+
+        state_batch, action_batch, reward_batch, done_batch, next_state_batch = [], [], [], [], []
+
+        env_id_keys = self.done_queue.keys()
+
+        n_queue = len(env_id_keys)
+        each_sample = math.floor(n / n_queue)
+        n_last = n - (n_queue - 1) * each_sample
+
+
+        for j, env_id in enumerate(env_id_keys):
+            if j == len(env_id_keys) - 1:
+                n_sample = n_last
+            else:
+                n_sample = each_sample
+            index = np.random.randint(len(self.state_queue[env_id])-1, size=n_sample)
+            state_batch.append(np.asarray([self.state_queue[env_id][i] for i in index]))
+            action_batch.append(np.asarray([self.action_queue[env_id][i] for i in index]))
+            reward_batch.append(np.asarray([self.reward_queue[env_id][i] for i in index]))
+            done_batch.append(np.asarray([self.done_queue[env_id][i] for i in index]))
+            next_state_batch.append(np.asarray([self.state_queue[env_id][i+1] for i in index]))
+
+        return np.stack(state_batch), np.stack(action_batch), np.stack(reward_batch), np.stack(done_batch), np.stack(next_state_batch)
 
 
 class NonBlockMemory(object):
