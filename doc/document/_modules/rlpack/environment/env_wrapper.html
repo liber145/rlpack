@@ -165,39 +165,86 @@
 <span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="k">import</span> <span class="n">Process</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">List</span>
 
+<span class="kn">import</span> <span class="nn">gym</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">baselines</span> <span class="k">import</span> <span class="n">bench</span><span class="p">,</span> <span class="n">logger</span>
-<span class="kn">from</span> <span class="nn">baselines.common.atari_wrappers</span> <span class="k">import</span> <span class="n">make_atari</span><span class="p">,</span> <span class="n">wrap_deepmind</span>
-<span class="kn">from</span> <span class="nn">baselines.common.vec_env</span> <span class="k">import</span> <span class="n">VecEnv</span>
-<span class="kn">from</span> <span class="nn">baselines.common.vec_env.subproc_vec_env</span> <span class="k">import</span> <span class="n">SubprocVecEnv</span>
 <span class="kn">from</span> <span class="nn">gym</span> <span class="k">import</span> <span class="n">spaces</span>
 
-<span class="c1"># from ..common.log import logger</span>
+<span class="kn">from</span> <span class="nn">.atari_wrappers</span> <span class="k">import</span> <span class="n">make_atari</span><span class="p">,</span> <span class="n">wrap_deepmind</span>
 <span class="kn">from</span> <span class="nn">.distributed_env_worker</span> <span class="k">import</span> <span class="n">DistributedEnvClient</span>
 <span class="kn">from</span> <span class="nn">.distributed_env_wrapper</span> <span class="k">import</span> <span class="n">DistributedEnvManager</span>
+<span class="kn">from</span> <span class="nn">.mujoco_wrappers</span> <span class="k">import</span> <span class="n">make_mujoco</span>
 <span class="kn">from</span> <span class="nn">.stack_env</span> <span class="k">import</span> <span class="n">StackEnv</span>
 
+<span class="c1"># class MujocoWrapper(StackEnv):</span>
+<span class="c1">#     def __init__(self, env_id: str, n_env: int):</span>
+<span class="c1">#         super().__init__(env_id, n_env)</span>
+<span class="c1">#         self.trajectory_rewards = [0 for _ in range(self.n_env)]</span>
+<span class="c1">#         self.trajectory_length = [0 for _ in range(self.n_env)]</span>
+<span class="c1">#         self._dim_observation = self.envs[0].observation_space.shape</span>
+<span class="c1">#         self._dim_action = self.envs[0].action_space.shape[0]</span>
+<span class="c1">#</span>
+<span class="c1">#     def step(self, actions):</span>
+<span class="c1">#         obs, rewards, dones, _ = super().step(actions)</span>
+<span class="c1">#         epinfos = []</span>
+<span class="c1">#         for i in range(self.n_env):</span>
+<span class="c1">#             if self.last_dones[i]:</span>
+<span class="c1">#                 epinfos.append({&quot;episode&quot;: {&quot;r&quot;: self.trajectory_rewards[i], &quot;l&quot;: self.trajectory_length[i]}})</span>
+<span class="c1">#                 self.trajectory_length[i] = 0</span>
+<span class="c1">#                 self.trajectory_rewards[i] = 0</span>
+<span class="c1">#             else:</span>
+<span class="c1">#                 self.trajectory_length[i] += 1</span>
+<span class="c1">#                 self.trajectory_rewards[i] += rewards[i]</span>
+<span class="c1">#         return obs, rewards, dones, epinfos</span>
+<span class="c1">#</span>
+<span class="c1">#     @property</span>
+<span class="c1">#     def dim_observation(self):</span>
+<span class="c1">#         return self._dim_observation</span>
+<span class="c1">#</span>
+<span class="c1">#     @property</span>
+<span class="c1">#     def dim_action(self):</span>
+<span class="c1">#         return self._dim_action</span>
+<span class="c1">#</span>
+<span class="c1">#     @property</span>
+<span class="c1">#     def is_continuous(self):</span>
+<span class="c1">#         return True</span>
 
-<div class="viewcode-block" id="MujocoWrapper"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.MujocoWrapper">[docs]</a><span class="k">class</span> <span class="nc">MujocoWrapper</span><span class="p">(</span><span class="n">StackEnv</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">n_env</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">env_id</span><span class="p">,</span> <span class="n">n_env</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_rewards</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_env</span><span class="p">)]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_length</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_env</span><span class="p">)]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_dim_observation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">envs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">observation_space</span><span class="o">.</span><span class="n">shape</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_dim_action</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">envs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
-<div class="viewcode-block" id="MujocoWrapper.step"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.MujocoWrapper.step">[docs]</a>    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actions</span><span class="p">):</span>
-        <span class="n">obs</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">actions</span><span class="p">)</span>
-        <span class="n">epinfos</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_env</span><span class="p">):</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_dones</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
-                <span class="n">epinfos</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;episode&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;r&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_rewards</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="s2">&quot;l&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_length</span><span class="p">[</span><span class="n">i</span><span class="p">]}})</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_length</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_rewards</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_length</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_rewards</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+=</span> <span class="n">rewards</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-        <span class="k">return</span> <span class="n">obs</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">,</span> <span class="n">epinfos</span></div>
+<div class="viewcode-block" id="AsyncMujocoWrapper"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.AsyncMujocoWrapper">[docs]</a><span class="k">class</span> <span class="nc">AsyncMujocoWrapper</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">n_env</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span> <span class="n">n_inference</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50000</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_env</span> <span class="o">=</span> <span class="n">n_env</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_inference</span> <span class="o">=</span> <span class="n">n_env</span> <span class="k">if</span> <span class="n">n_inference</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">n_inference</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_env_ids</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span> <span class="o">=</span> <span class="n">DistributedEnvManager</span><span class="p">(</span><span class="n">n_env</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span><span class="o">.</span><span class="n">configure</span><span class="p">()</span>
+        <span class="c1"># p = Process(target=self.env_manager.start)</span>
+        <span class="c1"># p.start()</span>
+        <span class="c1"># p.join()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+        <span class="n">processes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_env</span><span class="p">):</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">DistributedEnvClient</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_make_env</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">env_name</span><span class="p">),</span> <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">)</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">daemon</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+            <span class="n">processes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dim_action</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">dim_action</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dim_observation</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">dim_observation</span>
+
+    <span class="k">def</span> <span class="nf">_make_env</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">env_name</span><span class="p">):</span>
+        <span class="n">env</span> <span class="o">=</span> <span class="n">make_mujoco</span><span class="p">(</span><span class="n">env_name</span><span class="p">)</span>
+        <span class="n">env</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">rank</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">env</span>
+
+<div class="viewcode-block" id="AsyncMujocoWrapper.step"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.AsyncMujocoWrapper.step">[docs]</a>    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actions</span><span class="p">:</span> <span class="n">List</span><span class="p">):</span>
+        <span class="n">act_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">env_id</span><span class="p">:</span> <span class="n">act</span> <span class="k">for</span> <span class="n">env_id</span><span class="p">,</span> <span class="n">act</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_env_ids</span><span class="p">,</span> <span class="n">actions</span><span class="p">)}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">act_dict</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_env_ids</span><span class="p">,</span> <span class="n">obs</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">,</span> <span class="n">infos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span><span class="o">.</span><span class="n">get_envs_to_inference</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_inference</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">rewards</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">dones</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">infos</span></div>
+
+<div class="viewcode-block" id="AsyncMujocoWrapper.reset"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.AsyncMujocoWrapper.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_env_ids</span><span class="p">,</span> <span class="n">states</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span><span class="o">.</span><span class="n">get_envs_to_inference</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_env</span><span class="p">,</span> <span class="n">state_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">states</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span></div>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dim_observation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -205,11 +252,11 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dim_action</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dim_action</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dim_action</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">is_continuous</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="kc">True</span></div>
+    <span class="k">def</span> <span class="nf">env_id</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_env_ids</span></div>
 
 
 <div class="viewcode-block" id="DistributedMujocoWrapper"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.DistributedMujocoWrapper">[docs]</a><span class="k">class</span> <span class="nc">DistributedMujocoWrapper</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
@@ -224,14 +271,19 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
 
         <span class="n">processes</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_env</span><span class="p">):</span>
-            <span class="n">p</span> <span class="o">=</span> <span class="n">DistributedEnvClient</span><span class="p">(</span><span class="n">env_name</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_env</span><span class="p">):</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">DistributedEnvClient</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_make_env</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">env_name</span><span class="p">))</span>
             <span class="n">p</span><span class="o">.</span><span class="n">daemon</span> <span class="o">=</span> <span class="kc">True</span>
             <span class="n">p</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
             <span class="n">processes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_dim_action</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">dim_action</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_dim_observation</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">dim_observation</span>
+
+    <span class="k">def</span> <span class="nf">_make_env</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">env_name</span><span class="p">):</span>
+        <span class="n">env</span> <span class="o">=</span> <span class="n">make_mujoco</span><span class="p">(</span><span class="n">env_name</span><span class="p">)</span>
+        <span class="n">env</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">rank</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">env</span>
 
 <div class="viewcode-block" id="DistributedMujocoWrapper.step"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.DistributedMujocoWrapper.step">[docs]</a>    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actions</span><span class="p">:</span> <span class="n">List</span><span class="p">):</span>
         <span class="n">act_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">env_id</span><span class="p">:</span> <span class="n">act</span> <span class="k">for</span> <span class="n">env_id</span><span class="p">,</span> <span class="n">act</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">actions</span><span class="p">)}</span>
@@ -249,103 +301,217 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dim_action</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dim_action</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dim_action</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">env_id</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_ids</span></div>
 
 
-<div class="viewcode-block" id="CartpoleWrapper"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.CartpoleWrapper">[docs]</a><span class="k">class</span> <span class="nc">CartpoleWrapper</span><span class="p">(</span><span class="n">StackEnv</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_env</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;CartPole-v1&quot;</span><span class="p">,</span> <span class="n">n_env</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_rewards</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_env</span><span class="p">)]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_length</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_env</span><span class="p">)]</span>
+<div class="viewcode-block" id="DistributedAtariWrapper"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.DistributedAtariWrapper">[docs]</a><span class="k">class</span> <span class="nc">DistributedAtariWrapper</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">n_env</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_env</span> <span class="o">=</span> <span class="n">n_env</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">env_ids</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span> <span class="o">=</span> <span class="n">DistributedEnvManager</span><span class="p">(</span><span class="n">n_env</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span><span class="o">.</span><span class="n">configure</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_dim_observation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">envs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">observation_space</span><span class="o">.</span><span class="n">shape</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_n_action</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">envs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">n</span>
+        <span class="n">processes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_env</span><span class="p">):</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">DistributedEnvClient</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_make_env</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">env_name</span><span class="p">))</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">daemon</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+            <span class="n">processes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
 
-<div class="viewcode-block" id="CartpoleWrapper.step"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.CartpoleWrapper.step">[docs]</a>    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actions</span><span class="p">):</span>
-        <span class="n">obs</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">actions</span><span class="p">)</span>
-        <span class="n">epinfos</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_env</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_length</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_rewards</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+=</span> <span class="n">rewards</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+    <span class="k">def</span> <span class="nf">_make_env</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">env_name</span><span class="p">):</span>
+        <span class="n">env</span> <span class="o">=</span> <span class="n">make_atari</span><span class="p">(</span><span class="n">env_name</span><span class="p">)</span>
+        <span class="n">env</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">rank</span><span class="p">)</span>
+        <span class="n">env</span> <span class="o">=</span> <span class="n">wrap_deepmind</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">frame_stack</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">env</span>
 
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_dones</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
-                <span class="n">epinfos</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;episode&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;r&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_rewards</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="s2">&quot;l&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_length</span><span class="p">[</span><span class="n">i</span><span class="p">]}})</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_length</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_rewards</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-                <span class="n">rewards</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">rewards</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.1</span>
-        <span class="k">return</span> <span class="n">obs</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">,</span> <span class="n">epinfos</span></div>
+<div class="viewcode-block" id="DistributedAtariWrapper.step"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.DistributedAtariWrapper.step">[docs]</a>    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actions</span><span class="p">:</span> <span class="n">List</span><span class="p">):</span>
+        <span class="n">act_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">env_id</span><span class="p">:</span> <span class="n">act</span> <span class="k">for</span> <span class="n">env_id</span><span class="p">,</span> <span class="n">act</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">actions</span><span class="p">)}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">act_dict</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">obs</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">,</span> <span class="n">infos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span><span class="o">.</span><span class="n">get_envs_to_inference</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_env</span><span class="p">)</span>
+        <span class="sd">&quot;&quot;&quot;Bin reward to {+1, 0, -1} by its sign.&quot;&quot;&quot;</span>
+        <span class="n">rewards</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">rewards</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">rewards</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">dones</span><span class="p">,</span> <span class="n">infos</span></div>
+
+<div class="viewcode-block" id="DistributedAtariWrapper.reset"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.DistributedAtariWrapper.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">states</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span><span class="o">.</span><span class="n">get_envs_to_inference</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_env</span><span class="p">,</span> <span class="n">state_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">states</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">env_id</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_ids</span></div>
+
+
+<div class="viewcode-block" id="AsyncAtariWrapper"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.AsyncAtariWrapper">[docs]</a><span class="k">class</span> <span class="nc">AsyncAtariWrapper</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">n_env</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span> <span class="n">n_inference</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">6</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">50000</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_env</span> <span class="o">=</span> <span class="n">n_env</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_inference</span> <span class="o">=</span> <span class="n">n_inference</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">env_ids</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span> <span class="o">=</span> <span class="n">DistributedEnvManager</span><span class="p">(</span><span class="n">n_env</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span><span class="o">.</span><span class="n">configure</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+        <span class="n">processes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_env</span><span class="p">):</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">DistributedEnvClient</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_make_env</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">env_name</span><span class="p">),</span> <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">)</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">daemon</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+            <span class="n">processes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dim_observation</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">dim_observation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dim_action</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">dim_action</span>
+
+    <span class="k">def</span> <span class="nf">_make_env</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">env_name</span><span class="p">):</span>
+        <span class="n">env</span> <span class="o">=</span> <span class="n">make_atari</span><span class="p">(</span><span class="n">env_name</span><span class="p">)</span>
+        <span class="n">env</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">rank</span><span class="p">)</span>
+        <span class="n">env</span> <span class="o">=</span> <span class="n">wrap_deepmind</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">episode_life</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">clip_rewards</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">frame_stack</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">env</span>
+
+<div class="viewcode-block" id="AsyncAtariWrapper.step"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.AsyncAtariWrapper.step">[docs]</a>    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actions</span><span class="p">:</span> <span class="n">List</span><span class="p">):</span>
+        <span class="n">act_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">env_id</span><span class="p">:</span> <span class="n">act</span> <span class="k">for</span> <span class="n">env_id</span><span class="p">,</span> <span class="n">act</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">actions</span><span class="p">)}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">act_dict</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">obs</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">,</span> <span class="n">infos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span><span class="o">.</span><span class="n">get_envs_to_inference</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_inference</span><span class="p">)</span>
+        <span class="sd">&quot;&quot;&quot;Bin reward to {+1, 0, -1} by its sign.&quot;&quot;&quot;</span>
+        <span class="n">rewards</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">rewards</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">rewards</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">dones</span><span class="p">,</span> <span class="n">infos</span></div>
+
+<div class="viewcode-block" id="AsyncAtariWrapper.reset"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.AsyncAtariWrapper.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">states</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span><span class="o">.</span><span class="n">get_envs_to_inference</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_env</span><span class="p">,</span> <span class="n">state_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">states</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">env_id</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_ids</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dim_observation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dim_observation</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">n_action</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_action</span>
+    <span class="k">def</span> <span class="nf">dim_action</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dim_action</span></div>
 
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">is_continuous</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="kc">False</span></div>
+<span class="c1"># class CartpoleWrapper(StackEnv):</span>
+<span class="c1">#     def __init__(self, n_env):</span>
+<span class="c1">#         super().__init__(&quot;CartPole-v1&quot;, n_env)</span>
+<span class="c1">#         self.trajectory_rewards = [0 for _ in range(self.n_env)]</span>
+<span class="c1">#         self.trajectory_length = [0 for _ in range(self.n_env)]</span>
+<span class="c1">#</span>
+<span class="c1">#         self._dim_observation = self.envs[0].observation_space.shape</span>
+<span class="c1">#         self._n_action = self.envs[0].action_space.n</span>
+<span class="c1">#</span>
+<span class="c1">#     def step(self, actions):</span>
+<span class="c1">#         obs, rewards, dones, _ = super().step(actions)</span>
+<span class="c1">#         epinfos = []</span>
+<span class="c1">#         for i in range(self.n_env):</span>
+<span class="c1">#             self.trajectory_length[i] += 1</span>
+<span class="c1">#             self.trajectory_rewards[i] += rewards[i]</span>
+<span class="c1">#</span>
+<span class="c1">#             if self.last_dones[i]:</span>
+<span class="c1">#                 epinfos.append({&quot;episode&quot;: {&quot;r&quot;: self.trajectory_rewards[i], &quot;l&quot;: self.trajectory_length[i]}})</span>
+<span class="c1">#                 self.trajectory_length[i] = 0</span>
+<span class="c1">#                 self.trajectory_rewards[i] = 0</span>
+<span class="c1">#                 rewards[i] = -1</span>
+<span class="c1">#             else:</span>
+<span class="c1">#                 rewards[i] = 0.1</span>
+<span class="c1">#         return obs, rewards, dones, epinfos</span>
+<span class="c1">#</span>
+<span class="c1">#     @property</span>
+<span class="c1">#     def dim_observation(self):</span>
+<span class="c1">#         return self._dim_observation</span>
+<span class="c1">#</span>
+<span class="c1">#     @property</span>
+<span class="c1">#     def n_action(self):</span>
+<span class="c1">#         return self._n_action</span>
 
 
-<div class="viewcode-block" id="AtariWrapper"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.AtariWrapper">[docs]</a><span class="k">class</span> <span class="nc">AtariWrapper</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="AtariWrapper2"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.AtariWrapper2">[docs]</a><span class="k">class</span> <span class="nc">AtariWrapper2</span><span class="p">(</span><span class="n">StackEnv</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">n_env</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">env</span> <span class="o">=</span> <span class="n">SubprocVecEnv</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">_make_env</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">env_id</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_env</span><span class="p">)])</span>
-        <span class="n">wos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">observation_space</span>
-        <span class="n">low</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">wos</span><span class="o">.</span><span class="n">low</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
-        <span class="n">high</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">wos</span><span class="o">.</span><span class="n">high</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">stackedobs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_env</span><span class="p">,)</span> <span class="o">+</span> <span class="n">low</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">low</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_observation_space</span> <span class="o">=</span> <span class="n">spaces</span><span class="o">.</span><span class="n">Box</span><span class="p">(</span><span class="n">low</span><span class="o">=</span><span class="n">low</span><span class="p">,</span> <span class="n">high</span><span class="o">=</span><span class="n">high</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_action_space</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">action_space</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">env_id</span><span class="p">,</span> <span class="n">n_env</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">envs</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_make_env</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">i</span><span class="p">,</span> <span class="n">env_id</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_env</span><span class="p">)]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_length</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_env</span><span class="p">)]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_rewards</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_env</span><span class="p">)]</span>
 
     <span class="k">def</span> <span class="nf">_make_env</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">env_id</span><span class="p">):</span>
-        <span class="k">def</span> <span class="nf">env_fn</span><span class="p">():</span>
-            <span class="n">env</span> <span class="o">=</span> <span class="n">make_atari</span><span class="p">(</span><span class="n">env_id</span><span class="p">)</span>
-            <span class="n">env</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">rank</span><span class="p">)</span>
-            <span class="n">env</span> <span class="o">=</span> <span class="n">bench</span><span class="o">.</span><span class="n">Monitor</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">logger</span><span class="o">.</span><span class="n">get_dir</span><span class="p">()</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">logger</span><span class="o">.</span><span class="n">get_dir</span><span class="p">(),</span> <span class="nb">str</span><span class="p">(</span><span class="n">rank</span><span class="p">)))</span>
-            <span class="n">env</span> <span class="o">=</span> <span class="n">wrap_deepmind</span><span class="p">(</span><span class="n">env</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">env</span>
-        <span class="k">return</span> <span class="n">env_fn</span>
+        <span class="n">env</span> <span class="o">=</span> <span class="n">make_atari</span><span class="p">(</span><span class="n">env_id</span><span class="p">)</span>
+        <span class="n">env</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">rank</span><span class="p">)</span>
+        <span class="n">env</span> <span class="o">=</span> <span class="n">wrap_deepmind</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">frame_stack</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">env</span>
 
-<div class="viewcode-block" id="AtariWrapper.step"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.AtariWrapper.step">[docs]</a>    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actions</span><span class="p">):</span>
-        <span class="n">obs</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">,</span> <span class="n">infos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">actions</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">stackedobs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stackedobs</span><span class="p">,</span> <span class="n">shift</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
-        <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">done</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">dones</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">done</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">stackedobs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">stackedobs</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="o">-</span><span class="n">obs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:]</span> <span class="o">=</span> <span class="n">obs</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">stackedobs</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">,</span> <span class="n">infos</span></div>
+<div class="viewcode-block" id="AtariWrapper2.step"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.AtariWrapper2.step">[docs]</a>    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actions</span><span class="p">):</span>
+        <span class="n">obs</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">,</span> <span class="n">infos</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">actions</span><span class="p">)</span>
+        <span class="c1"># epinfos = []</span>
+        <span class="c1"># for i in range(self.n_env):</span>
+        <span class="c1">#     if infos[i][&quot;real_done&quot;]:</span>
+        <span class="c1">#         epinfos.append({&quot;episode&quot;: {&quot;r&quot;: self.trajectory_rewards[i], &quot;l&quot;: self.trajectory_length[i]}})</span>
+        <span class="c1">#         self.trajectory_length[i] = 0</span>
+        <span class="c1">#         self.trajectory_rewards[i] = 0</span>
+        <span class="c1">#     else:</span>
+        <span class="c1">#         self.trajectory_length[i] += 1</span>
+        <span class="c1">#         self.trajectory_rewards[i] += infos[i][&quot;real_reward&quot;]</span>
+        <span class="k">return</span> <span class="n">obs</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">,</span> <span class="n">infos</span></div></div>
 
-<div class="viewcode-block" id="AtariWrapper.reset"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.AtariWrapper.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">obs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">stackedobs</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">stackedobs</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="o">-</span><span class="n">obs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:]</span> <span class="o">=</span> <span class="n">obs</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">stackedobs</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span></div>
 
-<div class="viewcode-block" id="AtariWrapper.close"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.AtariWrapper.close">[docs]</a>    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">action_space</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_action_space</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">observation_space</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_observation_space</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">is_continuous</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="kc">False</span></div>
-
+<span class="c1"># class AtariWrapper(object):</span>
+<span class="c1">#     def __init__(self, env_id: str, n_env: int):</span>
+<span class="c1">#         self.env = SubprocVecEnv([self._make_env(i, env_id) for i in range(n_env)])</span>
+<span class="c1">#         wos = self.env.observation_space</span>
+<span class="c1">#         low = np.repeat(wos.low, 4, axis=-1)</span>
+<span class="c1">#         high = np.repeat(wos.high, 4, axis=-1)</span>
+<span class="c1">#         self.stackedobs = np.zeros((n_env,) + low.shape, low.dtype)</span>
+<span class="c1">#         self._observation_space = spaces.Box(low=low, high=high)</span>
+<span class="c1">#         self._action_space = self.env.action_space</span>
+<span class="c1">#</span>
+<span class="c1">#     def _make_env(self, rank, env_id):</span>
+<span class="c1">#         def env_fn():</span>
+<span class="c1">#             env = make_atari(env_id)</span>
+<span class="c1">#             env.seed(1 + rank)</span>
+<span class="c1">#             env = bench.Monitor(env, logger.get_dir() and os.path.join(logger.get_dir(), str(rank)))</span>
+<span class="c1">#             env = wrap_deepmind(env)</span>
+<span class="c1">#             return env</span>
+<span class="c1">#         return env_fn</span>
+<span class="c1">#</span>
+<span class="c1">#     def step(self, actions):</span>
+<span class="c1">#         obs, rewards, dones, infos = self.env.step(actions)</span>
+<span class="c1">#         self.stackedobs = np.roll(self.stackedobs, shift=-1, axis=-1)</span>
+<span class="c1">#         for (i, done) in enumerate(dones):</span>
+<span class="c1">#             if done:</span>
+<span class="c1">#                 self.stackedobs[i] = 0</span>
+<span class="c1">#         self.stackedobs[..., -obs.shape[-1]:] = obs</span>
+<span class="c1">#         return self.stackedobs.astype(np.float32) / 255.0, rewards, dones, infos</span>
+<span class="c1">#</span>
+<span class="c1">#     def reset(self):</span>
+<span class="c1">#         obs = self.env.reset()</span>
+<span class="c1">#         self.stackedobs[...] = 0</span>
+<span class="c1">#         self.stackedobs[..., -obs.shape[-1]:] = obs</span>
+<span class="c1">#         return self.stackedobs.astype(np.float32) / 255.0</span>
+<span class="c1">#</span>
+<span class="c1">#     def close(self):</span>
+<span class="c1">#         self.env.close()</span>
+<span class="c1">#</span>
+<span class="c1">#     @property</span>
+<span class="c1">#     def action_space(self):</span>
+<span class="c1">#         return self._action_space</span>
+<span class="c1">#</span>
+<span class="c1">#     @property</span>
+<span class="c1">#     def observation_space(self):</span>
+<span class="c1">#         return self._observation_space</span>
+<span class="c1">#</span>
+<span class="c1">#     @property</span>
+<span class="c1">#     def is_continuous(self):</span>
+<span class="c1">#         return False</span>
 
 <span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
-    <span class="n">env</span> <span class="o">=</span> <span class="n">AtariWrapper</span><span class="p">(</span><span class="s2">&quot;AlienNoFrameskip-v4&quot;</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+    <span class="n">env</span> <span class="o">=</span> <span class="n">DistributedAtariWrapper</span><span class="p">(</span><span class="s2">&quot;BreakoutNoFrameskip-v4&quot;</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
     <span class="n">obs</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;obs: </span><span class="si">{obs}</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="n">obs</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">,</span> <span class="n">infos</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;obs: </span><span class="si">{obs}</span><span class="s2">  rewards: </span><span class="si">{rewards}</span><span class="s2">  dones: </span><span class="si">{dones}</span><span class="s2">  infos: </span><span class="si">{infos}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;obs: </span><span class="si">{obs.shape}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1000</span><span class="p">):</span>
+        <span class="n">obs</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">,</span> <span class="n">infos</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;obs: </span><span class="si">{obs.shape}</span><span class="s2"> max: {np.max(obs)} min: {np.min(obs)}  rewards: </span><span class="si">{rewards.shape}</span><span class="s2">  dones: </span><span class="si">{dones}</span><span class="s2">  infos: </span><span class="si">{infos}</span><span class="s2">&quot;</span><span class="p">)</span>
 </pre></div>
 
            </div>

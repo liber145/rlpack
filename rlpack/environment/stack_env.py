@@ -1,6 +1,7 @@
 import gym
 import numpy as np
 
+from .mujoco_wrappers import make_mujoco
 
 class StackEnv(object):
     """

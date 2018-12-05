@@ -16,7 +16,7 @@ class Memory(object):
         self.reward_queue = deque(maxlen=capacity)
         self.done_queue = deque(maxlen=capacity)
 
-        self.cnt = 0
+        # self.cnt = 0
 
     def store_sard(self, state, action, reward, done):
         self.state_queue.append(state)
@@ -24,15 +24,15 @@ class Memory(object):
         self.reward_queue.append(reward)
         self.done_queue.append(done)
 
-        self.cnt += 1
-        if self.cnt == 200:
-            for j in range(8):
-                f = open(f"naive_state{j}.p", "wb")
-                pickle.dump([self.state_queue[i][j] for i in range(200)], f)
-                f = open(f"naive_reward{j}.p", "wb")
-                pickle.dump([self.reward_queue[i][j] for i in range(200)], f)
-                f = open(f"naive_done{j}.p", "wb")
-                pickle.dump([self.done_queue[i][j] for i in range(200)], f)
+        # self.cnt += 1
+        # if self.cnt == 200:
+        #     for j in range(8):
+        #         f = open(f"naive_state{j}.p", "wb")
+        #         pickle.dump([self.state_queue[i][j] for i in range(200)], f)
+        #         f = open(f"naive_reward{j}.p", "wb")
+        #         pickle.dump([self.reward_queue[i][j] for i in range(200)], f)
+        #         f = open(f"naive_done{j}.p", "wb")
+        #         pickle.dump([self.done_queue[i][j] for i in range(200)], f)
 
     def get_last_n_step(self, n):
         assert n < self.size, "No enough sample in memory."
@@ -140,7 +140,6 @@ class DistributedMemory(object):
         n_queue = len(env_id_keys)
         each_sample = math.floor(n / n_queue)
         n_last = n - (n_queue - 1) * each_sample
-
 
         for j, env_id in enumerate(env_id_keys):
             if j == len(env_id_keys) - 1:

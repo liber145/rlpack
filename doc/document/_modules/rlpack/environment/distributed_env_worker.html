@@ -161,16 +161,10 @@
            <div itemprop="articleBody">
             
   <h1>Source code for rlpack.environment.distributed_env_worker</h1><div class="highlight"><pre>
-<span></span>
-
-<span class="kn">import</span> <span class="nn">signal</span>
+<span></span><span class="kn">import</span> <span class="nn">signal</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="k">import</span> <span class="n">Process</span>
 <span class="kn">from</span> <span class="nn">multiprocessing.managers</span> <span class="k">import</span> <span class="n">BaseManager</span>
-
-<span class="kn">import</span> <span class="nn">gym</span>
-
-<span class="kn">from</span> <span class="nn">..common.log</span> <span class="k">import</span> <span class="n">logger</span>
 
 
 <div class="viewcode-block" id="exit_gracefully"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.distributed_env_worker.exit_gracefully">[docs]</a><span class="k">def</span> <span class="nf">exit_gracefully</span><span class="p">(</span><span class="n">signum</span><span class="p">,</span> <span class="n">frame</span><span class="p">):</span>
@@ -185,14 +179,11 @@
 <span class="sd">    start on worker client.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">hostname</span><span class="o">=</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">50000</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">hostname</span><span class="o">=</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">50000</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">gym_env</span> <span class="o">=</span> <span class="n">gym</span><span class="o">.</span><span class="n">make</span><span class="p">(</span><span class="n">env_name</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_dim_observation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gym_env</span><span class="o">.</span><span class="n">observation_space</span><span class="o">.</span><span class="n">shape</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_dim_action</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gym_env</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">shape</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">last_done</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_length</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_reward</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">env</span> <span class="o">=</span> <span class="n">env</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dim_observation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">dim_observation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dim_action</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">dim_action</span>
 
         <span class="k">class</span> <span class="nc">SharedMemoryManager</span><span class="p">(</span><span class="n">BaseManager</span><span class="p">):</span>
             <span class="k">pass</span>
@@ -209,31 +200,20 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">srd_queue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">get_srd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">env_id</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">a_queue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">get_a</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">env_id</span><span class="p">)</span>
 
-        <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gym_env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
-        <span class="c1"># logger.info(f&quot;s: {s.shape}  {type(s)}&quot;)</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">srd_queue</span><span class="o">.</span><span class="n">put</span><span class="p">([</span><span class="n">s</span><span class="p">])</span>
 
 <div class="viewcode-block" id="DistributedEnvClient.run"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.distributed_env_worker.DistributedEnvClient.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
             <span class="n">action</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
-            <span class="n">epinfo</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">info</span> <span class="o">=</span> <span class="p">{}</span>
 
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_done</span><span class="p">:</span>
-                <span class="n">ob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gym_env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
-                <span class="n">reward</span> <span class="o">=</span> <span class="mi">0</span>
-                <span class="n">done</span> <span class="o">=</span> <span class="kc">True</span>
-                <span class="n">info</span> <span class="o">=</span> <span class="kc">None</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">last_done</span> <span class="o">=</span> <span class="kc">False</span>
-                <span class="n">epinfo</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;episode&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;r&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_reward</span><span class="p">,</span> <span class="s2">&quot;l&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_length</span><span class="p">}}</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_length</span> <span class="o">=</span> <span class="mi">0</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_reward</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">ob</span><span class="p">,</span> <span class="n">reward</span><span class="p">,</span> <span class="n">done</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gym_env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">last_done</span> <span class="o">=</span> <span class="n">done</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_length</span> <span class="o">+=</span> <span class="mi">1</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_reward</span> <span class="o">+=</span> <span class="n">reward</span>
+            <span class="n">ob</span><span class="p">,</span> <span class="n">reward</span><span class="p">,</span> <span class="n">done</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
 
-            <span class="bp">self</span><span class="o">.</span><span class="n">srd_queue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="n">ob</span><span class="p">,</span> <span class="n">reward</span><span class="p">,</span> <span class="n">done</span><span class="p">,</span> <span class="n">epinfo</span><span class="p">))</span></div>
+            <span class="k">if</span> <span class="n">done</span><span class="p">:</span>
+                <span class="n">ob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">srd_queue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="n">ob</span><span class="p">,</span> <span class="n">reward</span><span class="p">,</span> <span class="n">done</span><span class="p">,</span> <span class="n">info</span><span class="p">))</span></div>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dim_observation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>

@@ -19,12 +19,13 @@ class TD3(Base):
 
         self.policy_delay = 2
         self.target_update_rate = 0.995
-        self.noise_std = 0.1
+        self.noise_std = 0.2
+        self.explore_noise_std = 0.1
 
         super().__init__(config)
 
-        self.action_low = np.array([-1 for i in range(self.dim_action)])
-        self.action_high = np.array([1 for i in range(self.dim_action)])
+        self.action_low = np.array([-1.0 for i in range(self.dim_action)])
+        self.action_high = np.array([1.0 for i in range(self.dim_action)])
 
         self.sess.run(self.init_target_policy_op)
         self.sess.run(self.init_target_value_op)
@@ -34,49 +35,42 @@ class TD3(Base):
         self.action = tf.placeholder(tf.float32, [None, self.dim_action], name="action")
 
         with tf.variable_scope("policy_net"):
-            x = tf.layers.dense(self.observation, 32, activation=tf.nn.relu, trainable=True)
-            x = tf.layers.dense(x, 32, activation=tf.nn.relu, trainable=True)
+            x = tf.layers.dense(self.observation, 400, activation=tf.nn.relu, trainable=True)
+            x = tf.layers.dense(x, 300, activation=tf.nn.relu, trainable=True)
             self.act = tf.layers.dense(x, self.dim_action, activation=tf.nn.tanh, trainable=True)
 
         with tf.variable_scope("target_policy_net"):
-            x = tf.layers.dense(self.observation, 32, activation=tf.nn.relu, trainable=False)
-            x = tf.layers.dense(x, 32, activation=tf.nn.relu, trainable=False)
+            x = tf.layers.dense(self.observation, 400, activation=tf.nn.relu, trainable=False)
+            x = tf.layers.dense(x, 300, activation=tf.nn.relu, trainable=False)
             self.target_act = tf.layers.dense(x, self.dim_action, activation=tf.nn.tanh, trainable=False)
 
         with tf.variable_scope("value_net"):
-            x = tf.layers.dense(self.observation, 32, activation=tf.nn.relu, trainable=True)
-            y = tf.layers.dense(self.action, 32, activation=tf.nn.relu, trainable=True)
-            z = tf.concat([x, y], axis=1)
-            z = tf.layers.dense(z, 32, activation=tf.nn.relu, trainable=True)
-            self.qval_1 = tf.squeeze(tf.layers.dense(z, 1, activation=None, trainable=True))
+            x = tf.concat([self.observation, self.action], axis=1)
+            x = tf.layers.dense(x, 400, activation=tf.nn.relu, trainable=True)
+            x = tf.layers.dense(x, 300, activation=tf.nn.relu, trainable=True)
+            self.qval_1 = tf.squeeze(tf.layers.dense(x, 1, activation=None, trainable=True))
 
-            x = tf.layers.dense(self.observation, 32, activation=tf.nn.relu, trainable=True)
-            y = tf.layers.dense(self.action, 32, activation=tf.nn.relu, trainable=True)
-            z = tf.concat([x, y], axis=1)
-            z = tf.layers.dense(z, 32, activation=tf.nn.relu, trainable=True)
-            self.qval_2 = tf.squeeze(tf.layers.dense(z, 1, activation=None, trainable=True))
+            x = tf.concat([self.observation, self.action], axis=1)
+            x = tf.layers.dense(x, 400, activation=tf.nn.relu, trainable=True)
+            x = tf.layers.dense(x, 300, activation=tf.nn.relu, trainable=True)
+            self.qval_2 = tf.squeeze(tf.layers.dense(x, 1, activation=None, trainable=True))
 
         with tf.variable_scope("value_net", reuse=True):
-            x = tf.layers.dense(self.observation, 32, activation=tf.nn.relu, trainable=True)
-            y = tf.layers.dense(self.act, 32, activation=tf.nn.relu, trainable=True)
-            z = tf.concat([x, y], axis=1)
-            z = tf.layers.dense(z, 32, activation=tf.nn.relu, trainable=True)
-            self.qval_act = tf.squeeze(tf.layers.dense(z, 1, activation=None, trainable=True))
+            x = tf.concat([self.observation, self.act], axis=1)
+            x = tf.layers.dense(x, 400, activation=tf.nn.relu, trainable=True)
+            x = tf.layers.dense(x, 300, activation=tf.nn.relu, trainable=True)
+            self.qval_act = tf.squeeze(tf.layers.dense(x, 1, activation=None, trainable=True))
 
         with tf.variable_scope("target_value_net"):
-            x = tf.layers.dense(self.observation, 32, activation=tf.nn.relu, trainable=False)
-            y = tf.layers.dense(self.action, 32, activation=tf.nn.relu, trainable=False)
-            z = tf.concat([x, y], axis=1)
-            assert_shape(z, [None, 64])
-            z = tf.layers.dense(z, 32, activation=tf.nn.relu, trainable=False)
-            self.target_qval_1 = tf.squeeze(tf.layers.dense(z, 1, activation=None, trainable=False))
+            x = tf.concat([self.observation, self.action], axis=1)
+            x = tf.layers.dense(x, 400, activation=tf.nn.relu, trainable=False)
+            x = tf.layers.dense(x, 300, activation=tf.nn.relu, trainable=False)
+            self.target_qval_1 = tf.squeeze(tf.layers.dense(x, 1, activation=None, trainable=False))
 
-            x = tf.layers.dense(self.observation, 32, activation=tf.nn.relu, trainable=False)
-            y = tf.layers.dense(self.action, 32, activation=tf.nn.relu, trainable=False)
-            z = tf.concat([x, y], axis=1)
-            assert_shape(z, [None, 64])
-            z = tf.layers.dense(z, 32, activation=tf.nn.relu, trainable=False)
-            self.target_qval_2 = tf.squeeze(tf.layers.dense(z, 1, activation=None, trainable=False))
+            x = tf.concat([self.observation, self.action], axis=1)
+            x = tf.layers.dense(x, 400, activation=tf.nn.relu, trainable=False)
+            x = tf.layers.dense(x, 300, activation=tf.nn.relu, trainable=False)
+            self.target_qval_2 = tf.squeeze(tf.layers.dense(x, 1, activation=None, trainable=False))
 
     # Update target network.
     def _update_target(self, new_net, old_net, rho=0):
@@ -119,7 +113,7 @@ class TD3(Base):
             newobs = obs
 
         action = self.sess.run(self.act, feed_dict={self.observation: newobs})
-        action += np.random.normal(scale=self.noise_std, size=action.shape)
+        action += np.random.normal(scale=self.explore_noise_std, size=action.shape)
         action = np.clip(action, self.action_low, self.action_high)
         return action
 
@@ -136,7 +130,7 @@ class TD3(Base):
         n_env = s_batch.shape[0]
         for i in range(n_env):
             batch_size = d_batch[i].shape[0]
-            assert batch_size == 64   # TODO: remove
+            assert batch_size == 128   # TODO: remove
 
             # Compute target value.
             next_a_batch = self.sess.run(self.target_act, feed_dict={self.observation: next_s_batch[i, :]}) + np.random.normal(scale=self.noise_std, size=(batch_size, self.dim_action))

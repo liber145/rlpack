@@ -91,7 +91,11 @@
 <p class="caption"><span class="caption-text">Algorithms</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="dqn.html">DQN</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">A2C</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">A2C</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#quick-review">Quick Review</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#reference">Reference</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="trpo.html">TRPO</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ppo.html">PPO</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ddpg.html">DDPG</a></li>
@@ -169,6 +173,29 @@
   <div class="section" id="a2c">
 <h1>A2C<a class="headerlink" href="#a2c" title="Permalink to this headline">¶</a></h1>
 <p>Advantage Actor Critic is an off-policy algorithm.</p>
+<div class="section" id="quick-review">
+<h2>Quick Review<a class="headerlink" href="#quick-review" title="Permalink to this headline">¶</a></h2>
+<p>First, let’s look at REINFORCE algorithm, which is a Monte Carlo policy gradient aglrothm.</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\nabla \eta(\theta) &amp;= \sum_s d_\pi(s) \sum_a q_\pi(s, a) \nabla_\theta \pi(a | s; \theta) \\
+&amp;= \mathbb{E}_{(s_t, a_t) \sim \pi} \gamma^t q_\pi(s_t, a_t) \nabla_\theta \pi(a_t | s_t; \theta)\end{split}\]</div>
+<p>REINFORCE algorithm uses Monte Carlo method to estimate the expected <span class="math notranslate nohighlight">\(q(s_t, a_t)\)</span>.</p>
+<p>Note that <span class="math notranslate nohighlight">\(\mathbb{E}_{(s_t, a_t) \sim \pi} b(s_t) \nabla_\theta \pi(a_t | s_t; \theta) = 0\)</span>, we have</p>
+<div class="math notranslate nohighlight">
+\[\nabla \eta(\theta) = \mathbb{E}_{(s_t, a_t) \sim \pi} \gamma^t [q_\pi(s_t, a_t) - b(s_t)] \nabla_\theta \pi(a_t | s_t; \theta)\]</div>
+<p>The term <span class="math notranslate nohighlight">\(b(s_t)\)</span> called <em>baseline</em> is usually estimated by state value <span class="math notranslate nohighlight">\(v(s_t)\)</span>.
+The residual term <span class="math notranslate nohighlight">\(q(s_t, a_t) - v(s_t)\)</span> is called <em>advantage</em>.
+In general, the baseline leaves the expected value of the update unchanged, but it can have a large effect on reducing its variance [1].</p>
+<p>Now, let’s go to advantage actor critic (A2C).
+Instead, A2C uses a state value approximate function to estimate <span class="math notranslate nohighlight">\(v(s_t; \theta)\)</span>.
+The action value can be derived as <span class="math notranslate nohighlight">\(q(s_t, a_t) = r_t + \gamma v(s_{t+1}; \theta)\)</span>.
+The critic part updates the value function from TD error.
+The actor part updates the policy function by policy gradient.</p>
+</div>
+<div class="section" id="reference">
+<h2>Reference<a class="headerlink" href="#reference" title="Permalink to this headline">¶</a></h2>
+<p>[1] Sutton, Richard S., and Andrew G. Barto. “Reinforcement Learning: An Introduction.” (1998).</p>
+</div>
 </div>
 
 

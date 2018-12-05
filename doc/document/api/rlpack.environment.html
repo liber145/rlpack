@@ -168,71 +168,95 @@
   <div class="section" id="module-rlpack.environment.env_wrapper">
 <span id="rlpack-environment-package"></span><h1>rlpack.environment package<a class="headerlink" href="#module-rlpack.environment.env_wrapper" title="Permalink to this headline">¶</a></h1>
 <dl class="class">
-<dt id="rlpack.environment.env_wrapper.AtariWrapper">
-<em class="property">class </em><code class="descclassname">rlpack.environment.env_wrapper.</code><code class="descname">AtariWrapper</code><span class="sig-paren">(</span><em>env_id: str</em>, <em>n_env: int</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/environment/env_wrapper.html#AtariWrapper"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.env_wrapper.AtariWrapper" title="Permalink to this definition">¶</a></dt>
+<dt id="rlpack.environment.env_wrapper.AsyncAtariWrapper">
+<em class="property">class </em><code class="descclassname">rlpack.environment.env_wrapper.</code><code class="descname">AsyncAtariWrapper</code><span class="sig-paren">(</span><em>env_name: str</em>, <em>n_env: int = 8</em>, <em>n_inference: int = 6</em>, <em>port=50000</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/environment/env_wrapper.html#AsyncAtariWrapper"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.env_wrapper.AsyncAtariWrapper" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <dl class="attribute">
-<dt id="rlpack.environment.env_wrapper.AtariWrapper.action_space">
-<code class="descname">action_space</code><a class="headerlink" href="#rlpack.environment.env_wrapper.AtariWrapper.action_space" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="rlpack.environment.env_wrapper.AtariWrapper.close">
-<code class="descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/environment/env_wrapper.html#AtariWrapper.close"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.env_wrapper.AtariWrapper.close" title="Permalink to this definition">¶</a></dt>
+<dt id="rlpack.environment.env_wrapper.AsyncAtariWrapper.dim_action">
+<code class="descname">dim_action</code><a class="headerlink" href="#rlpack.environment.env_wrapper.AsyncAtariWrapper.dim_action" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="attribute">
-<dt id="rlpack.environment.env_wrapper.AtariWrapper.is_continuous">
-<code class="descname">is_continuous</code><a class="headerlink" href="#rlpack.environment.env_wrapper.AtariWrapper.is_continuous" title="Permalink to this definition">¶</a></dt>
+<dt id="rlpack.environment.env_wrapper.AsyncAtariWrapper.dim_observation">
+<code class="descname">dim_observation</code><a class="headerlink" href="#rlpack.environment.env_wrapper.AsyncAtariWrapper.dim_observation" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="attribute">
-<dt id="rlpack.environment.env_wrapper.AtariWrapper.observation_space">
-<code class="descname">observation_space</code><a class="headerlink" href="#rlpack.environment.env_wrapper.AtariWrapper.observation_space" title="Permalink to this definition">¶</a></dt>
+<dt id="rlpack.environment.env_wrapper.AsyncAtariWrapper.env_id">
+<code class="descname">env_id</code><a class="headerlink" href="#rlpack.environment.env_wrapper.AsyncAtariWrapper.env_id" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
-<dt id="rlpack.environment.env_wrapper.AtariWrapper.reset">
-<code class="descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/environment/env_wrapper.html#AtariWrapper.reset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.env_wrapper.AtariWrapper.reset" title="Permalink to this definition">¶</a></dt>
+<dt id="rlpack.environment.env_wrapper.AsyncAtariWrapper.reset">
+<code class="descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/environment/env_wrapper.html#AsyncAtariWrapper.reset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.env_wrapper.AsyncAtariWrapper.reset" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
-<dt id="rlpack.environment.env_wrapper.AtariWrapper.step">
-<code class="descname">step</code><span class="sig-paren">(</span><em>actions</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/environment/env_wrapper.html#AtariWrapper.step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.env_wrapper.AtariWrapper.step" title="Permalink to this definition">¶</a></dt>
+<dt id="rlpack.environment.env_wrapper.AsyncAtariWrapper.step">
+<code class="descname">step</code><span class="sig-paren">(</span><em>actions: List</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/environment/env_wrapper.html#AsyncAtariWrapper.step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.env_wrapper.AsyncAtariWrapper.step" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
 
 <dl class="class">
-<dt id="rlpack.environment.env_wrapper.CartpoleWrapper">
-<em class="property">class </em><code class="descclassname">rlpack.environment.env_wrapper.</code><code class="descname">CartpoleWrapper</code><span class="sig-paren">(</span><em>n_env</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/environment/env_wrapper.html#CartpoleWrapper"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.env_wrapper.CartpoleWrapper" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">rlpack.environment.stack_env.StackEnv</span></code></p>
+<dt id="rlpack.environment.env_wrapper.AsyncMujocoWrapper">
+<em class="property">class </em><code class="descclassname">rlpack.environment.env_wrapper.</code><code class="descname">AsyncMujocoWrapper</code><span class="sig-paren">(</span><em>env_name: str</em>, <em>n_env: int = 8</em>, <em>n_inference: int = None</em>, <em>port: int = 50000</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/environment/env_wrapper.html#AsyncMujocoWrapper"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.env_wrapper.AsyncMujocoWrapper" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <dl class="attribute">
-<dt id="rlpack.environment.env_wrapper.CartpoleWrapper.dim_observation">
-<code class="descname">dim_observation</code><a class="headerlink" href="#rlpack.environment.env_wrapper.CartpoleWrapper.dim_observation" title="Permalink to this definition">¶</a></dt>
+<dt id="rlpack.environment.env_wrapper.AsyncMujocoWrapper.dim_action">
+<code class="descname">dim_action</code><a class="headerlink" href="#rlpack.environment.env_wrapper.AsyncMujocoWrapper.dim_action" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="attribute">
-<dt id="rlpack.environment.env_wrapper.CartpoleWrapper.is_continuous">
-<code class="descname">is_continuous</code><a class="headerlink" href="#rlpack.environment.env_wrapper.CartpoleWrapper.is_continuous" title="Permalink to this definition">¶</a></dt>
+<dt id="rlpack.environment.env_wrapper.AsyncMujocoWrapper.dim_observation">
+<code class="descname">dim_observation</code><a class="headerlink" href="#rlpack.environment.env_wrapper.AsyncMujocoWrapper.dim_observation" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="attribute">
-<dt id="rlpack.environment.env_wrapper.CartpoleWrapper.n_action">
-<code class="descname">n_action</code><a class="headerlink" href="#rlpack.environment.env_wrapper.CartpoleWrapper.n_action" title="Permalink to this definition">¶</a></dt>
-<dd><table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">the number of discrete action</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
+<dt id="rlpack.environment.env_wrapper.AsyncMujocoWrapper.env_id">
+<code class="descname">env_id</code><a class="headerlink" href="#rlpack.environment.env_wrapper.AsyncMujocoWrapper.env_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="method">
-<dt id="rlpack.environment.env_wrapper.CartpoleWrapper.step">
-<code class="descname">step</code><span class="sig-paren">(</span><em>actions</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/environment/env_wrapper.html#CartpoleWrapper.step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.env_wrapper.CartpoleWrapper.step" title="Permalink to this definition">¶</a></dt>
+<dt id="rlpack.environment.env_wrapper.AsyncMujocoWrapper.reset">
+<code class="descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/environment/env_wrapper.html#AsyncMujocoWrapper.reset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.env_wrapper.AsyncMujocoWrapper.reset" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="rlpack.environment.env_wrapper.AsyncMujocoWrapper.step">
+<code class="descname">step</code><span class="sig-paren">(</span><em>actions: List</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/environment/env_wrapper.html#AsyncMujocoWrapper.step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.env_wrapper.AsyncMujocoWrapper.step" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="rlpack.environment.env_wrapper.AtariWrapper2">
+<em class="property">class </em><code class="descclassname">rlpack.environment.env_wrapper.</code><code class="descname">AtariWrapper2</code><span class="sig-paren">(</span><em>env_id: str</em>, <em>n_env: int</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/environment/env_wrapper.html#AtariWrapper2"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.env_wrapper.AtariWrapper2" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">rlpack.environment.stack_env.StackEnv</span></code></p>
+<dl class="method">
+<dt id="rlpack.environment.env_wrapper.AtariWrapper2.step">
+<code class="descname">step</code><span class="sig-paren">(</span><em>actions</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/environment/env_wrapper.html#AtariWrapper2.step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.env_wrapper.AtariWrapper2.step" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="rlpack.environment.env_wrapper.DistributedAtariWrapper">
+<em class="property">class </em><code class="descclassname">rlpack.environment.env_wrapper.</code><code class="descname">DistributedAtariWrapper</code><span class="sig-paren">(</span><em>env_name: str</em>, <em>n_env: int = 8</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/environment/env_wrapper.html#DistributedAtariWrapper"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.env_wrapper.DistributedAtariWrapper" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="attribute">
+<dt id="rlpack.environment.env_wrapper.DistributedAtariWrapper.env_id">
+<code class="descname">env_id</code><a class="headerlink" href="#rlpack.environment.env_wrapper.DistributedAtariWrapper.env_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="rlpack.environment.env_wrapper.DistributedAtariWrapper.reset">
+<code class="descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/environment/env_wrapper.html#DistributedAtariWrapper.reset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.env_wrapper.DistributedAtariWrapper.reset" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="rlpack.environment.env_wrapper.DistributedAtariWrapper.step">
+<code class="descname">step</code><span class="sig-paren">(</span><em>actions: List</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/environment/env_wrapper.html#DistributedAtariWrapper.step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.env_wrapper.DistributedAtariWrapper.step" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
@@ -251,6 +275,11 @@
 <code class="descname">dim_observation</code><a class="headerlink" href="#rlpack.environment.env_wrapper.DistributedMujocoWrapper.dim_observation" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
+<dl class="attribute">
+<dt id="rlpack.environment.env_wrapper.DistributedMujocoWrapper.env_id">
+<code class="descname">env_id</code><a class="headerlink" href="#rlpack.environment.env_wrapper.DistributedMujocoWrapper.env_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="method">
 <dt id="rlpack.environment.env_wrapper.DistributedMujocoWrapper.reset">
 <code class="descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/environment/env_wrapper.html#DistributedMujocoWrapper.reset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.env_wrapper.DistributedMujocoWrapper.reset" title="Permalink to this definition">¶</a></dt>
@@ -263,43 +292,9 @@
 
 </dd></dl>
 
-<dl class="class">
-<dt id="rlpack.environment.env_wrapper.MujocoWrapper">
-<em class="property">class </em><code class="descclassname">rlpack.environment.env_wrapper.</code><code class="descname">MujocoWrapper</code><span class="sig-paren">(</span><em>env_id: str</em>, <em>n_env: int</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/environment/env_wrapper.html#MujocoWrapper"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.env_wrapper.MujocoWrapper" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">rlpack.environment.stack_env.StackEnv</span></code></p>
-<dl class="attribute">
-<dt id="rlpack.environment.env_wrapper.MujocoWrapper.dim_action">
-<code class="descname">dim_action</code><a class="headerlink" href="#rlpack.environment.env_wrapper.MujocoWrapper.dim_action" title="Permalink to this definition">¶</a></dt>
-<dd><table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">the dimension of continuous action</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="rlpack.environment.env_wrapper.MujocoWrapper.dim_observation">
-<code class="descname">dim_observation</code><a class="headerlink" href="#rlpack.environment.env_wrapper.MujocoWrapper.dim_observation" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="attribute">
-<dt id="rlpack.environment.env_wrapper.MujocoWrapper.is_continuous">
-<code class="descname">is_continuous</code><a class="headerlink" href="#rlpack.environment.env_wrapper.MujocoWrapper.is_continuous" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="rlpack.environment.env_wrapper.MujocoWrapper.step">
-<code class="descname">step</code><span class="sig-paren">(</span><em>actions</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/environment/env_wrapper.html#MujocoWrapper.step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.env_wrapper.MujocoWrapper.step" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
 <span class="target" id="module-rlpack.environment.distributed_env_worker"></span><dl class="class">
 <dt id="rlpack.environment.distributed_env_worker.DistributedEnvClient">
-<em class="property">class </em><code class="descclassname">rlpack.environment.distributed_env_worker.</code><code class="descname">DistributedEnvClient</code><span class="sig-paren">(</span><em>env_name: str</em>, <em>hostname='localhost'</em>, <em>port=50000</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/environment/distributed_env_worker.html#DistributedEnvClient"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.distributed_env_worker.DistributedEnvClient" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">rlpack.environment.distributed_env_worker.</code><code class="descname">DistributedEnvClient</code><span class="sig-paren">(</span><em>env</em>, <em>hostname='localhost'</em>, <em>port=50000</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/environment/distributed_env_worker.html#DistributedEnvClient"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.distributed_env_worker.DistributedEnvClient" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">multiprocessing.context.Process</span></code></p>
 <p>start on worker client.</p>
 <dl class="attribute">
@@ -328,7 +323,7 @@
 <span class="target" id="module-rlpack.environment.distributed_env_wrapper"></span><p>通过共享内存的方式实现多机多进程并行Env.</p>
 <dl class="class">
 <dt id="rlpack.environment.distributed_env_wrapper.DistributedEnvManager">
-<em class="property">class </em><code class="descclassname">rlpack.environment.distributed_env_wrapper.</code><code class="descname">DistributedEnvManager</code><span class="sig-paren">(</span><em>n_env</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/environment/distributed_env_wrapper.html#DistributedEnvManager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.distributed_env_wrapper.DistributedEnvManager" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">rlpack.environment.distributed_env_wrapper.</code><code class="descname">DistributedEnvManager</code><span class="sig-paren">(</span><em>n_env</em>, <em>port=50000</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/environment/distributed_env_wrapper.html#DistributedEnvManager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.environment.distributed_env_wrapper.DistributedEnvManager" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/threading.html#threading.Thread" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">threading.Thread</span></code></a></p>
 <p>start on main learning process.</p>
 <dl class="method">

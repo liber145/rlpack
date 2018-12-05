@@ -90,7 +90,11 @@
 </ul>
 <p class="caption"><span class="caption-text">Algorithms</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">DQN</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">DQN</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#quick-review">Quick Review</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#reference">Reference</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="a2c.html">A2C</a></li>
 <li class="toctree-l1"><a class="reference internal" href="trpo.html">TRPO</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ppo.html">PPO</a></li>
@@ -169,6 +173,23 @@
   <div class="section" id="dqn">
 <h1>DQN<a class="headerlink" href="#dqn" title="Permalink to this headline">¶</a></h1>
 <p>DQN is an off-policy algorithm.</p>
+<div class="section" id="quick-review">
+<h2>Quick Review<a class="headerlink" href="#quick-review" title="Permalink to this headline">¶</a></h2>
+<p>DQN lighted the fire of reinforcement learning.
+It introduces deep learning to Q-learning and proposes two key ideas to make the learning not divergent [1].</p>
+<p>The optimization objective of DQN can be formated by:</p>
+<div class="math notranslate nohighlight">
+\[L_i(\theta_i) = \mathbb{E}_{(s, a, r, s') \sim U(D)} \left[ \left(r + \gamma \max_{a'} Q(s', a'; \theta_i^-) - Q(s,a; \theta_i) \right)^2  \right]\]</div>
+<p>The two key ingredients are in the above equation:</p>
+<ol class="arabic simple">
+<li><span class="math notranslate nohighlight">\(U(D)\)</span> means to uniform sample experienced transitions <span class="math notranslate nohighlight">\((s, a, r, s')\)</span> from an experience replay buffer <span class="math notranslate nohighlight">\(D\)</span>. This alleviates the correlations in the observed sequence and smoothes over changes in the data distribution.</li>
+<li><span class="math notranslate nohighlight">\(Q(s', a'; \theta_i^-)\)</span> is a target action value function, which helps reducing correlations with the target.</li>
+</ol>
+</div>
+<div class="section" id="reference">
+<h2>Reference<a class="headerlink" href="#reference" title="Permalink to this headline">¶</a></h2>
+<p>[1] Mnih, Volodymyr, et al. “Human-level control through deep reinforcement learning.” Nature 518.7540 (2015): 529.</p>
+</div>
 </div>
 
 

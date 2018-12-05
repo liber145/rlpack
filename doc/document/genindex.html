@@ -171,10 +171,6 @@
  | <a href="#D"><strong>D</strong></a>
  | <a href="#E"><strong>E</strong></a>
  | <a href="#G"><strong>G</strong></a>
- | <a href="#I"><strong>I</strong></a>
- | <a href="#M"><strong>M</strong></a>
- | <a href="#N"><strong>N</strong></a>
- | <a href="#O"><strong>O</strong></a>
  | <a href="#P"><strong>P</strong></a>
  | <a href="#R"><strong>R</strong></a>
  | <a href="#S"><strong>S</strong></a>
@@ -187,11 +183,13 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/rlpack.algos.html#rlpack.algos.a2c.A2C">A2C (class in rlpack.algos.a2c)</a>
 </li>
+      <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.AsyncAtariWrapper">AsyncAtariWrapper (class in rlpack.environment.env_wrapper)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.AtariWrapper.action_space">action_space (rlpack.environment.env_wrapper.AtariWrapper attribute)</a>
+      <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.AsyncMujocoWrapper">AsyncMujocoWrapper (class in rlpack.environment.env_wrapper)</a>
 </li>
-      <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.AtariWrapper">AtariWrapper (class in rlpack.environment.env_wrapper)</a>
+      <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.AtariWrapper2">AtariWrapper2 (class in rlpack.environment.env_wrapper)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -231,12 +229,6 @@
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.CartpoleWrapper">CartpoleWrapper (class in rlpack.environment.env_wrapper)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.AtariWrapper.close">close() (rlpack.environment.env_wrapper.AtariWrapper method)</a>
-</li>
       <li><a href="api/rlpack.environment.html#rlpack.environment.distributed_env_wrapper.DistributedEnvManager.configure">configure() (rlpack.environment.distributed_env_wrapper.DistributedEnvManager method)</a>
 </li>
   </ul></td>
@@ -250,23 +242,27 @@
       <li><a href="api/rlpack.environment.html#rlpack.environment.distributed_env_worker.DistributedEnvClient.dim_action">dim_action (rlpack.environment.distributed_env_worker.DistributedEnvClient attribute)</a>
 
       <ul>
-        <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.DistributedMujocoWrapper.dim_action">(rlpack.environment.env_wrapper.DistributedMujocoWrapper attribute)</a>
+        <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.AsyncAtariWrapper.dim_action">(rlpack.environment.env_wrapper.AsyncAtariWrapper attribute)</a>
 </li>
-        <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.MujocoWrapper.dim_action">(rlpack.environment.env_wrapper.MujocoWrapper attribute)</a>
+        <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.AsyncMujocoWrapper.dim_action">(rlpack.environment.env_wrapper.AsyncMujocoWrapper attribute)</a>
+</li>
+        <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.DistributedMujocoWrapper.dim_action">(rlpack.environment.env_wrapper.DistributedMujocoWrapper attribute)</a>
 </li>
       </ul></li>
       <li><a href="api/rlpack.environment.html#rlpack.environment.distributed_env_worker.DistributedEnvClient.dim_observation">dim_observation (rlpack.environment.distributed_env_worker.DistributedEnvClient attribute)</a>
 
       <ul>
-        <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.CartpoleWrapper.dim_observation">(rlpack.environment.env_wrapper.CartpoleWrapper attribute)</a>
+        <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.AsyncAtariWrapper.dim_observation">(rlpack.environment.env_wrapper.AsyncAtariWrapper attribute)</a>
+</li>
+        <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.AsyncMujocoWrapper.dim_observation">(rlpack.environment.env_wrapper.AsyncMujocoWrapper attribute)</a>
 </li>
         <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.DistributedMujocoWrapper.dim_observation">(rlpack.environment.env_wrapper.DistributedMujocoWrapper attribute)</a>
-</li>
-        <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.MujocoWrapper.dim_observation">(rlpack.environment.env_wrapper.MujocoWrapper attribute)</a>
 </li>
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.DistributedAtariWrapper">DistributedAtariWrapper (class in rlpack.environment.env_wrapper)</a>
+</li>
       <li><a href="api/rlpack.environment.html#rlpack.environment.distributed_env_worker.DistributedEnvClient">DistributedEnvClient (class in rlpack.environment.distributed_env_worker)</a>
 </li>
       <li><a href="api/rlpack.environment.html#rlpack.environment.distributed_env_wrapper.DistributedEnvManager">DistributedEnvManager (class in rlpack.environment.distributed_env_wrapper)</a>
@@ -280,6 +276,18 @@
 
 <h2 id="E">E</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.AsyncAtariWrapper.env_id">env_id (rlpack.environment.env_wrapper.AsyncAtariWrapper attribute)</a>
+
+      <ul>
+        <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.AsyncMujocoWrapper.env_id">(rlpack.environment.env_wrapper.AsyncMujocoWrapper attribute)</a>
+</li>
+        <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.DistributedAtariWrapper.env_id">(rlpack.environment.env_wrapper.DistributedAtariWrapper attribute)</a>
+</li>
+        <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.DistributedMujocoWrapper.env_id">(rlpack.environment.env_wrapper.DistributedMujocoWrapper attribute)</a>
+</li>
+      </ul></li>
+  </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/rlpack.environment.html#rlpack.environment.distributed_env_worker.exit_gracefully">exit_gracefully() (in module rlpack.environment.distributed_env_worker)</a>
 
@@ -312,44 +320,6 @@
   </ul></td>
 </tr></table>
 
-<h2 id="I">I</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.AtariWrapper.is_continuous">is_continuous (rlpack.environment.env_wrapper.AtariWrapper attribute)</a>
-
-      <ul>
-        <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.CartpoleWrapper.is_continuous">(rlpack.environment.env_wrapper.CartpoleWrapper attribute)</a>
-</li>
-        <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.MujocoWrapper.is_continuous">(rlpack.environment.env_wrapper.MujocoWrapper attribute)</a>
-</li>
-      </ul></li>
-  </ul></td>
-</tr></table>
-
-<h2 id="M">M</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.MujocoWrapper">MujocoWrapper (class in rlpack.environment.env_wrapper)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="N">N</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.CartpoleWrapper.n_action">n_action (rlpack.environment.env_wrapper.CartpoleWrapper attribute)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="O">O</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.AtariWrapper.observation_space">observation_space (rlpack.environment.env_wrapper.AtariWrapper attribute)</a>
-</li>
-  </ul></td>
-</tr></table>
-
 <h2 id="P">P</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
@@ -361,9 +331,13 @@
 <h2 id="R">R</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.AtariWrapper.reset">reset() (rlpack.environment.env_wrapper.AtariWrapper method)</a>
+      <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.AsyncAtariWrapper.reset">reset() (rlpack.environment.env_wrapper.AsyncAtariWrapper method)</a>
 
       <ul>
+        <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.AsyncMujocoWrapper.reset">(rlpack.environment.env_wrapper.AsyncMujocoWrapper method)</a>
+</li>
+        <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.DistributedAtariWrapper.reset">(rlpack.environment.env_wrapper.DistributedAtariWrapper method)</a>
+</li>
         <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.DistributedMujocoWrapper.reset">(rlpack.environment.env_wrapper.DistributedMujocoWrapper method)</a>
 </li>
       </ul></li>
@@ -373,10 +347,10 @@
 </li>
       <li><a href="api/rlpack.algos.html#module-rlpack.algos.dqn">rlpack.algos.dqn (module)</a>
 </li>
-      <li><a href="api/rlpack.algos.html#module-rlpack.algos.ppo">rlpack.algos.ppo (module)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/rlpack.algos.html#module-rlpack.algos.ppo">rlpack.algos.ppo (module)</a>
+</li>
       <li><a href="api/rlpack.algos.html#module-rlpack.algos.trpo">rlpack.algos.trpo (module)</a>
 </li>
       <li><a href="api/rlpack.environment.html#module-rlpack.environment.distributed_env_worker">rlpack.environment.distributed_env_worker (module)</a>
@@ -400,13 +374,15 @@
       <li><a href="api/rlpack.environment.html#rlpack.environment.distributed_env_wrapper.DistributedEnvManager.step">step() (rlpack.environment.distributed_env_wrapper.DistributedEnvManager method)</a>
 
       <ul>
-        <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.AtariWrapper.step">(rlpack.environment.env_wrapper.AtariWrapper method)</a>
+        <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.AsyncAtariWrapper.step">(rlpack.environment.env_wrapper.AsyncAtariWrapper method)</a>
 </li>
-        <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.CartpoleWrapper.step">(rlpack.environment.env_wrapper.CartpoleWrapper method)</a>
+        <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.AsyncMujocoWrapper.step">(rlpack.environment.env_wrapper.AsyncMujocoWrapper method)</a>
+</li>
+        <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.AtariWrapper2.step">(rlpack.environment.env_wrapper.AtariWrapper2 method)</a>
+</li>
+        <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.DistributedAtariWrapper.step">(rlpack.environment.env_wrapper.DistributedAtariWrapper method)</a>
 </li>
         <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.DistributedMujocoWrapper.step">(rlpack.environment.env_wrapper.DistributedMujocoWrapper method)</a>
-</li>
-        <li><a href="api/rlpack.environment.html#rlpack.environment.env_wrapper.MujocoWrapper.step">(rlpack.environment.env_wrapper.MujocoWrapper method)</a>
 </li>
       </ul></li>
   </ul></td>

@@ -94,7 +94,12 @@
 <li class="toctree-l1"><a class="reference internal" href="a2c.html">A2C</a></li>
 <li class="toctree-l1"><a class="reference internal" href="trpo.html">TRPO</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ppo.html">PPO</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">DDPG</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">DDPG</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#quick-review">Quick Review</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#implementation">Implementation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#reference">Reference</a></li>
+</ul>
+</li>
 </ul>
 <p class="caption"><span class="caption-text">API Reference</span></p>
 <ul>
@@ -169,6 +174,28 @@
   <div class="section" id="ddpg">
 <h1>DDPG<a class="headerlink" href="#ddpg" title="Permalink to this headline">¶</a></h1>
 <p>DDPG is an off-policy algorithm.</p>
+<div class="section" id="quick-review">
+<h2>Quick Review<a class="headerlink" href="#quick-review" title="Permalink to this headline">¶</a></h2>
+<p>DDPG is the deep learning vergion of deterministic policy gradient (DPG) algorithm [2].
+DPG consider policy gradient algorithm in the context of deterministic policy.</p>
+<p>Simliar to policy gradient theorem, [2] gives a deterministic policy gradient theorem,</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\nabla_\theta J(\mu_\theta) &amp;= \sum_s \rho^\mu(s) \nabla_\theta \mu_\theta (s)  \nabla_a Q^\mu(s,a)|_{a = \mu_\theta(s)} \mathrm{d} s \\
+&amp;= \mathbb{E}_{s \sim \rho^\mu}  \nabla_\theta \mu_\theta(s) \nabla_a Q^\mu(s,a)|_{a = \mu_\theta(s)}\end{split}\]</div>
+<p>The action value udpate is to minimize TD error between target value and current value as usual.</p>
+</div>
+<div class="section" id="implementation">
+<h2>Implementation<a class="headerlink" href="#implementation" title="Permalink to this headline">¶</a></h2>
+<p>The policy update can be rewritten to <span class="math notranslate nohighlight">\(\nabla_\theta Q(s, \mu_\theta(s))\)</span>.
+We can write the policy loss as <span class="math notranslate nohighlight">\(\mathbb{E}_s [-Q(s, \mu_\theta(s))]\)</span>, then pick an optimizer to do gradient descent on policy loss and value loss iteratively.</p>
+<p>Given a state, straightforward action inference by old policy makes no exploration.
+[1] introduces an Ornstein-Uhlenbeck process to generate temporally correlated exploration.</p>
+</div>
+<div class="section" id="reference">
+<h2>Reference<a class="headerlink" href="#reference" title="Permalink to this headline">¶</a></h2>
+<p>[1] Lillicrap, Timothy P., et al. “Continuous control with deep reinforcement learning.” arXiv preprint arXiv:1509.02971 (2015).</p>
+<p>[2] Silver, David, et al. “Deterministic policy gradient algorithms.” ICML. 2014.</p>
+</div>
 </div>
 
 

@@ -13,10 +13,12 @@ class TRPO(Base):
 
         self.trajectory_length = config.trajectory_length
 
+        self.n_env = config.n_env
+
         self.gae = config.gae
         self.training_epoch = config.training_epoch
         self.max_grad_norm = config.max_grad_norm
-        self.lr_schedule = config.lr_schedule
+        self.lr_schedule = config.policy_lr_schedule
         super().__init__(config)
 
     def build_network(self):
@@ -42,16 +44,17 @@ class TRPO(Base):
         self.span_reward = tf.placeholder(tf.float32, [None], "span_reward")
 
         logp = -0.5 * tf.reduce_sum(self.log_var)
-        logp += -0.5 * tf.reduce_sum(tf.square(self.action - self.mu) / tf.exp(self.log_var), axis=1, keepdims=True)
+        logp += -0.5 * tf.reduce_sum(tf.square(self.action - self.mu) / tf.exp(self.log_var), axis=1)
 
-        assert_shape(logp, [None, 1])
+        assert_shape(logp, [None])
         assert_shape(tf.square(self.action - self.mu) / tf.exp(self.log_var), [None, self.dim_action])
 
         logp_old = -0.5 * tf.reduce_sum(self.old_log_var)
-        logp_old += -0.5 * tf.reduce_sum(tf.square(self.action - self.old_mu) / tf.exp(self.old_log_var), axis=1, keepdims=True)
+        logp_old += -0.5 * tf.reduce_sum(tf.square(self.action - self.old_mu) / tf.exp(self.old_log_var), axis=1)
+
+        assert_shape(logp_old, [None])
 
         self.obj = -tf.reduce_mean(self.advantage * tf.exp(logp - logp_old))
-        self.p_pold = tf.exp(logp - logp_old)
 
         # Compute gradients of object function.
         self.actor_vars = tf.trainable_variables("policy_net")
@@ -70,7 +73,7 @@ class TRPO(Base):
         size_vec = np.sum([np.prod(v.shape.as_list()) for v in self.actor_vars])
         self.vec = tf.placeholder(tf.float32, [size_vec], "vector")
         # Add damping vector.
-        self.Hv = self._flat_param_list(tf.gradients(tf.reduce_sum(g_kl * self.vec), self.actor_vars)) + 0.1 * self.vec
+        self.Hv = self._flat_param_list(tf.gradients(tf.reduce_sum(g_kl * self.vec), self.actor_vars)) + 0.01 * self.vec
 
         self.critic_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "value_net")
         self.critic_loss = tf.reduce_mean(tf.square(self.state_value - self.span_reward))
@@ -80,7 +83,7 @@ class TRPO(Base):
         # self.train_critic_op = self.critic_optimizer.minimize(self.critic_loss, global_step=tf.train.get_global_step(), var_list=self.critic_vars)
 
         # Build sample action.
-        self.sample_action = self.mu + tf.exp(self.log_var / 2.0) * tf.random_normal(shape=[self.dim_action], dtype=tf.float32)
+        self.sample_action = self.mu + tf.exp(self.log_var / 2.0) * tf.random.normal(shape=[4, self.dim_action], dtype=tf.float32)
 
     def update(self, minibatch, update_ratio):
         s_batch, a_batch, r_batch, d_batch = minibatch
@@ -108,7 +111,7 @@ class TRPO(Base):
         target_value_batch = target_value_batch.reshape(self.n_env * self.trajectory_length)
 
         # Normalize advantage.
-        # advantage_batch = (advantage_batch - advantage_batch.mean()) / (advantage_batch.std() + 1e-5)
+        advantage_batch = (advantage_batch - advantage_batch.mean()) / (advantage_batch.std() + 1e-10)
 
         # Compute some values on old parameters.
         old_mu_batch, old_log_var = self.sess.run([self.mu, self.log_var], feed_dict={self.observation: s_batch})

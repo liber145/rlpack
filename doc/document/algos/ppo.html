@@ -93,7 +93,12 @@
 <li class="toctree-l1"><a class="reference internal" href="dqn.html">DQN</a></li>
 <li class="toctree-l1"><a class="reference internal" href="a2c.html">A2C</a></li>
 <li class="toctree-l1"><a class="reference internal" href="trpo.html">TRPO</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">PPO</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">PPO</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#quick-review">Quick Review</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#practice">Practice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#reference">Reference</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="ddpg.html">DDPG</a></li>
 </ul>
 <p class="caption"><span class="caption-text">API Reference</span></p>
@@ -169,6 +174,25 @@
   <div class="section" id="ppo">
 <h1>PPO<a class="headerlink" href="#ppo" title="Permalink to this headline">¶</a></h1>
 <p>PPO is an on-policy algorithm.</p>
+<div class="section" id="quick-review">
+<h2>Quick Review<a class="headerlink" href="#quick-review" title="Permalink to this headline">¶</a></h2>
+<p>While TRPO uses a hard constraint to control the policy update in a small scale,
+PPO modifeies the surrogate objective by clipping the probability ratio [1].</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}L(\theta) &amp;= \mathbb{E}_t \min( r_t(\theta) A_t, clip( r_t(\theta) A_t , 1-\epsilon, 1+\epsilon) )  \\
+r_t(\theta) &amp;=  \frac{\pi_{\theta}(a_t | s_t)}{ \pi_{\theta_{old}}(a_t | s_t) }\end{split}\]</div>
+</div>
+<div class="section" id="practice">
+<h2>Practice<a class="headerlink" href="#practice" title="Permalink to this headline">¶</a></h2>
+<p>To update the policy for PPO, one only needs to call a gradient descent optimizer.
+Its implementation is quite easier than TRPO.
+In practice, PPO is more robust than TRPO.
+The champion of OpenAI Retro Contest uses an A3C version of PPO, join PPO <a class="reference external" href="https://blog.openai.com/first-retro-contest-retrospective/">link</a>.</p>
+</div>
+<div class="section" id="reference">
+<h2>Reference<a class="headerlink" href="#reference" title="Permalink to this headline">¶</a></h2>
+<p>[1] Schulman, John, et al. “Proximal policy optimization algorithms.” arXiv preprint arXiv:1707.06347 (2017).</p>
+</div>
 </div>
 
 

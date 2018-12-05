@@ -92,7 +92,12 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="dqn.html">DQN</a></li>
 <li class="toctree-l1"><a class="reference internal" href="a2c.html">A2C</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">TRPO</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">TRPO</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#quick-review">Quick Review</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#computation">Computation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#reference">Reference</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="ppo.html">PPO</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ddpg.html">DDPG</a></li>
 </ul>
@@ -168,7 +173,50 @@
             
   <div class="section" id="trpo">
 <h1>TRPO<a class="headerlink" href="#trpo" title="Permalink to this headline">¶</a></h1>
-<p>TRPO is an on-policy algorithm.</p>
+<p>TRPO is an on-policy algorithm [1].
+It uses KL-divergence to control the updated policy not exceeding a reasonable ball of the last policy.</p>
+<div class="section" id="quick-review">
+<h2>Quick Review<a class="headerlink" href="#quick-review" title="Permalink to this headline">¶</a></h2>
+<p>Like all reinforcement learing algorithms, TRPO cares the future accumulative reward:</p>
+<div class="math notranslate nohighlight">
+\[\eta(\pi) = \mathbb{E}_{s_0, a_0, ...} \sum_{t=0}^\infty \gamma^t r(s_t).\]</div>
+<p>Note that the expected return of another policy <span class="math notranslate nohighlight">\(\eta(\tilde{\pi})\)</span> can be expressed:</p>
+<div class="math notranslate nohighlight">
+\[\eta(\tilde{\pi}) = \eta(\pi) + \sum_s \rho_{\tilde{\pi}}(s) \sum_a \tilde{\pi}(a|s) A_\pi(s, a)\]</div>
+<p>Therefore, given the current policy <span class="math notranslate nohighlight">\(\pi\)</span>, to update the new policy <span class="math notranslate nohighlight">\(\tilde{\pi}\)</span>, we will maximize the right term of the above equation.
+However, it is not easy to solve since we do not have <span class="math notranslate nohighlight">\(\rho_{\tilde{\pi}}(s)\)</span>.
+Instead, Consider the surrogate function:</p>
+<div class="math notranslate nohighlight">
+\[L_{\pi}(\tilde{\pi}) = \eta(\pi) + \sum_s \rho_{\pi} (s) \sum_a \tilde{\pi}(a|s) A_\pi(s, a).\]</div>
+<p>Further, [1] gives the relationship between new policy and old policy.</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}&amp; \eta(\pi_{new}) \geq L_{\pi_{old}}(\pi_{new}) - CD_{KL}^{max} (\pi, \tilde{\pi}) \\
+&amp; \text{where}~~ C = \frac{4\epsilon \gamma}{ (1-\gamma)^2 }\end{split}\]</div>
+<p>[1] considers solving the below optimization problem:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}&amp;\max_{\theta} L_{\theta_{old}}(\theta) \\
+&amp;\text{subject to} ~~ D_{KL}^{max} (\theta_{old}, \theta) \leq \delta\end{split}\]</div>
+<p>The maximum KL divergence is depended on every point in the state space and is impractical to estimate.
+Instead, a heuristic approximation is used:</p>
+<div class="math notranslate nohighlight">
+\[\bar{D}_{KL}^{\rho} (\theta_1, \theta_2) = \mathbb{E}_{s\sim \rho} D_{KL}( \pi_{\theta_1}(\cdot|s) \| \pi_{\theta_2(\cdot | s)} )\]</div>
+</div>
+<div class="section" id="computation">
+<h2>Computation<a class="headerlink" href="#computation" title="Permalink to this headline">¶</a></h2>
+<p>To sovle it, [1] uses the gradient descent algorithm.</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}&amp;\min_x \nabla f(x) (x - x_0)   \\
+&amp;\text{s.t.}~~   (x - x_0)^\top H (x - x_0) \leq \delta\end{split}\]</div>
+<p>The Lagrangian function can be expressed by:</p>
+<div class="math notranslate nohighlight">
+\[L(\lambda, x) \nabla f(x) (x - x_0) + \lambda [(x - x_0)^\top H (x - x_0) - \delta]\]</div>
+<p>Therefore, we can get the update direction <span class="math notranslate nohighlight">\(d(x) = H^{-1} \nabla f(x)\)</span>.
+Then, we can use line search to get a proper step length such that the new policy satisfies the KL-divergence constraint.</p>
+</div>
+<div class="section" id="reference">
+<h2>Reference<a class="headerlink" href="#reference" title="Permalink to this headline">¶</a></h2>
+<p>[1] Schulman, John, et al. “Trust region policy optimization.” International Conference on Machine Learning. 2015.</p>
+</div>
 </div>
 
 

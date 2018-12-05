@@ -6,7 +6,7 @@ from collections import deque
 
 
 import numpy as np
-from rlpack.algos import ContinuousPPO
+from rlpack.algos import TRPO
 from rlpack.common import DistributedMemory
 from rlpack.environment import AsyncMujocoWrapper
 from tensorboardX import SummaryWriter
@@ -22,8 +22,8 @@ class Config(object):
 
     def __init__(self):
         """All papameters here."""
-        self.rnd = 10
-        self.save_path = f"./log/ppo_{args.env_name}"
+        self.rnd = 1
+        self.save_path = f"./log/trpo_{args.env_name}"
         self.save_model_freq = 50
         self.log_freq = 1
 
@@ -44,13 +44,14 @@ class Config(object):
         self.training_epoch = 10
         self.discount = 0.99
         self.gae = 0.95
-        self.policy_lr_schedule = lambda x: 3e-4
+        self.delta = 0.01
+        self.policy_lr_schedule = lambda x: 2.5e-4 * (1 - x)
         self.value_lr_schedule = lambda x: 3e-4
 
         self.clip_schedule = lambda x: (1 - x) * 0.1
         self.vf_coef = 1.0
         self.entropy_coef = 0.01
-        self.max_grad_norm = 40
+        self.max_grad_norm = 5
 
 
 def process_env(env):
@@ -113,7 +114,7 @@ def learn(env, agent, config):
             print(f"eprewmean: {rewmean}  eplenmean: {lenmean}  rew: {epinfobuf[-1]['r']}  len: {epinfobuf[-1]['l']}")
 
 if __name__ == "__main__":
-    env = AsyncMujocoWrapper(f"{args.env_name}", 1, 1, 50007)
+    env = AsyncMujocoWrapper(f"{args.env_name}", 1, 1, 50006)
     config = process_env(env)
-    agent = ContinuousPPO(config)
+    agent = TRPO(config)
     learn(env, agent, config)
