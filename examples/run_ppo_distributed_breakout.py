@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 class Config(object):
     def __init__(self):
-        self.seed = 1
+        self.rnd = 1
         self.save_path = "./log/ppo_breakout_v16"
         self.save_model_freq = 0.001
         self.log_freq = 10

@@ -11,20 +11,30 @@ from .base import Base
 
 class DoubleDQN(Base):
     def __init__(self, config):
+        self.lr = config.value_lr_schedule(0)
+        self.epsilon_schedule = config.epsilon_schedule
+        self.epsilon = self.epsilon_schedule(0)
+        self.update_target_freq = config.update_target_freq
         super().__init__(config)
 
     def build_network(self):
         self.observation = tf.placeholder(shape=[None, *self.dim_observation], dtype=tf.float32, name="observation")
 
         with tf.variable_scope("qnet"):
-            x = tf.layers.dense(self.observation, 32, activation=tf.nn.relu, trainable=True)
-            x = tf.layers.dense(x, 32, activation=tf.nn.relu, trainable=True)
-            self.qvals = tf.layers.dense(x, self.n_action, activation=None, trainable=True)
+            x = tf.layers.conv2d(self.observation, 32, 8, 4, activation=tf.nn.relu)
+            x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu)
+            x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu)
+            x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
+            x = tf.layers.dense(x, 512, activation=tf.nn.relu)
+            self.qvals = tf.layers.dense(x, self.dim_action)
 
         with tf.variable_scope("target_qnet"):
-            x = tf.layers.dense(self.observation, 32, activation=tf.nn.relu, trainable=False)
-            x = tf.layers.dense(x, 32, activation=tf.nn.relu, trainable=False)
-            self.target_qvals = tf.layers.dense(x, self.n_action, activation=None, trainable=False)
+            x = tf.layers.conv2d(self.observation, 32, 8, 4, activation=tf.nn.relu, trainable=False)
+            x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu, trainable=False)
+            x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu, trainable=False)
+            x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
+            x = tf.layers.dense(x, 512, activation=tf.nn.relu, trainable=False)
+            self.target_qvals = tf.layers.dense(x, self.dim_action, trainable=False)
 
     def build_algorithm(self):
         self.action = tf.placeholder(shape=[None], dtype=tf.int32, name="action")
@@ -33,7 +43,7 @@ class DoubleDQN(Base):
         trainable_variables = tf.trainable_variables("qnet")
 
         batch_size = tf.shape(self.observation)[0]
-        gather_indices = tf.range(batch_size) * self.n_action + self.action
+        gather_indices = tf.range(batch_size) * self.dim_action + self.action
         action_q = tf.gather(tf.reshape(self.qvals, [-1]), gather_indices)
 
         self.loss = tf.reduce_mean(tf.squared_difference(self.target, action_q))
@@ -68,13 +78,10 @@ class DoubleDQN(Base):
             assert obs.ndim == 2 or obs.ndim == 4
             newobs = obs
 
-        self.epsilon -= (self.initial_epsilon - self.final_epsilon) / 100000
-        self.epsilon = max(self.final_epsilon, self.epsilon)
-
         qvals = self.sess.run(self.qvals, feed_dict={self.observation: newobs})
         best_action = np.argmax(qvals, axis=1)
         batch_size = newobs.shape[0]
-        actions = np.random.randint(self.n_action, size=batch_size)
+        actions = np.random.randint(self.dim_action, size=batch_size)
         idx = np.random.uniform(size=batch_size) > self.epsilon
         actions[idx] = best_action[idx]
 
@@ -97,7 +104,7 @@ class DoubleDQN(Base):
 
         global_step = self.sess.run(tf.train.get_global_step())
 
-        actions = [np.random.choice(self.n_action, p=exp_m[i]) for i in range(newobs.shape[0])]
+        actions = [np.random.choice(self.dim_action, p=exp_m[i]) for i in range(newobs.shape[0])]
 
         if obs.ndim == 1:
             actions = actions[0]
@@ -105,14 +112,28 @@ class DoubleDQN(Base):
 
     def update(self, minibatch, update_ratio):
 
+        self.epsilon = self.epsilon_schedule(update_ratio)
+
         # 拆分样本。
         s_batch, a_batch, r_batch, d_batch, next_s_batch = minibatch
 
-        batch_size = s_batch.shape[0]
-        current_next_q_vals, target_next_q_vals = self.sess.run(
-            [self.qvals, self.target_qvals], feed_dict={self.observation: next_s_batch})
-        q_next = target_next_q_vals[range(batch_size), current_next_q_vals.argmax(axis=1)]
-        target_batch = r_batch + (1 - d_batch) * self.discount * q_next
+        mb_s, mb_a, mb_target = [], [], []
+
+        n_env = s_batch.shape[0]
+        for i in range(n_env):
+            batch_size = s_batch[i, :].shape[0]
+            current_next_q_vals, target_next_q_vals = self.sess.run(
+                [self.qvals, self.target_qvals], feed_dict={self.observation: next_s_batch[i, :]})
+            q_next = target_next_q_vals[range(batch_size), current_next_q_vals.argmax(axis=1)]
+            target_batch = r_batch[i, :] + (1 - d_batch[i, :]) * self.discount * q_next
+
+            mb_target.append(target_batch)
+            mb_s.append(s_batch[i, :])
+            mb_a.append(a_batch[i, :])
+
+        mb_s = np.concatenate(mb_s)
+        mb_a = np.concatenate(mb_a)
+        mb_target = np.concatenate(mb_target)
 
         _, global_step, loss, max_q_val = self.sess.run(
             [self.train_op,
@@ -120,9 +141,9 @@ class DoubleDQN(Base):
              self.loss,
              self.max_qval],
             feed_dict={
-                self.observation: s_batch,
-                self.action: a_batch,
-                self.target: target_batch
+                self.observation: mb_s,
+                self.action: mb_a,
+                self.target: mb_target
             }
         )
 

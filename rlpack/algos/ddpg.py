@@ -11,9 +11,13 @@ class DDPG(Base):
     """Deep Deterministic Policy Gradient."""
 
     def __init__(self, config):
-        self.epsilon = 0.1
-        self.lr = config.lr
-        self.gae = config.gae
+        self.n_env = config.n_env
+        self.policy_lr = config.policy_lr_schedule(0)
+        self.value_lr = config.value_lr_schedule(0)
+        self.action_low = -1.0
+        self.action_high = 1.0
+
+        self.update_target_freq = 5
         super().__init__(config)
 
     def build_network(self):
@@ -48,8 +52,8 @@ class DDPG(Base):
             self.dummy_action = tf.layers.dense(x, self.dim_action, activation=tf.nn.tanh, trainable=False)
 
     def build_algorithm(self):
-        self.optimizer = tf.train.AdamOptimizer(self.lr)
-        self.critic_optimizer = tf.train.AdamOptimizer(self.lr)
+        self.optimizer = tf.train.AdamOptimizer(self.policy_lr)
+        self.critic_optimizer = tf.train.AdamOptimizer(self.value_lr)
         self.target_qval_ph = tf.placeholder(tf.float32, (None,), "next_state_qval")
         self.grad_q_act_ph = tf.placeholder(tf.float32, (None, self.dim_action), "grad_q_act")
 
@@ -62,7 +66,9 @@ class DDPG(Base):
         grad_surr = tf.gradients(self.action / self.batch_size, actor_vars, -self.grad_q_act_ph)
 
         # Update actor parameters.
-        self.train_actor_op = self.optimizer.apply_gradients(zip(grad_surr, actor_vars), global_step=tf.train.get_global_step())
+        self.train_actor_op = self.optimizer.apply_gradients(zip(grad_surr, actor_vars))
+
+        self.increment_global_step = tf.assign_add(tf.train.get_global_step(), 1)
 
         # ---------- Build Value Algorithm ----------
         critic_vars = tf.trainable_variables("qval_net")
@@ -71,80 +77,95 @@ class DDPG(Base):
         self.train_critic_op = self.critic_optimizer.minimize(self.value_loss, var_list=critic_vars)
 
     def update(self, minibatch, update_ratio=None):
-        s_batch, a_batch, r_batch, d_batch = minibatch
 
-        s_batch = s_batch[:, :-1, :]
-        r_batch = r_batch[:, :-1]
-        d_batch = d_batch[:, :-1]
+        s_batch, a_batch, r_batch, d_batch, next_s_batch = minibatch
 
-        # print(s_batch.shape)
-        # print(a_batch.shape)
-        # print(r_batch.shape)
-        # print(d_batch.shape)
-        # print(d_batch[1, :-1].shape[0])
+        mb_s, mb_a, mb_target = [], [], []
 
-        tmp_n = d_batch[0].shape[0]
-        target_value_batch = np.empty([self.n_env, tmp_n], dtype=np.float32)
-        advantage_value_batch = np.empty([self.n_env, tmp_n], dtype=np.float32)
+        n_env = s_batch.shape[0]
+        for i in range(n_env):
+            batch_size = d_batch[i].shape[0]
 
-        for i in range(self.n_env):
-            action_value_batch = self.sess.run(self.qval, feed_dict={self.observation_ph: s_batch[i, :, :], self.action_ph: a_batch[i, :]})
-            delta_value_batch = r_batch[i, :] + self.discount * (1 - d_batch[i, :]) * action_value_batch[1:] - action_value_batch[:-1]
+            # Compute target value.
+            next_a_batch = self.sess.run(self.dummy_action, feed_dict={self.observation_ph: next_s_batch[i, :]})
+            assert next_a_batch.shape == (batch_size, self.dim_action)
+            next_a_batch = np.clip(next_a_batch, self.action_low, self.action_high)
+            qval = self.sess.run(self.dummy_qval, feed_dict={self.observation_ph: next_s_batch[i, :], self.action_ph: next_a_batch})
+            assert qval.shape == (batch_size,)
+            target_qval = r_batch[i, :] + self.discount * (1 - d_batch[i, :]) * qval
+            assert target_qval.shape == (batch_size,)
 
-            # print("--------")
-            # print(advantage_value_batch.shape)
-            # print(action_value_batch.shape)
-            # print(delta_value_batch.shape)
-            # print(tmp_n)
-            # input()
+            mb_s.append(s_batch[i, :])
+            mb_a.append(a_batch[i, :])
+            mb_target.append(target_qval)
 
-            last_advantage = 0
-            for t in reversed(range(tmp_n)):
-                advantage_value_batch[i, t] = delta_value_batch[t] + self.discount * self.gae * (1 - d_batch[i, t]) * last_advantage
-                last_advantage = advantage_value_batch[i, t]
+        mb_s = np.concatenate(mb_s)
+        mb_a = np.concatenate(mb_a)
+        mb_target = np.concatenate(mb_target)
 
-            target_value_batch[i, :] = action_value_batch[:-1] + advantage_value_batch[i, :]
 
-        s_batch = s_batch[:, :-1, ...].reshape(self.n_env * tmp_n, *self.dim_observation)
-        a_batch = a_batch[:, :-1].reshape(self.n_env * tmp_n, self.dim_action)
-        target_value_batch = target_value_batch.reshape(self.n_env * tmp_n)
+        # s_batch, a_batch, r_batch, d_batch = minibatch
+        #
+        # s_batch = s_batch[:, :-1, :]
+        # r_batch = r_batch[:, :-1]
+        # d_batch = d_batch[:, :-1]
+        #
+        # # print(s_batch.shape)
+        # # print(a_batch.shape)
+        # # print(r_batch.shape)
+        # # print(d_batch.shape)
+        # # print(d_batch[1, :-1].shape[0])
+        #
+        # tmp_n = d_batch[0].shape[0]
+        # target_value_batch = np.empty([self.n_env, tmp_n], dtype=np.float32)
+        # advantage_value_batch = np.empty([self.n_env, tmp_n], dtype=np.float32)
+        #
+        # for i in range(self.n_env):
+        #     action_value_batch = self.sess.run(self.qval, feed_dict={self.observation_ph: s_batch[i, :, :], self.action_ph: a_batch[i, :]})
+        #     delta_value_batch = r_batch[i, :] + self.discount * (1 - d_batch[i, :]) * action_value_batch[1:] - action_value_batch[:-1]
+        #
+        #     # print("--------")
+        #     # print(advantage_value_batch.shape)
+        #     # print(action_value_batch.shape)
+        #     # print(delta_value_batch.shape)
+        #     # print(tmp_n)
+        #     # input()
+        #
+        #     last_advantage = 0
+        #     for t in reversed(range(tmp_n)):
+        #         advantage_value_batch[i, t] = delta_value_batch[t] + self.discount * self.gae * (1 - d_batch[i, t]) * last_advantage
+        #         last_advantage = advantage_value_batch[i, t]
+        #
+        #     target_value_batch[i, :] = action_value_batch[:-1] + advantage_value_batch[i, :]
+        #
+        # s_batch = s_batch[:, :-1, ...].reshape(self.n_env * tmp_n, *self.dim_observation)
+        # a_batch = a_batch[:, :-1].reshape(self.n_env * tmp_n, self.dim_action)
+        # target_value_batch = target_value_batch.reshape(self.n_env * tmp_n)
 
         # next_action_batch = self.sess.run(self.dummy_action, feed_dict={self.observation_ph: next_s_batch})
         # next_qval_batch = self.sess.run(self.dummy_qval, feed_dict={self.observation_ph: next_s_batch, self.action_ph: next_action_batch})
         # target_qval_batch = r_batch + (1 - d_batch) * self.discount * next_qval_batch
 
-        batch_generator = self._generator([s_batch, a_batch])
-        while True:
-            try:
 
-                mb_s, mb_a = next(batch_generator)
-                grad = self.sess.run(self.grad_q_a, feed_dict={self.observation_ph: mb_s, self.action_ph: mb_a})[0]
+        self.sess.run(self.increment_global_step)
 
-                self.sess.run(self.train_actor_op, feed_dict={self.observation_ph: mb_s, self.action_ph: mb_a, self.grad_q_act_ph: grad})
+        # Update actor.
+        grad = self.sess.run(self.grad_q_a, feed_dict={self.observation_ph: mb_s, self.action_ph: mb_a})[0]
+        self.sess.run(self.train_actor_op, feed_dict={self.observation_ph: mb_s, self.action_ph: mb_a, self.grad_q_act_ph: grad})
 
-            except StopIteration:
-                del batch_generator
-                break
+        # Update critic.
+        _, loss = self.sess.run([self.train_critic_op, self.value_loss],
+                                             feed_dict={
+            self.observation_ph: mb_s,
+            self.action_ph: mb_a,
+            self.target_qval_ph: mb_target})
 
-        batch_generator = self._generator([s_batch, a_batch, target_value_batch])
-        while True:
-            try:
-                mb_s, mb_a, mb_target = next(batch_generator)
 
-                # Update critic.
+        global_step = self.sess.run(tf.train.get_global_step())
 
-                _, loss, global_step = self.sess.run([self.train_critic_op, self.value_loss, tf.train.get_global_step()],
-                                                     feed_dict={
-                    self.observation_ph: mb_s,
-                    self.action_ph: mb_a,
-                    self.target_qval_ph: mb_target})
-
-            except StopIteration:
-                del batch_generator
-                break
-
-        self._copy_parameters("qval_net", "dummy_qval_net")
-        self._copy_parameters("act_net", "dummy_act_net")
+        if global_step % self.update_target_freq == 0:
+            self._copy_parameters("qval_net", "dummy_qval_net")
+            self._copy_parameters("act_net", "dummy_act_net")
 
         return {"critic_loss": loss, "global_step": global_step}
 
@@ -174,7 +195,7 @@ class DDPG(Base):
 
         best_actions = self.sess.run(self.action, feed_dict={self.observation_ph: newobs})
         actions = best_actions + self._ou_fn(best_actions)
-        actions = np.clip(actions, [-1, -1], [1, 1])
+        actions = np.clip(actions, -1, 1)
 
         if obs.ndim == 1 or obs.ndim == 3:
             actions = actions[0]

@@ -13,20 +13,31 @@ class DistDQN(Base):
         self.vmin = -10
         self.delta = (self.vmax - self.vmin) / (self.n_histogram - 1)
         self.split_points = np.linspace(self.vmin, self.vmax, self.n_histogram)
+
+        self.lr = config.value_lr_schedule(0)
+        self.epsilon_schedule = config.epsilon_schedule
+        self.epsilon = self.epsilon_schedule(0)
+        self.update_target_freq = config.update_target_freq
         super().__init__(config)
 
     def build_network(self):
-        self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], name="observation")
+        self.observation = tf.placeholder(shape=[None, *self.dim_observation], dtype=tf.float32, name="observation")
 
         with tf.variable_scope("qnet"):
-            x = tf.layers.dense(self.observation, 32, activation=tf.nn.relu, trainable=True)
-            x = tf.layers.dense(x, 32, activation=tf.nn.relu, trainable=True)
-            self.logits = tf.layers.dense(x, self.n_action * self.n_histogram, activation=tf.nn.relu, trainable=True)
+            x = tf.layers.conv2d(self.observation, 32, 8, 4, activation=tf.nn.relu)
+            x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu)
+            x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu)
+            x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
+            x = tf.layers.dense(x, 512, activation=tf.nn.relu)
+            self.logits = tf.layers.dense(x, self.dim_action * self.n_histogram)
 
         with tf.variable_scope("target_qnet"):
-            x = tf.layers.dense(self.observation, 32, activation=tf.nn.relu, trainable=False)
-            x = tf.layers.dense(x, 32, activation=tf.nn.relu, trainable=False)
-            self.target_logits = tf.layers.dense(x, self.n_action * self.n_histogram, activation=tf.nn.relu, trainable=False)
+            x = tf.layers.conv2d(self.observation, 32, 8, 4, activation=tf.nn.relu, trainable=False)
+            x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu, trainable=False)
+            x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu, trainable=False)
+            x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
+            x = tf.layers.dense(x, 512, activation=tf.nn.relu, trainable=False)
+            self.target_logits = tf.layers.dense(x, self.dim_action * self.n_histogram, trainable=False)
 
     def build_algorithm(self):
         self.optimizer = tf.train.AdamOptimizer(self.lr)
@@ -36,10 +47,10 @@ class DistDQN(Base):
 
         trainable_variables = tf.trainable_variables('qnet')
         batch_size = tf.shape(self.observation)[0]
-        self.probs = tf.nn.softmax(tf.reshape(self.logits, [-1, self.n_action, self.n_histogram]))
-        self.probs_target = tf.nn.softmax(tf.reshape(self.target_logits, [-1, self.n_action, self.n_histogram]))
+        self.probs = tf.nn.softmax(tf.reshape(self.logits, [-1, self.dim_action, self.n_histogram]))
+        self.probs_target = tf.nn.softmax(tf.reshape(self.target_logits, [-1, self.dim_action, self.n_histogram]))
 
-        gather_indices = tf.range(batch_size) * self.n_action + self.action
+        gather_indices = tf.range(batch_size) * self.dim_action + self.action
         self.action_probs = tf.gather(tf.reshape(self.probs, [-1, self.n_histogram]), gather_indices)
         self.action_probs_clip = tf.clip_by_value(self.action_probs, 0.00001, 0.99999)
 
@@ -62,7 +73,16 @@ class DistDQN(Base):
         self.update_target_op = _update_target("target_qnet", "qnet")
 
     def update(self, minibatch, update_ratio):
+        self.epsilon = self.epsilon_schedule(update_ratio)
+
         s_batch, a_batch, r_batch, d_batch, next_s_batch = minibatch
+
+        n_env, batch_size = s_batch.shape[:2]
+        s_batch = s_batch.reshape(n_env * batch_size, *self.dim_observation)
+        a_batch = a_batch.reshape(n_env * batch_size)
+        r_batch = r_batch.reshape(n_env * batch_size)
+        d_batch = d_batch.reshape(n_env * batch_size)
+        next_s_batch = next_s_batch.reshape(n_env * batch_size, *self.dim_observation)
 
         next_q_probs = self.sess.run(self.probs_target, feed_dict={self.observation: next_s_batch})
         next_q_vals = np.sum(next_q_probs * self.split_points, axis=-1)
@@ -99,13 +119,11 @@ class DistDQN(Base):
         return {"loss": loss, "training_step": global_step}
 
     def get_action(self, obs):
-        if obs.ndim == 1:
+        if obs.ndim == 1 or obs.ndim == 3:
             newobs = np.array(obs)[np.newaxis, :]
         else:
+            assert obs.ndim == 2 or obs.ndim == 4
             newobs = obs
-
-        self.epsilon -= (self.initial_epsilon - self.final_epsilon) / 100000
-        self.epsilon = max(self.final_epsilon, self.epsilon)
 
         probs = self.sess.run(self.probs, feed_dict={self.observation: newobs})
         qvals = np.sum(probs * self.split_points, axis=-1)
@@ -114,7 +132,7 @@ class DistDQN(Base):
 
         batch_size = newobs.shape[0]
 
-        actions = np.random.randint(self.n_action, size=batch_size)
+        actions = np.random.randint(self.dim_action, size=batch_size)
         idx = np.random.uniform(size=batch_size) > self.epsilon
 
         actions[idx] = best_action[idx]

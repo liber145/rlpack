@@ -18,7 +18,6 @@ class TRPO(Base):
         self.gae = config.gae
         self.training_epoch = config.training_epoch
         self.max_grad_norm = config.max_grad_norm
-        self.lr_schedule = config.policy_lr_schedule
         super().__init__(config)
 
     def build_network(self):
@@ -27,7 +26,7 @@ class TRPO(Base):
         with tf.variable_scope("policy_net"):
             x = tf.layers.dense(self.observation, 64, activation=tf.nn.tanh)
             x = tf.layers.dense(x, 64, activation=tf.nn.tanh)
-            self.mu = tf.layers.dense(x, self.dim_action, activation=None)
+            self.mu = tf.layers.dense(x, self.dim_action, activation=tf.tanh)
             self.log_var = tf.get_variable("log_var", [self.mu.shape.as_list()[1]], tf.float32, tf.constant_initializer(0.0))
 
         with tf.variable_scope("value_net"):

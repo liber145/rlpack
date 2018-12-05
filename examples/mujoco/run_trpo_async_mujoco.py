@@ -24,7 +24,7 @@ class Config(object):
     def __init__(self):
         """All papameters here."""
         self.rnd = 5
-        self.save_path = f"./log/trpo_{args.env_name}"
+        self.save_path = f"./log/trpo_{args.env_name}_2"
 
         # 环境
         self.n_env = 1
@@ -111,7 +111,7 @@ def learn(env, agent, config):
 
 
 if __name__ == "__main__":
-    env = AsyncMujocoWrapper(f"{args.env_name}", 1, 1, 50006)
+    env = AsyncMujocoWrapper(f"{args.env_name}", 1, 1, 50019)
     config = process_env(env)
     agent = TRPO(config)
     learn(env, agent, config)

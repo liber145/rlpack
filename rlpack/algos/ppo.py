@@ -38,8 +38,9 @@ class PPO(Base):
         x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu)
         x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
         x = tf.layers.dense(x, 512, activation=tf.nn.relu)
-        self.logit_action_probability = tf.layers.dense(x, self.n_action, activation=None, kernel_initializer=tf.truncated_normal_initializer(0.0, 0.01))
+        self.logit_action_probability = tf.layers.dense(x, self.dim_action, activation=None, kernel_initializer=tf.truncated_normal_initializer(0.0, 0.01))
         self.state_value = tf.squeeze(tf.layers.dense(x, 1, activation=None, kernel_initializer=tf.truncated_normal_initializer()))
+
 
     def build_algorithm(self):
         self.init_clip_epsilon = 0.1
@@ -48,7 +49,7 @@ class PPO(Base):
         self.moved_lr = tf.placeholder(tf.float32)
         self.optimizer = tf.train.AdamOptimizer(self.moved_lr, epsilon=1e-5)
 
-        self.old_logit_action_probability = tf.placeholder(tf.float32, [None, self.n_action])
+        self.old_logit_action_probability = tf.placeholder(tf.float32, [None, self.dim_action])
         self.action = tf.placeholder(tf.int32, [None], name="action")
         self.advantage = tf.placeholder(tf.float32, [None], name="advantage")
         self.target_state_value = tf.placeholder(tf.float32, [None], "target_state_value")
@@ -60,13 +61,13 @@ class PPO(Base):
         # Compute entropy of the action probability.
         log_prob_1 = tf.nn.log_softmax(self.logit_action_probability)
         log_prob_2 = tf.stop_gradient(tf.nn.log_softmax(self.old_logit_action_probability))
-        assert_shape(log_prob_1, [None, self.n_action])
-        assert_shape(log_prob_2, [None, self.n_action])
+        assert_shape(log_prob_1, [None, self.dim_action])
+        assert_shape(log_prob_2, [None, self.dim_action])
 
         prob_1 = tf.nn.softmax(log_prob_1)
         prob_2 = tf.stop_gradient(tf.nn.softmax(log_prob_2))
-        assert_shape(prob_1, [None, self.n_action])
-        # assert_shape(prob_2, [None, self.n_action])
+        assert_shape(prob_1, [None, self.dim_action])
+        # assert_shape(prob_2, [None, self.dim_action])
 
         self.entropy = - tf.reduce_sum(log_prob_1 * prob_1, axis=1)
         assert_shape(self.entropy, [None])
@@ -84,7 +85,6 @@ class PPO(Base):
         surrogate_2 = tf.clip_by_value(self.ratio, 1.0 - self.clip_epsilon, 1.0 + self.clip_epsilon) * self.advantage
         assert_shape(self.ratio, [None])
         assert_shape(surrogate_1, [None])
-        assert_shape(surrogate_2, [None])
         self.surrogate = -tf.reduce_mean(tf.minimum(surrogate_1, surrogate_2))
 
         # Compute critic loss.
@@ -106,10 +106,11 @@ class PPO(Base):
             assert obs.ndim == 2 or obs.ndim == 4
             newobs = obs
 
+
         logit = self.sess.run(self.logit_action_probability, feed_dict={self.observation: newobs})
         logit = logit - np.max(logit, axis=1, keepdims=True)
         prob = np.exp(logit) / np.sum(np.exp(logit), axis=1, keepdims=True)
-        action = [np.random.choice(self.n_action, p=prob[i, :]) for i in range(newobs.shape[0])]
+        action = [np.random.choice(self.dim_action, p=prob[i, :]) for i in range(newobs.shape[0])]
         assert len(action) == newobs.shape[0]
         return np.array(action)
 
