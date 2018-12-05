@@ -21,6 +21,7 @@ class DistDQN(Base):
         super().__init__(config)
 
     def build_network(self):
+        """Build networks for algorithm."""
         self.observation = tf.placeholder(shape=[None, *self.dim_observation], dtype=tf.float32, name="observation")
 
         with tf.variable_scope("qnet"):
@@ -40,6 +41,7 @@ class DistDQN(Base):
             self.target_logits = tf.layers.dense(x, self.dim_action * self.n_histogram, trainable=False)
 
     def build_algorithm(self):
+        """Build networks for algorithm."""
         self.optimizer = tf.train.AdamOptimizer(self.lr)
         self.action = tf.placeholder(tf.int32, [None], name="action")
         self.target = tf.placeholder(tf.float32, [None], name="target")
@@ -73,6 +75,20 @@ class DistDQN(Base):
         self.update_target_op = _update_target("target_qnet", "qnet")
 
     def update(self, minibatch, update_ratio):
+        """Update the algorithm by suing a batch of data.
+
+        Parameters:
+            minibatch: A list of ndarray containing a minibatch of state, action, reward, done, next_state.
+                - state shape: (n_env, batch_size, state_dimension)
+                - action shape: (n_env, batch_size)
+                - reward shape: (n_env, batch_size)
+                - done shape: (n_env, batch_size)
+                - next_state shape: (n_env, batch_size, state_dimension)
+            update_ratio: float scalar in (0, 1).
+
+        Returns:
+            training infomation.
+        """
         self.epsilon = self.epsilon_schedule(update_ratio)
 
         s_batch, a_batch, r_batch, d_batch, next_s_batch = minibatch
@@ -119,6 +135,14 @@ class DistDQN(Base):
         return {"loss": loss, "training_step": global_step}
 
     def get_action(self, obs):
+        """Return actions according to the given observation.
+
+        Parameters:
+            ob: An ndarray with shape (n, state_dimension).
+
+        Returns:
+            An ndarray for action with shape (n).
+        """
         if obs.ndim == 1 or obs.ndim == 3:
             newobs = np.array(obs)[np.newaxis, :]
         else:

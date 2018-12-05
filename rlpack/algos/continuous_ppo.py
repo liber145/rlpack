@@ -19,6 +19,7 @@ class ContinuousPPO(Base):
         super().__init__(config)
 
     def build_network(self):
+        """Build networks for algorithm."""
         self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], name="observation")
 
         assert_shape(self.observation, [None, *self.dim_observation])
@@ -35,6 +36,7 @@ class ContinuousPPO(Base):
             self.state_value = tf.squeeze(tf.layers.dense(x, 1, activation=None))
 
     def build_algorithm(self):
+        """Build networks for algorithm."""
         self.clip_epsilon = tf.placeholder(tf.float32)
 
         self.policy_lr = tf.placeholder(tf.float32)
@@ -113,6 +115,14 @@ class ContinuousPPO(Base):
         self.sample_action = self.mu + tf.exp(self.log_var) * tf.random_normal(shape=[self.dim_action], dtype=tf.float32)
 
     def get_action(self, obs):
+        """Return actions according to the given observation.
+
+        Parameters:
+            obs: An ndarray with shape (n, state_dimension).
+
+        Returns:
+            An ndarray for action with shape (n, action_dimension).
+        """
         if obs.ndim == 1 or obs.ndim == 3:
             newobs = np.array(obs)[np.newaxis, :]
         else:
@@ -123,10 +133,18 @@ class ContinuousPPO(Base):
         return actions
 
     def update(self, minibatch, update_ratio):
-        """minibatch is a trajectory.
+        """Update the algorithm by suing a batch of data.
 
-        Arguments:
-            minibatch: n_env * trajectory_length * self.dim_observation
+        Parameters:
+            minibatch: A list of ndarray containing a minibatch of state, action, reward, done.
+                - state shape: (n_env, batch_size, state_dimension)
+                - action shape: (n_env, batch_size, state_dimension)
+                - reward shape: (n_env, batch_size)
+                - done shape: (n_env, batch_size)
+            update_ratio: float scalar in (0, 1).
+
+        Returns:
+            training infomation.
         """
         s_batch, a_batch, r_batch, d_batch = minibatch
         assert s_batch.shape == (self.n_env, self.trajectory_length + 1, *self.dim_observation)

@@ -4,6 +4,7 @@ dependencies:
   - pip:
     - gym[atari]
     - tensorboardx==1.4
-    - tensorflow-gpu==1.11.0
+    - tensorflow-gpu==1.10.0
     - tqdm==4.26.0
+    - opencv-python
 prefix: /home/$USER/anaconda3/envs/py36

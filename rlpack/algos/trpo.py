@@ -21,6 +21,7 @@ class TRPO(Base):
         super().__init__(config)
 
     def build_network(self):
+        """Build networks for algorithm."""
         self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], "observation")
 
         with tf.variable_scope("policy_net"):
@@ -35,6 +36,7 @@ class TRPO(Base):
             self.state_value = tf.squeeze(tf.layers.dense(x, 1, name="state_value"))
 
     def build_algorithm(self):
+        """Build networks for algorithm."""
         self.critic_optimizer = tf.train.AdamOptimizer(3e-3)
         self.action = tf.placeholder(tf.float32, [None, self.dim_action], "action")
         self.old_mu = tf.placeholder(tf.float32, [None, self.dim_action], "old_mu")
@@ -85,6 +87,19 @@ class TRPO(Base):
         self.sample_action = self.mu + tf.exp(self.log_var / 2.0) * tf.random.normal(shape=[4, self.dim_action], dtype=tf.float32)
 
     def update(self, minibatch, update_ratio):
+        """Update the algorithm by suing a batch of data.
+
+        Parameters:
+            minibatch: A list of ndarray containing a minibatch of state, action, reward, done.
+                - state shape: (n_env, batch_size, state_dimension)
+                - action shape: (n_env, batch_size, state_dimension)
+                - reward shape: (n_env, batch_size)
+                - done shape: (n_env, batch_size)
+            update_ratio: float scalar in (0, 1).
+
+        Returns:
+            training infomation.
+        """
         s_batch, a_batch, r_batch, d_batch = minibatch
         assert s_batch.shape == (self.n_env, self.trajectory_length + 1, *self.dim_observation)
 
@@ -218,5 +233,13 @@ class TRPO(Base):
             yield [x[span_index] if x.ndim == 1 else x[span_index, :] for x in data_batch]
 
     def get_action(self, obs):
+        """Return actions according to the given observation.
+
+        Parameters:
+            ob: An ndarray with shape (n, state_dimension).
+
+        Returns:
+            An ndarray for action with shape (n, action_dimension).
+        """        
         actions = self.sess.run(self.sample_action, feed_dict={self.observation: obs})
         return actions

@@ -31,6 +31,7 @@ class TD3(Base):
         self.sess.run(self.init_target_value_op)
 
     def build_network(self):
+        """Build networks for algorithm."""
         self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], name="observation")
         self.action = tf.placeholder(tf.float32, [None, self.dim_action], name="action")
 
@@ -85,6 +86,7 @@ class TD3(Base):
         return update_ops
 
     def build_algorithm(self):
+        """Build networks for algorithm."""
         self.target_qval = tf.placeholder(tf.float32, [None], name="target_q_value")
         self.actor_lr = tf.placeholder(tf.float32)
         self.critic_lr = tf.placeholder(tf.float32)
@@ -106,6 +108,14 @@ class TD3(Base):
         self.init_target_value_op = self._update_target("target_value_net", "value_net")
 
     def get_action(self, obs):
+        """Return actions according to the given observation.
+
+        Parameters:
+            ob: An ndarray with shape (n, state_dimension).
+
+        Returns:
+            An ndarray for action with shape (n, action_dimension).
+        """
         if obs.ndim == 1 or obs.ndim == 3:
             newobs = np.array(obs)[np.newaxis, :]
         else:
@@ -118,10 +128,18 @@ class TD3(Base):
         return action
 
     def update(self, minibatch, update_ratio):
-        """Update the policy.
+        """Update the algorithm by suing a batch of data.
 
-        Arguments:
-            minibatch: n_env * trajectory_length * self.dim_observation
+        Parameters:
+            minibatch: A list of ndarray containing a minibatch of state, action, reward, done.
+                - state shape: (n_env, batch_size, state_dimension)
+                - action shape: (n_env, batch_size, state_dimension)
+                - reward shape: (n_env, batch_size)
+                - done shape: (n_env, batch_size)
+            update_ratio: float scalar in (0, 1).
+
+        Returns:
+            training infomation.
         """
         s_batch, a_batch, r_batch, d_batch, next_s_batch = minibatch
 

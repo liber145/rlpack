@@ -17,10 +17,11 @@ class A2C(Base):
         super().__init__(config)
 
     def build_network(self):
+        """Build networks for algorithm."""
         # Build inputs.
         self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], "observation")
 
-        # # Build Nets.
+        # Build Nets.
         with tf.variable_scope("policy_net"):
             x = tf.layers.dense(self.observation, 64, activation=tf.nn.tanh)
             x = tf.layers.dense(x, 64, activation=tf.nn.tanh)
@@ -33,6 +34,7 @@ class A2C(Base):
             self.state_value = tf.squeeze(tf.layers.dense(x, 1, activation=None))
 
     def build_algorithm(self):
+        """Build networks for algorithm."""
         self.actor_optimizer = tf.train.AdamOptimizer(self.lr)
         self.critic_optimizer = tf.train.AdamOptimizer(self.lr)
 
@@ -64,7 +66,19 @@ class A2C(Base):
         self.sampled_act = (self.mu + tf.exp(self.log_var / 2.0) * tf.random_normal(shape=[self.dim_action], dtype=tf.float32))
 
     def update(self, minibatch, update_ratio):
+        """Update the algorithm by suing a batch of data.
 
+        Parameters:
+            minibatch: A list of ndarray containing a minibatch of state, action, reward, done.
+                - state shape: (n_env, batch_size, state_dimension)
+                - action shape: (n_env, batch_size, state_dimension)
+                - reward shape: (n_env, batch_size)
+                - done shape: (n_env, batch_size)
+            update_ratio: float scalar in (0, 1).
+
+        Returns:
+            training infomation.
+        """
         s_batch, a_batch, r_batch, d_batch = minibatch
         assert s_batch.shape == (self.n_env, self.trajectory_length + 1, *self.dim_observation)
 
@@ -137,6 +151,15 @@ class A2C(Base):
         return {"critic_loss": critic_loss, "global_step": global_step}
 
     def get_action(self, ob):
+        """Return actions according to the given observation.
+
+        Parameters:
+            ob: An ndarray with shape (n, state_dimension).
+
+        Returns:
+            An ndarray for action with shape (n, action_dimension).
+        """
+
         action = self.sess.run(self.sampled_act, feed_dict={self.observation: ob})
         return action
 

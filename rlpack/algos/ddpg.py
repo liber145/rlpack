@@ -21,6 +21,7 @@ class DDPG(Base):
         super().__init__(config)
 
     def build_network(self):
+        """Build networks for algorithm."""
         # Build placeholders.
         self.observation_ph = tf.placeholder(tf.float32, [None, *self.dim_observation], "observation")
         self.action_ph = tf.placeholder(tf.float32, (None, self.dim_action), "action")
@@ -52,6 +53,7 @@ class DDPG(Base):
             self.dummy_action = tf.layers.dense(x, self.dim_action, activation=tf.nn.tanh, trainable=False)
 
     def build_algorithm(self):
+        """Build networks for algorithm."""
         self.optimizer = tf.train.AdamOptimizer(self.policy_lr)
         self.critic_optimizer = tf.train.AdamOptimizer(self.value_lr)
         self.target_qval_ph = tf.placeholder(tf.float32, (None,), "next_state_qval")
@@ -77,7 +79,19 @@ class DDPG(Base):
         self.train_critic_op = self.critic_optimizer.minimize(self.value_loss, var_list=critic_vars)
 
     def update(self, minibatch, update_ratio=None):
+        """Update the algorithm by suing a batch of data.
 
+        Parameters:
+            minibatch: A list of ndarray containing a minibatch of state, action, reward, done.
+                - state shape: (n_env, batch_size, state_dimension)
+                - action shape: (n_env, batch_size, state_dimension)
+                - reward shape: (n_env, batch_size)
+                - done shape: (n_env, batch_size)
+            update_ratio: float scalar in (0, 1).
+
+        Returns:
+            training infomation.
+        """
         s_batch, a_batch, r_batch, d_batch, next_s_batch = minibatch
 
         mb_s, mb_a, mb_target = [], [], []
@@ -103,50 +117,6 @@ class DDPG(Base):
         mb_a = np.concatenate(mb_a)
         mb_target = np.concatenate(mb_target)
 
-
-        # s_batch, a_batch, r_batch, d_batch = minibatch
-        #
-        # s_batch = s_batch[:, :-1, :]
-        # r_batch = r_batch[:, :-1]
-        # d_batch = d_batch[:, :-1]
-        #
-        # # print(s_batch.shape)
-        # # print(a_batch.shape)
-        # # print(r_batch.shape)
-        # # print(d_batch.shape)
-        # # print(d_batch[1, :-1].shape[0])
-        #
-        # tmp_n = d_batch[0].shape[0]
-        # target_value_batch = np.empty([self.n_env, tmp_n], dtype=np.float32)
-        # advantage_value_batch = np.empty([self.n_env, tmp_n], dtype=np.float32)
-        #
-        # for i in range(self.n_env):
-        #     action_value_batch = self.sess.run(self.qval, feed_dict={self.observation_ph: s_batch[i, :, :], self.action_ph: a_batch[i, :]})
-        #     delta_value_batch = r_batch[i, :] + self.discount * (1 - d_batch[i, :]) * action_value_batch[1:] - action_value_batch[:-1]
-        #
-        #     # print("--------")
-        #     # print(advantage_value_batch.shape)
-        #     # print(action_value_batch.shape)
-        #     # print(delta_value_batch.shape)
-        #     # print(tmp_n)
-        #     # input()
-        #
-        #     last_advantage = 0
-        #     for t in reversed(range(tmp_n)):
-        #         advantage_value_batch[i, t] = delta_value_batch[t] + self.discount * self.gae * (1 - d_batch[i, t]) * last_advantage
-        #         last_advantage = advantage_value_batch[i, t]
-        #
-        #     target_value_batch[i, :] = action_value_batch[:-1] + advantage_value_batch[i, :]
-        #
-        # s_batch = s_batch[:, :-1, ...].reshape(self.n_env * tmp_n, *self.dim_observation)
-        # a_batch = a_batch[:, :-1].reshape(self.n_env * tmp_n, self.dim_action)
-        # target_value_batch = target_value_batch.reshape(self.n_env * tmp_n)
-
-        # next_action_batch = self.sess.run(self.dummy_action, feed_dict={self.observation_ph: next_s_batch})
-        # next_qval_batch = self.sess.run(self.dummy_qval, feed_dict={self.observation_ph: next_s_batch, self.action_ph: next_action_batch})
-        # target_qval_batch = r_batch + (1 - d_batch) * self.discount * next_qval_batch
-
-
         self.sess.run(self.increment_global_step)
 
         # Update actor.
@@ -154,12 +124,10 @@ class DDPG(Base):
         self.sess.run(self.train_actor_op, feed_dict={self.observation_ph: mb_s, self.action_ph: mb_a, self.grad_q_act_ph: grad})
 
         # Update critic.
-        _, loss = self.sess.run([self.train_critic_op, self.value_loss],
-                                             feed_dict={
+        _, loss = self.sess.run([self.train_critic_op, self.value_loss], feed_dict={
             self.observation_ph: mb_s,
             self.action_ph: mb_a,
             self.target_qval_ph: mb_target})
-
 
         global_step = self.sess.run(tf.train.get_global_step())
 
@@ -187,6 +155,15 @@ class DDPG(Base):
         return theta * (mu - x) + sigma * np.random.randn(1)
 
     def get_action(self, obs):
+        """Return actions according to the given observation.
+
+        Parameters:
+            ob: An ndarray with shape (n, state_dimension).
+
+        Returns:
+            An ndarray for action with shape (n, action_dimension).
+        """
+
         if obs.ndim == 1 or obs.ndim == 3:
             newobs = np.array(obs)[np.newaxis, :]
         else:

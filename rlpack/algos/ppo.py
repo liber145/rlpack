@@ -31,6 +31,7 @@ class PPO(Base):
         super().__init__(config)
 
     def build_network(self):
+        """Build networks for algorithm."""
         self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], name="observation")
 
         x = tf.layers.conv2d(self.observation, 32, 8, 4, activation=tf.nn.relu)
@@ -41,8 +42,8 @@ class PPO(Base):
         self.logit_action_probability = tf.layers.dense(x, self.dim_action, activation=None, kernel_initializer=tf.truncated_normal_initializer(0.0, 0.01))
         self.state_value = tf.squeeze(tf.layers.dense(x, 1, activation=None, kernel_initializer=tf.truncated_normal_initializer()))
 
-
     def build_algorithm(self):
+        """Build networks for algorithm."""
         self.init_clip_epsilon = 0.1
         self.init_lr = 2.5e-4
         self.clip_epsilon = tf.placeholder(tf.float32)
@@ -115,10 +116,19 @@ class PPO(Base):
         return np.array(action)
 
     def update(self, minibatch, update_ratio):
-        """Update the policy.
+        """Update the algorithm by suing a batch of data.
 
-        Arguments:
-            minibatch: n_env * trajectory_length * self.dim_observation
+        Parameters:
+            minibatch: A list of ndarray containing a minibatch of state, action, reward, done, next_state.
+                - state shape: (n_env, batch_size, state_dimension)
+                - action shape: (n_env, batch_size)
+                - reward shape: (n_env, batch_size)
+                - done shape: (n_env, batch_size)
+                - next_state shape: (n_env, batch_size, state_dimension)
+            update_ratio: float scalar in (0, 1).
+
+        Returns:
+            training infomation.
         """
         s_batch, a_batch, r_batch, d_batch = minibatch
         assert s_batch.shape == (self.n_env, self.trajectory_length + 1, *self.dim_observation)

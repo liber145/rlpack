@@ -15,6 +15,7 @@ class DuelDQN(Base):
         super().__init__(config)
 
     def build_network(self):
+        """Build networks for algorithm."""
         self.observation = tf.placeholder(shape=[None, *self.dim_observation], dtype=tf.float32, name="observation")
 
         with tf.variable_scope("net"):
@@ -35,8 +36,8 @@ class DuelDQN(Base):
             self.target_v = tf.layers.dense(x, 1, trainable=False)
             self.target_adv = tf.layers.dense(x, self.dim_action, trainable=False)
 
-
     def build_algorithm(self):
+        """Build networks for algorithm."""
         self.optimizer = tf.train.AdamOptimizer(self.lr, epsilon=1.5e-8)
         self.action = tf.placeholder(shape=[None], dtype=tf.int32, name="action")
         self.target = tf.placeholder(shape=[None], dtype=tf.float32, name="target")
@@ -75,8 +76,13 @@ class DuelDQN(Base):
         self.max_qval = tf.reduce_max(self.qvals)
 
     def get_action(self, obs):
-        """Get action with respect to the observation.
-        :param obs: observation, with 1-dimension representing real-value feature, 3-dimension representing image.
+        """Get actions according to the given observation.
+
+        Parameters:
+            ob: An ndarray with shape (n, state_dimension).
+
+        Returns:
+            An ndarray for action with shape (n).
         """
         if obs.ndim == 1 or obs.ndim == 3:
             newobs = np.array(obs)[np.newaxis, :]
@@ -96,9 +102,19 @@ class DuelDQN(Base):
         return actions
 
     def update(self, minibatch, update_ratio) -> dict:
-        """
-        :param minibatch: a minibatch of (state_batch, action_batch, reward_batch, done_batch, next_state_batch)
-        :param update_ratio: the ratio of update
+        """Update the algorithm by suing a batch of data.
+
+        Parameters:
+            minibatch: A list of ndarray containing a minibatch of state, action, reward, done, next_state.
+                - state shape: (n_env, batch_size, state_dimension)
+                - action shape: (n_env, batch_size)
+                - reward shape: (n_env, batch_size)
+                - done shape: (n_env, batch_size)
+                - next_state shape: (n_env, batch_size, state_dimension)
+            update_ratio: float scalar in (0, 1).
+
+        Returns:
+            training infomation.
         """
         # 拆分样本。
         self.epsilon = self.epsilon_schedule(update_ratio)
