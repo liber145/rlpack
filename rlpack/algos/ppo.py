@@ -119,16 +119,17 @@ class PPO(Base):
         """Update the algorithm by suing a batch of data.
 
         Parameters:
-            minibatch: A list of ndarray containing a minibatch of state, action, reward, done, next_state.
+            - minibatch: A list of ndarray containing a minibatch of state, action, reward, done, next_state.
                 - state shape: (n_env, batch_size, state_dimension)
                 - action shape: (n_env, batch_size)
                 - reward shape: (n_env, batch_size)
                 - done shape: (n_env, batch_size)
                 - next_state shape: (n_env, batch_size, state_dimension)
-            update_ratio: float scalar in (0, 1).
+
+            - update_ratio: float scalar in (0, 1).
 
         Returns:
-            training infomation.
+            - training infomation.
         """
         s_batch, a_batch, r_batch, d_batch = minibatch
         assert s_batch.shape == (self.n_env, self.trajectory_length + 1, *self.dim_observation)

@@ -180,10 +180,11 @@
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
 
 <div class="viewcode-block" id="A2C.build_network"><a class="viewcode-back" href="../../../api/rlpack.algos.html#rlpack.algos.a2c.A2C.build_network">[docs]</a>    <span class="k">def</span> <span class="nf">build_network</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Build networks for algorithm.&quot;&quot;&quot;</span>
         <span class="c1"># Build inputs.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">observation</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">dim_observation</span><span class="p">],</span> <span class="s2">&quot;observation&quot;</span><span class="p">)</span>
 
-        <span class="c1"># # Build Nets.</span>
+        <span class="c1"># Build Nets.</span>
         <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s2">&quot;policy_net&quot;</span><span class="p">):</span>
             <span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">dense</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">observation</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">tanh</span><span class="p">)</span>
             <span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">dense</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">tanh</span><span class="p">)</span>
@@ -196,6 +197,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">state_value</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">dense</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="kc">None</span><span class="p">))</span></div>
 
 <div class="viewcode-block" id="A2C.build_algorithm"><a class="viewcode-back" href="../../../api/rlpack.algos.html#rlpack.algos.a2c.A2C.build_algorithm">[docs]</a>    <span class="k">def</span> <span class="nf">build_algorithm</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Build networks for algorithm.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">actor_optimizer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">AdamOptimizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lr</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">critic_optimizer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">AdamOptimizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lr</span><span class="p">)</span>
 
@@ -227,7 +229,21 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">sampled_act</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mu</span> <span class="o">+</span> <span class="n">tf</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_var</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">)</span> <span class="o">*</span> <span class="n">tf</span><span class="o">.</span><span class="n">random_normal</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dim_action</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span></div>
 
 <div class="viewcode-block" id="A2C.update"><a class="viewcode-back" href="../../../api/rlpack.algos.html#rlpack.algos.a2c.A2C.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">minibatch</span><span class="p">,</span> <span class="n">update_ratio</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update the algorithm by suing a batch of data.</span>
 
+<span class="sd">        Parameters:</span>
+<span class="sd">            - minibatch: A list of ndarray containing a minibatch of state, action, reward, done.</span>
+
+<span class="sd">                - state shape: (n_env, batch_size, state_dimension)</span>
+<span class="sd">                - action shape: (n_env, batch_size, state_dimension)</span>
+<span class="sd">                - reward shape: (n_env, batch_size)</span>
+<span class="sd">                - done shape: (n_env, batch_size)</span>
+
+<span class="sd">            - update_ratio: float scalar in (0, 1).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - training infomation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">s_batch</span><span class="p">,</span> <span class="n">a_batch</span><span class="p">,</span> <span class="n">r_batch</span><span class="p">,</span> <span class="n">d_batch</span> <span class="o">=</span> <span class="n">minibatch</span>
         <span class="k">assert</span> <span class="n">s_batch</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_env</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_length</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">dim_observation</span><span class="p">)</span>
 
@@ -300,6 +316,15 @@
         <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;critic_loss&quot;</span><span class="p">:</span> <span class="n">critic_loss</span><span class="p">,</span> <span class="s2">&quot;global_step&quot;</span><span class="p">:</span> <span class="n">global_step</span><span class="p">}</span></div>
 
 <div class="viewcode-block" id="A2C.get_action"><a class="viewcode-back" href="../../../api/rlpack.algos.html#rlpack.algos.a2c.A2C.get_action">[docs]</a>    <span class="k">def</span> <span class="nf">get_action</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ob</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return actions according to the given observation.</span>
+
+<span class="sd">        Parameters:</span>
+<span class="sd">            - ob: An ndarray with shape (n, state_dimension).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - An ndarray for action with shape (n, action_dimension).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="n">action</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sampled_act</span><span class="p">,</span> <span class="n">feed_dict</span><span class="o">=</span><span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">observation</span><span class="p">:</span> <span class="n">ob</span><span class="p">})</span>
         <span class="k">return</span> <span class="n">action</span></div>
 

@@ -175,13 +175,13 @@
 <dl class="method">
 <dt id="rlpack.algos.ppo.PPO.build_algorithm">
 <code class="descname">build_algorithm</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/algos/ppo.html#PPO.build_algorithm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.algos.ppo.PPO.build_algorithm" title="Permalink to this definition">¶</a></dt>
-<dd><p>Build algorithms using prebuilt networks.</p>
+<dd><p>Build networks for algorithm.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="rlpack.algos.ppo.PPO.build_network">
 <code class="descname">build_network</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/algos/ppo.html#PPO.build_network"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.algos.ppo.PPO.build_network" title="Permalink to this definition">¶</a></dt>
-<dd><p>Build tensorflow operations for algorithms.</p>
+<dd><p>Build networks for algorithm.</p>
 </dd></dl>
 
 <dl class="method">
@@ -195,10 +195,30 @@
 <dl class="method">
 <dt id="rlpack.algos.ppo.PPO.update">
 <code class="descname">update</code><span class="sig-paren">(</span><em>minibatch</em>, <em>update_ratio</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/algos/ppo.html#PPO.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.algos.ppo.PPO.update" title="Permalink to this definition">¶</a></dt>
-<dd><p>Update the policy.</p>
+<dd><p>Update the algorithm by suing a batch of data.</p>
 <dl class="docutils">
-<dt>Arguments:</dt>
-<dd>minibatch: n_env * trajectory_length * self.dim_observation</dd>
+<dt>Parameters:</dt>
+<dd><ul class="first last simple">
+<li><dl class="first docutils">
+<dt>minibatch: A list of ndarray containing a minibatch of state, action, reward, done, next_state.</dt>
+<dd><ul class="first last">
+<li>state shape: (n_env, batch_size, state_dimension)</li>
+<li>action shape: (n_env, batch_size)</li>
+<li>reward shape: (n_env, batch_size)</li>
+<li>done shape: (n_env, batch_size)</li>
+<li>next_state shape: (n_env, batch_size, state_dimension)</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li>update_ratio: float scalar in (0, 1).</li>
+</ul>
+</dd>
+<dt>Returns:</dt>
+<dd><ul class="first last simple">
+<li>training infomation.</li>
+</ul>
+</dd>
 </dl>
 </dd></dl>
 
@@ -212,30 +232,60 @@
 <dl class="method">
 <dt id="rlpack.algos.trpo.TRPO.build_algorithm">
 <code class="descname">build_algorithm</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/algos/trpo.html#TRPO.build_algorithm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.algos.trpo.TRPO.build_algorithm" title="Permalink to this definition">¶</a></dt>
-<dd><p>Build algorithms using prebuilt networks.</p>
+<dd><p>Build networks for algorithm.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="rlpack.algos.trpo.TRPO.build_network">
 <code class="descname">build_network</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/algos/trpo.html#TRPO.build_network"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.algos.trpo.TRPO.build_network" title="Permalink to this definition">¶</a></dt>
-<dd><p>Build tensorflow operations for algorithms.</p>
+<dd><p>Build networks for algorithm.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="rlpack.algos.trpo.TRPO.get_action">
 <code class="descname">get_action</code><span class="sig-paren">(</span><em>obs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/algos/trpo.html#TRPO.get_action"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.algos.trpo.TRPO.get_action" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return action according to the observations.
-:param obs: the observation that could be image or real-number features
-:return: actions</p>
+<dd><p>Return actions according to the given observation.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><ul class="first last simple">
+<li>ob: An ndarray with shape (n, state_dimension).</li>
+</ul>
+</dd>
+<dt>Returns:</dt>
+<dd><ul class="first last simple">
+<li>An ndarray for action with shape (n, action_dimension).</li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="rlpack.algos.trpo.TRPO.update">
 <code class="descname">update</code><span class="sig-paren">(</span><em>minibatch</em>, <em>update_ratio</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/algos/trpo.html#TRPO.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.algos.trpo.TRPO.update" title="Permalink to this definition">¶</a></dt>
-<dd><p>Update policy using minibatch samples.
-:param minibatch: a minibatch of training data
-:param update_ratio: the ratio of current update step in total update step
-:return: update info, i.e. loss.</p>
+<dd><p>Update the algorithm by suing a batch of data.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><ul class="first last">
+<li><p class="first">minibatch: A list of ndarray containing a minibatch of state, action, reward, done.</p>
+<blockquote>
+<div><ul class="simple">
+<li>state shape: (n_env, batch_size, state_dimension)</li>
+<li>action shape: (n_env, batch_size, state_dimension)</li>
+<li>reward shape: (n_env, batch_size)</li>
+<li>done shape: (n_env, batch_size)</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">update_ratio: float scalar in (0, 1).</p>
+</li>
+</ul>
+</dd>
+<dt>Returns:</dt>
+<dd><ul class="first last simple">
+<li>training infomation.</li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
@@ -249,30 +299,60 @@
 <dl class="method">
 <dt id="rlpack.algos.a2c.A2C.build_algorithm">
 <code class="descname">build_algorithm</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/algos/a2c.html#A2C.build_algorithm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.algos.a2c.A2C.build_algorithm" title="Permalink to this definition">¶</a></dt>
-<dd><p>Build algorithms using prebuilt networks.</p>
+<dd><p>Build networks for algorithm.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="rlpack.algos.a2c.A2C.build_network">
 <code class="descname">build_network</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/algos/a2c.html#A2C.build_network"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.algos.a2c.A2C.build_network" title="Permalink to this definition">¶</a></dt>
-<dd><p>Build tensorflow operations for algorithms.</p>
+<dd><p>Build networks for algorithm.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="rlpack.algos.a2c.A2C.get_action">
 <code class="descname">get_action</code><span class="sig-paren">(</span><em>ob</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/algos/a2c.html#A2C.get_action"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.algos.a2c.A2C.get_action" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return action according to the observations.
-:param obs: the observation that could be image or real-number features
-:return: actions</p>
+<dd><p>Return actions according to the given observation.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><ul class="first last simple">
+<li>ob: An ndarray with shape (n, state_dimension).</li>
+</ul>
+</dd>
+<dt>Returns:</dt>
+<dd><ul class="first last simple">
+<li>An ndarray for action with shape (n, action_dimension).</li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="rlpack.algos.a2c.A2C.update">
 <code class="descname">update</code><span class="sig-paren">(</span><em>minibatch</em>, <em>update_ratio</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/algos/a2c.html#A2C.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.algos.a2c.A2C.update" title="Permalink to this definition">¶</a></dt>
-<dd><p>Update policy using minibatch samples.
-:param minibatch: a minibatch of training data
-:param update_ratio: the ratio of current update step in total update step
-:return: update info, i.e. loss.</p>
+<dd><p>Update the algorithm by suing a batch of data.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><ul class="first last">
+<li><p class="first">minibatch: A list of ndarray containing a minibatch of state, action, reward, done.</p>
+<blockquote>
+<div><ul class="simple">
+<li>state shape: (n_env, batch_size, state_dimension)</li>
+<li>action shape: (n_env, batch_size, state_dimension)</li>
+<li>reward shape: (n_env, batch_size)</li>
+<li>done shape: (n_env, batch_size)</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">update_ratio: float scalar in (0, 1).</p>
+</li>
+</ul>
+</dd>
+<dt>Returns:</dt>
+<dd><ul class="first last simple">
+<li>training infomation.</li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
@@ -286,31 +366,61 @@
 <dl class="method">
 <dt id="rlpack.algos.dqn.DQN.build_algorithm">
 <code class="descname">build_algorithm</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/algos/dqn.html#DQN.build_algorithm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.algos.dqn.DQN.build_algorithm" title="Permalink to this definition">¶</a></dt>
-<dd><p>Build algorithms using prebuilt networks.</p>
+<dd><p>Build networks for algorithm.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="rlpack.algos.dqn.DQN.build_network">
 <code class="descname">build_network</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/algos/dqn.html#DQN.build_network"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.algos.dqn.DQN.build_network" title="Permalink to this definition">¶</a></dt>
-<dd><p>Build tensorflow operations for algorithms.</p>
+<dd><p>Build networks for algorithm.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="rlpack.algos.dqn.DQN.get_action">
 <code class="descname">get_action</code><span class="sig-paren">(</span><em>obs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/algos/dqn.html#DQN.get_action"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.algos.dqn.DQN.get_action" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get action according to the given observation and epsilon-greedy method.</p>
+<dd><p>Get actions according to the given observation.</p>
 <dl class="docutils">
-<dt>Args:</dt>
-<dd>obs: observation. The shape needs to be [None, dim_observation].</dd>
+<dt>Parameters:</dt>
+<dd><ul class="first last simple">
+<li>ob: An ndarray with shape (n, state_dimension).</li>
+</ul>
+</dd>
+<dt>Returns:</dt>
+<dd><ul class="first last simple">
+<li>An ndarray for action with shape (n).</li>
+</ul>
+</dd>
 </dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="rlpack.algos.dqn.DQN.update">
 <code class="descname">update</code><span class="sig-paren">(</span><em>minibatch</em>, <em>update_ratio: float</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/algos/dqn.html#DQN.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.algos.dqn.DQN.update" title="Permalink to this definition">¶</a></dt>
-<dd><p>更新策略，使用minibatch样本。
-:param minibatch: A minibatch of samples.
-:update ratio: the ratio of update.</p>
+<dd><p>Update the algorithm by suing a batch of data.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><ul class="first last">
+<li><p class="first">minibatch:  a list of ndarray containing a minibatch of state, action, reward, done, next_state.</p>
+<blockquote>
+<div><ul class="simple">
+<li>state shape: (n_env, batch_size, state_dimension)</li>
+<li>action shape: (n_env, batch_size)</li>
+<li>reward shape: (n_env, batch_size)</li>
+<li>done shape: (n_env, batch_size)</li>
+<li>next_state shape: (n_env, batch_size, state_dimension)</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">update_ratio: a float scalar in (0, 1).</p>
+</li>
+</ul>
+</dd>
+<dt>Returns:</dt>
+<dd><ul class="first last simple">
+<li>training infomation.</li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
@@ -324,30 +434,60 @@
 <dl class="method">
 <dt id="rlpack.algos.ddpg.DDPG.build_algorithm">
 <code class="descname">build_algorithm</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/algos/ddpg.html#DDPG.build_algorithm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.algos.ddpg.DDPG.build_algorithm" title="Permalink to this definition">¶</a></dt>
-<dd><p>Build algorithms using prebuilt networks.</p>
+<dd><p>Build networks for algorithm.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="rlpack.algos.ddpg.DDPG.build_network">
 <code class="descname">build_network</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/algos/ddpg.html#DDPG.build_network"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.algos.ddpg.DDPG.build_network" title="Permalink to this definition">¶</a></dt>
-<dd><p>Build tensorflow operations for algorithms.</p>
+<dd><p>Build networks for algorithm.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="rlpack.algos.ddpg.DDPG.get_action">
 <code class="descname">get_action</code><span class="sig-paren">(</span><em>obs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/algos/ddpg.html#DDPG.get_action"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.algos.ddpg.DDPG.get_action" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return action according to the observations.
-:param obs: the observation that could be image or real-number features
-:return: actions</p>
+<dd><p>Return actions according to the given observation.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><ul class="first last simple">
+<li>obs: An ndarray with shape (n, state_dimension).</li>
+</ul>
+</dd>
+<dt>Returns:</dt>
+<dd><ul class="first last simple">
+<li>An ndarray for action with shape (n, action_dimension).</li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="rlpack.algos.ddpg.DDPG.update">
 <code class="descname">update</code><span class="sig-paren">(</span><em>minibatch</em>, <em>update_ratio=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/rlpack/algos/ddpg.html#DDPG.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rlpack.algos.ddpg.DDPG.update" title="Permalink to this definition">¶</a></dt>
-<dd><p>Update policy using minibatch samples.
-:param minibatch: a minibatch of training data
-:param update_ratio: the ratio of current update step in total update step
-:return: update info, i.e. loss.</p>
+<dd><p>Update the algorithm by suing a batch of data.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><ul class="first last">
+<li><p class="first">minibatch: A list of ndarray containing a minibatch of state, action, reward, done.</p>
+<blockquote>
+<div><ul class="simple">
+<li>state shape: (n_env, batch_size, state_dimension)</li>
+<li>action shape: (n_env, batch_size, state_dimension)</li>
+<li>reward shape: (n_env, batch_size)</li>
+<li>done shape: (n_env, batch_size)</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">update_ratio: float scalar in (0, 1).</p>
+</li>
+</ul>
+</dd>
+<dt>Returns:</dt>
+<dd><ul class="first last simple">
+<li>training infomation.</li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>

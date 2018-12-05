@@ -79,10 +79,10 @@ class DuelDQN(Base):
         """Get actions according to the given observation.
 
         Parameters:
-            ob: An ndarray with shape (n, state_dimension).
+            - ob: An ndarray with shape (n, state_dimension).
 
         Returns:
-            An ndarray for action with shape (n).
+            - An ndarray for action with shape (n).
         """
         if obs.ndim == 1 or obs.ndim == 3:
             newobs = np.array(obs)[np.newaxis, :]
@@ -105,16 +105,18 @@ class DuelDQN(Base):
         """Update the algorithm by suing a batch of data.
 
         Parameters:
-            minibatch: A list of ndarray containing a minibatch of state, action, reward, done, next_state.
+            - minibatch: A list of ndarray containing a minibatch of state, action, reward, done, next_state.
+
                 - state shape: (n_env, batch_size, state_dimension)
                 - action shape: (n_env, batch_size)
                 - reward shape: (n_env, batch_size)
                 - done shape: (n_env, batch_size)
                 - next_state shape: (n_env, batch_size, state_dimension)
-            update_ratio: float scalar in (0, 1).
+
+            - update_ratio: float scalar in (0, 1).
 
         Returns:
-            training infomation.
+            - training infomation.
         """
         # 拆分样本。
         self.epsilon = self.epsilon_schedule(update_ratio)

@@ -82,15 +82,17 @@ class DDPG(Base):
         """Update the algorithm by suing a batch of data.
 
         Parameters:
-            minibatch: A list of ndarray containing a minibatch of state, action, reward, done.
+            - minibatch: A list of ndarray containing a minibatch of state, action, reward, done.
+
                 - state shape: (n_env, batch_size, state_dimension)
                 - action shape: (n_env, batch_size, state_dimension)
                 - reward shape: (n_env, batch_size)
                 - done shape: (n_env, batch_size)
-            update_ratio: float scalar in (0, 1).
+
+            - update_ratio: float scalar in (0, 1).
 
         Returns:
-            training infomation.
+            - training infomation.
         """
         s_batch, a_batch, r_batch, d_batch, next_s_batch = minibatch
 
@@ -141,8 +143,8 @@ class DDPG(Base):
         """Copy parameters from netnew to netold.
 
         Parameters:
-            netold: string
-            netnew: string
+            - netold: string
+            - netnew: string
         """
 
         oldvars = tf.trainable_variables(netold)
@@ -158,10 +160,10 @@ class DDPG(Base):
         """Return actions according to the given observation.
 
         Parameters:
-            ob: An ndarray with shape (n, state_dimension).
+            - obs: An ndarray with shape (n, state_dimension).
 
         Returns:
-            An ndarray for action with shape (n, action_dimension).
+            - An ndarray for action with shape (n, action_dimension).
         """
 
         if obs.ndim == 1 or obs.ndim == 3:
