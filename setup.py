@@ -5,10 +5,7 @@ setup(name="rlpack",
       packages=find_packages(),
       zip_safe=False,
       install_requires=[
-          "ray",
-          "opencv-python",
-          "msgpack_numpy",
-          "msgpack",
-          "zmq",
+          "tensorflow-gpu"
           "tensorboardX",
+          "opencv-python",
       ])

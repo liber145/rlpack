@@ -18,26 +18,43 @@ Look how easy it is to use:
 
 
 ```python
-    from tqdm import tqdm
-    from rlpack.algos import PPO
-    from rlpack.environment import AtariWrapper
-    # Get your stuff done
+from tqdm import tqdm
+import numpy as np
+from rlpack.algos import PPO
+from rlpack.environment import AsyncAtariWrapper
+from rlpack.common import DistributedMemory
 
-    env = AtariWrapper("BreakoutNoFrameskip-v4")
-    pol = PPO()
+env = AsyncAtariWrapper("BreakoutNoFrameskip-v4")
+class Config:
+    def __init__(self):
+        self.n_env = 4
+        self.entropy_coef = 0.01
+        self.vf_coef = 0.1
+        self.trajectory_length = 128
+        self.clip_schedule = lambda x: (1 - x) * 0.1
+        self.dim_observation = env.dim_observation
+        self.dim_action = env.dim_action
+config = Config()
+agent = PPO(config)
+memory = DistributedMemory(10000)
+memory.register(env)
+epinfos = []
 
-    obs = env.reset()
-    for i in tqdm(range(10000)):
-        for _ in range(128):
-            actions = agent.get_action(obs)
-            next_obs, rewards, dones, infos = env.step(actions)
+obs = env.reset()
+memory.store_s(obs)
+for i in tqdm(range(10000)):
+    for _ in range(config.trajectory_length):
+        actions = agent.get_action(obs)
+        memory.store_a(actions)
+        obs, rewards, dones, infos = env.step(actions)
+        memory.store_rds(rewards, dones, obs)
 
-            memory.store_sard(obs, actions, rewards, dones)
-            obs = next_obs
+        epinfos.extend([info["episode"] for info in infos if "episode" in info])
 
-        data_batch = memory.get_last_traj()
-        update_ratio = i / 10000
-        agent.update(data_batch, update_ratio)
+    update_ratio = i / 10000
+    data_batch = memory.get_last_n_samples(config.trajectory_length)
+    agent.update(data_batch, update_ratio)
+    print("eprewmean:", np.mean([info["r"] for info in epinfos]))
 ```
 
 

@@ -20,7 +20,7 @@ class Config(object):
         self.save_path = f"./log/ppo_{args.env_name}"
 
         # Environment.
-        self.n_env = 8
+        self.n_env = 4
         self.dim_observation = None
         self.dim_action = None   # For continuous action.
 
@@ -66,9 +66,7 @@ def learn(env, agent, config):
 
     # ------------ Warm start --------------
     obs = env.reset()
-    print("obs", obs.shape)
     memory.store_s(obs)
-    print(obs.shape)
     print(f"observation: max={np.max(obs)} min={np.min(obs)}")
     for i in tqdm(range(config.warm_start_length)):
         actions = agent.get_action(obs)
@@ -108,7 +106,7 @@ def learn(env, agent, config):
 
 
 if __name__ == "__main__":
-    env = AsyncAtariWrapper(f"{args.env_name}", 8, 6, 50000)
+    env = AsyncAtariWrapper(f"{args.env_name}", 4, 3, 50000)
     config = process_config(env)
     pol = PPO(config)
 

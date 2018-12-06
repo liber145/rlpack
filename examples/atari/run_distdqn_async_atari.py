@@ -10,7 +10,7 @@ from tqdm import tqdm
 import argparse
 
 parser = argparse.ArgumentParser(description='Process some integers.')
-parser.add_argument('--env_name',  type=str, default="Reacher-v2")
+parser.add_argument('--env_name',  type=str, default="BreakoutNoFrameskip-v4")
 args = parser.parse_args()
 
 
@@ -21,7 +21,7 @@ class Config(object):
         self.save_path = f"./log/distdqn_{args.env_name}"
 
         # Environment parameters.
-        self.n_env = 8
+        self.n_env = 4
         self.dim_observation = None
         self.dim_action = None   # For continuous action.
 
@@ -103,7 +103,7 @@ def learn(env, agent, config):
 
 
 if __name__ == "__main__":
-    env = AsyncAtariWrapper(f"{args.env_name}", 8, 6, 50000)
+    env = AsyncAtariWrapper(f"{args.env_name}", 4, 3, 50000)
     config = process_config(env)
     pol = DistDQN(config)
 
