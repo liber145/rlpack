@@ -10,7 +10,7 @@ from tqdm import tqdm
 import argparse
 
 parser = argparse.ArgumentParser(description='Process some integers.')
-parser.add_argument('--env_name',  type=str, default="Reacher-v2")
+parser.add_argument('--env_name',  type=str, default="BreakoutNoFrameskip-v4")
 args = parser.parse_args()
 
 

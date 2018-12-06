@@ -5,7 +5,7 @@ setup(name="rlpack",
       packages=find_packages(),
       zip_safe=False,
       install_requires=[
-          "tensorflow-gpu"
+          "tensorflow-gpu",
           "tensorboardX",
           "opencv-python",
       ])

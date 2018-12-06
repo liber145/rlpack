@@ -65,6 +65,8 @@ Python3.6+ is required.
 1. Install the dependencies using `environment.yml`:
 
 ```bash
+    $ git clone https://github.com/smsxgz/rl-algo.git
+    $ cd rl-algo
     $ conda env create -f environment.yml
     $ conda activate py36
 ```
@@ -72,10 +74,19 @@ Python3.6+ is required.
 2. Install `rlpack` by running:
 
 ```bash
-    $ git clone https://github.com/smsxgz/rl-algo.git
-    $ cd rl-algo
     $ python setup.py install
 ```
 
 It will install a basic learning environment in `gym`.
-To install more environments in `gym`, please refer to https://github.com/openai/gym.
+To install more environments like mujoco, please refer to https://github.com/openai/gym.
+
+### Reference
+
+- [Human-level control through deep reinforcement learning](https://www.nature.com/articles/nature14236)
+- [Deep Reinforcement Learning with Double Q-learning](https://arxiv.org/abs/1509.06461)
+- [A Distributional Perspective on Reinforcement Learning](https://arxiv.org/abs/1707.06887)
+- [Trust Region Policy Optimization](https://arxiv.org/abs/1502.05477)
+- [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347)
+- [Asynchronous Methods for Deep Reinforcement Learning](https://arxiv.org/abs/1602.01783)
+- [Continuous control with deep reinforcement learning](https://arxiv.org/abs/1509.02971)
+- [Introduction to Reinforcement Learning](https://dl.acm.org/citation.cfm?id=551283)
