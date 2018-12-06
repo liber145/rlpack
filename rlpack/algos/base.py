@@ -12,7 +12,7 @@ class Base(ABC):
         # Environment parameters.
         assert hasattr(config, "dim_observation")
         assert hasattr(config, "dim_action")
-        self.n_env = config.n_env if hasattr(config, "n_env") else 1
+        self.n_env = config.n_env if hasattr(config, "n_env") else 4
         self.dim_observation = config.dim_observation
         self.dim_action = config.dim_action
         self.rnd = config.rnd if hasattr(config, "rnd") else 1
@@ -25,8 +25,8 @@ class Base(ABC):
         self.max_grad_norm = config.max_grad_norm if hasattr(config, "max_grad_norm") else 1.0
 
         # learning scheme.
-        self.policy_lr_schedule = config.policy_lr_shedule if hasattr(config, "policy_lr_shedule") else lambda ratio: 2.5e-4
-        self.value_lr_schedule = config.value_lr_shedule if hasattr(config, "value_lr_shedule") else lambda ratio: 3e-4
+        self.policy_lr_schedule = config.policy_lr_shedule if hasattr(config, "policy_lr_shedule") else lambda ratio: 2.5e-4 * (1 - ratio)
+        self.value_lr_schedule = config.value_lr_shedule if hasattr(config, "value_lr_shedule") else lambda ratio: 3e-4 * (1 - ratio)
 
         # Save.
         self.save_path = config.save_path if hasattr(config, "save_path") else "./log"

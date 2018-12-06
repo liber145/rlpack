@@ -53,9 +53,6 @@ class AsyncMujocoWrapper(object):
         self._env_ids = None
         self.env_manager = DistributedEnvManager(n_env, port=port)
         self.env_manager.configure()
-        # p = Process(target=self.env_manager.start)
-        # p.start()
-        # p.join()
         self.env_manager.start()
 
         processes = []
@@ -202,7 +199,7 @@ class DistributedAtariWrapper(object):
 
 
 class AsyncAtariWrapper(object):
-    def __init__(self, env_name: str, n_env: int = 8, n_inference: int = 6, port=50000):
+    def __init__(self, env_name: str, n_env: int = 4, n_inference: int = 4, port=50000):
         self.n_env = n_env
         self.n_inference = n_inference
         self.env_ids = None

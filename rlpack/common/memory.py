@@ -94,7 +94,7 @@ class DistributedMemory(object):
 
     @property
     def _env_ids(self):
-        assert self.env_wrapper is not None
+        assert self.env_wrapper is not None, "Not register environment"
         return self.env_wrapper.env_id
 
     def store_s(self, states):

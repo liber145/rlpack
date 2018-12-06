@@ -17,15 +17,9 @@ class PPO(Base):
         Returns:
             None
         """
-        self.tau = config.gae
         self.entropy_coefficient = config.entropy_coef
         self.critic_coefficient = config.vf_coef
-        self.max_grad_norm = config.max_grad_norm
-
-        self.n_trajectory = config.n_trajectory
         self.trajectory_length = config.trajectory_length
-
-        self.lr_schedule = config.lr_schedule
         self.clip_schedule = config.clip_schedule
 
         super().__init__(config)
@@ -147,7 +141,7 @@ class PPO(Base):
 
             last_advantage = 0
             for t in reversed(range(self.trajectory_length)):
-                advantage_batch[i, t] = delta_value_batch[t] + self.discount * self.tau * (1 - d_batch[i, t]) * last_advantage
+                advantage_batch[i, t] = delta_value_batch[t] + self.discount * self.gae * (1 - d_batch[i, t]) * last_advantage
                 last_advantage = advantage_batch[i, t]
 
             # Compute target value.
@@ -188,7 +182,7 @@ class PPO(Base):
                         self.action: mini_a_batch,
                         self.advantage: mini_advantage_batch,
                         self.target_state_value: mini_target_state_value_batch,
-                        self.moved_lr: self.lr_schedule(update_ratio),
+                        self.moved_lr: self.policy_lr_schedule(update_ratio),
                         self.clip_epsilon: self.clip_schedule(update_ratio)})
 
                 except StopIteration:
