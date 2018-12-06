@@ -180,15 +180,9 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            None</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">tau</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">gae</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">entropy_coefficient</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">entropy_coef</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">critic_coefficient</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">vf_coef</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">max_grad_norm</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">max_grad_norm</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">n_trajectory</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">n_trajectory</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_length</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">trajectory_length</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">lr_schedule</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">lr_schedule</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">clip_schedule</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">clip_schedule</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
@@ -310,7 +304,7 @@
 
             <span class="n">last_advantage</span> <span class="o">=</span> <span class="mi">0</span>
             <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trajectory_length</span><span class="p">)):</span>
-                <span class="n">advantage_batch</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">delta_value_batch</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">discount</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">d_batch</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">t</span><span class="p">])</span> <span class="o">*</span> <span class="n">last_advantage</span>
+                <span class="n">advantage_batch</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">delta_value_batch</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">discount</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">gae</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">d_batch</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">t</span><span class="p">])</span> <span class="o">*</span> <span class="n">last_advantage</span>
                 <span class="n">last_advantage</span> <span class="o">=</span> <span class="n">advantage_batch</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">t</span><span class="p">]</span>
 
             <span class="c1"># Compute target value.</span>
@@ -351,7 +345,7 @@
                         <span class="bp">self</span><span class="o">.</span><span class="n">action</span><span class="p">:</span> <span class="n">mini_a_batch</span><span class="p">,</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">advantage</span><span class="p">:</span> <span class="n">mini_advantage_batch</span><span class="p">,</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">target_state_value</span><span class="p">:</span> <span class="n">mini_target_state_value_batch</span><span class="p">,</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">moved_lr</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">lr_schedule</span><span class="p">(</span><span class="n">update_ratio</span><span class="p">),</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">moved_lr</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">policy_lr_schedule</span><span class="p">(</span><span class="n">update_ratio</span><span class="p">),</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">clip_epsilon</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">clip_schedule</span><span class="p">(</span><span class="n">update_ratio</span><span class="p">)})</span>
 
                 <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>

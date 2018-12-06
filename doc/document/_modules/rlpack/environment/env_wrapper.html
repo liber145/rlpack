@@ -216,9 +216,6 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_env_ids</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span> <span class="o">=</span> <span class="n">DistributedEnvManager</span><span class="p">(</span><span class="n">n_env</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span><span class="o">.</span><span class="n">configure</span><span class="p">()</span>
-        <span class="c1"># p = Process(target=self.env_manager.start)</span>
-        <span class="c1"># p.start()</span>
-        <span class="c1"># p.join()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
 
         <span class="n">processes</span> <span class="o">=</span> <span class="p">[]</span>
@@ -365,7 +362,7 @@
 
 
 <div class="viewcode-block" id="AsyncAtariWrapper"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.AsyncAtariWrapper">[docs]</a><span class="k">class</span> <span class="nc">AsyncAtariWrapper</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">n_env</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span> <span class="n">n_inference</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">6</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">50000</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">n_env</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span> <span class="n">n_inference</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">50000</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">n_env</span> <span class="o">=</span> <span class="n">n_env</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">n_inference</span> <span class="o">=</span> <span class="n">n_inference</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">env_ids</span> <span class="o">=</span> <span class="kc">None</span>

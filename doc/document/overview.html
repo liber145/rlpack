@@ -180,25 +180,42 @@ by providing a basic explanation of how to do it easily.</p>
 <h1>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h1>
 <p>Look how easy it is to use:</p>
 <div class="code python highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">tqdm</span> <span class="k">import</span> <span class="n">tqdm</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">rlpack.algos</span> <span class="k">import</span> <span class="n">PPO</span>
-<span class="kn">from</span> <span class="nn">rlpack.environment</span> <span class="k">import</span> <span class="n">AtariWrapper</span>
-<span class="c1"># Get your stuff done</span>
+<span class="kn">from</span> <span class="nn">rlpack.environment</span> <span class="k">import</span> <span class="n">AsyncAtariWrapper</span>
+<span class="kn">from</span> <span class="nn">rlpack.common</span> <span class="k">import</span> <span class="n">DistributedMemory</span>
 
-<span class="n">env</span> <span class="o">=</span> <span class="n">AtariWrapper</span><span class="p">(</span><span class="s2">&quot;BreakoutNoFrameskip-v4&quot;</span><span class="p">)</span>
-<span class="n">pol</span> <span class="o">=</span> <span class="n">PPO</span><span class="p">()</span>
+<span class="n">env</span> <span class="o">=</span> <span class="n">AsyncAtariWrapper</span><span class="p">(</span><span class="s2">&quot;BreakoutNoFrameskip-v4&quot;</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">Config</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_env</span> <span class="o">=</span> <span class="mi">4</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">entropy_coef</span> <span class="o">=</span> <span class="mf">0.01</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vf_coef</span> <span class="o">=</span> <span class="mf">0.1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trajectory_length</span> <span class="o">=</span> <span class="mi">128</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clip_schedule</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">x</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dim_observation</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">dim_observation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dim_action</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">dim_action</span>
+<span class="n">config</span> <span class="o">=</span> <span class="n">Config</span><span class="p">()</span>
+<span class="n">agent</span> <span class="o">=</span> <span class="n">PPO</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+<span class="n">memory</span> <span class="o">=</span> <span class="n">DistributedMemory</span><span class="p">(</span><span class="mi">10000</span><span class="p">)</span>
+<span class="n">memory</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">env</span><span class="p">)</span>
+<span class="n">epinfos</span> <span class="o">=</span> <span class="p">[]</span>
 
 <span class="n">obs</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+<span class="n">memory</span><span class="o">.</span><span class="n">store_s</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">10000</span><span class="p">)):</span>
-    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">128</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">trajectory_length</span><span class="p">):</span>
         <span class="n">actions</span> <span class="o">=</span> <span class="n">agent</span><span class="o">.</span><span class="n">get_action</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
-        <span class="n">next_obs</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">,</span> <span class="n">infos</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">actions</span><span class="p">)</span>
+        <span class="n">memory</span><span class="o">.</span><span class="n">store_a</span><span class="p">(</span><span class="n">actions</span><span class="p">)</span>
+        <span class="n">obs</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">,</span> <span class="n">infos</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">actions</span><span class="p">)</span>
+        <span class="n">memory</span><span class="o">.</span><span class="n">store_rds</span><span class="p">(</span><span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">,</span> <span class="n">obs</span><span class="p">)</span>
 
-        <span class="n">memory</span><span class="o">.</span><span class="n">store_sard</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">actions</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">)</span>
-        <span class="n">obs</span> <span class="o">=</span> <span class="n">next_obs</span>
+        <span class="n">epinfos</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;episode&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">info</span> <span class="ow">in</span> <span class="n">infos</span> <span class="k">if</span> <span class="s2">&quot;episode&quot;</span> <span class="ow">in</span> <span class="n">info</span><span class="p">])</span>
 
-    <span class="n">data_batch</span> <span class="o">=</span> <span class="n">memory</span><span class="o">.</span><span class="n">get_last_traj</span><span class="p">()</span>
     <span class="n">update_ratio</span> <span class="o">=</span> <span class="n">i</span> <span class="o">/</span> <span class="mi">10000</span>
+    <span class="n">data_batch</span> <span class="o">=</span> <span class="n">memory</span><span class="o">.</span><span class="n">get_last_n_samples</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">trajectory_length</span><span class="p">)</span>
     <span class="n">agent</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">data_batch</span><span class="p">,</span> <span class="n">update_ratio</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;eprewmean:&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">([</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;r&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">info</span> <span class="ow">in</span> <span class="n">epinfos</span><span class="p">]))</span>
 </pre></div>
 </div>
 </div>
