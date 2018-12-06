@@ -13,7 +13,7 @@ signal.signal(signal.SIGINT, exit_gracefully)
 
 class DistributedEnvClient(Process):
     """
-    start on worker client.
+    Start on worker client.
     """
 
     def __init__(self, env, hostname='localhost', port=50000):
@@ -41,6 +41,7 @@ class DistributedEnvClient(Process):
         self.srd_queue.put([s])
 
     def run(self):
+        """Run forever. If done, reset."""
         while True:
             action = self.a_queue.get()
             info = {}
@@ -54,10 +55,16 @@ class DistributedEnvClient(Process):
 
     @property
     def dim_observation(self):
+        """The dimension of observatin."""
         return self._dim_observation
 
     @property
     def dim_action(self):
+        """The dimension of action.
+
+        For discrete-action game, it means the number of actions.
+        For continuous-action game, it means the dimension of action.
+        """
         return self._dim_action
 
 

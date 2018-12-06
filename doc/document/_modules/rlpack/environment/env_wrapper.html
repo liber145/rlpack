@@ -237,25 +237,40 @@
         <span class="k">return</span> <span class="n">env</span>
 
 <div class="viewcode-block" id="AsyncMujocoWrapper.step"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.AsyncMujocoWrapper.step">[docs]</a>    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actions</span><span class="p">:</span> <span class="n">List</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Forward one step according to the given actions.</span>
+
+<span class="sd">        Parameters:</span>
+<span class="sd">            - actions: a list of actions.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - states (np.ndarray): (n_inference, state_dimension)</span>
+<span class="sd">            - rewards (np.ndarray): (n_inference)</span>
+<span class="sd">            - dones (np.ndarray): (n_inference)</span>
+<span class="sd">            - infos</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">act_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">env_id</span><span class="p">:</span> <span class="n">act</span> <span class="k">for</span> <span class="n">env_id</span><span class="p">,</span> <span class="n">act</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_env_ids</span><span class="p">,</span> <span class="n">actions</span><span class="p">)}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">act_dict</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_env_ids</span><span class="p">,</span> <span class="n">obs</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">,</span> <span class="n">infos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span><span class="o">.</span><span class="n">get_envs_to_inference</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_inference</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">rewards</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">dones</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">infos</span></div>
 
 <div class="viewcode-block" id="AsyncMujocoWrapper.reset"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.AsyncMujocoWrapper.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Reset environment.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_env_ids</span><span class="p">,</span> <span class="n">states</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span><span class="o">.</span><span class="n">get_envs_to_inference</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_env</span><span class="p">,</span> <span class="n">state_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">states</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span></div>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dim_observation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The dimension of observation.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dim_observation</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dim_action</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The dimension of action.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dim_action</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">env_id</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The ID of environment.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_env_ids</span></div>
 
 
@@ -292,15 +307,18 @@
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">rewards</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">dones</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">infos</span></div>
 
 <div class="viewcode-block" id="DistributedMujocoWrapper.reset"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.DistributedMujocoWrapper.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Reset the environment.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">states</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span><span class="o">.</span><span class="n">get_envs_to_inference</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_env</span><span class="p">,</span> <span class="n">state_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">states</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span></div>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dim_observation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The dimension of observation.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dim_observation</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dim_action</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The dimension of action.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dim_action</span>
 
     <span class="nd">@property</span>
@@ -372,6 +390,17 @@
         <span class="k">return</span> <span class="n">env</span>
 
 <div class="viewcode-block" id="AsyncAtariWrapper.step"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.AsyncAtariWrapper.step">[docs]</a>    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actions</span><span class="p">:</span> <span class="n">List</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Forward one step according to the given actions.</span>
+
+<span class="sd">        Parameters:</span>
+<span class="sd">            - actions: a list of actions.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - states (np.ndarray): (n_inference, state_dimension)</span>
+<span class="sd">            - rewards (np.ndarray): (n_inference)</span>
+<span class="sd">            - dones (np.ndarray): (n_inference)</span>
+<span class="sd">            - infos</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">act_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">env_id</span><span class="p">:</span> <span class="n">act</span> <span class="k">for</span> <span class="n">env_id</span><span class="p">,</span> <span class="n">act</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">actions</span><span class="p">)}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">act_dict</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">obs</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">,</span> <span class="n">infos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span><span class="o">.</span><span class="n">get_envs_to_inference</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_inference</span><span class="p">)</span>
@@ -380,19 +409,23 @@
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">rewards</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">dones</span><span class="p">,</span> <span class="n">infos</span></div>
 
 <div class="viewcode-block" id="AsyncAtariWrapper.reset"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.env_wrapper.AsyncAtariWrapper.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Reset the environment.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">states</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_manager</span><span class="o">.</span><span class="n">get_envs_to_inference</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_env</span><span class="p">,</span> <span class="n">state_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">states</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span></div>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">env_id</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The id of environment.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_ids</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dim_observation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The dimension of observation.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dim_observation</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dim_action</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The dimension of action.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dim_action</span></div>
 
 <span class="c1"># class CartpoleWrapper(StackEnv):</span>

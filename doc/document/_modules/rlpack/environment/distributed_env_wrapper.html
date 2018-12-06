@@ -161,12 +161,7 @@
            <div itemprop="articleBody">
             
   <h1>Source code for rlpack.environment.distributed_env_wrapper</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
-
-<span class="sd">通过共享内存的方式实现多机多进程并行Env.</span>
-
-<span class="sd">&quot;&quot;&quot;</span>
-<span class="kn">import</span> <span class="nn">signal</span>
+<span></span><span class="kn">import</span> <span class="nn">signal</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">time</span>
 <span class="kn">from</span> <span class="nn">multiprocessing.managers</span> <span class="k">import</span> <span class="n">BaseManager</span>
@@ -186,7 +181,7 @@
 
 <div class="viewcode-block" id="DistributedEnvManager"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.distributed_env_wrapper.DistributedEnvManager">[docs]</a><span class="k">class</span> <span class="nc">DistributedEnvManager</span><span class="p">(</span><span class="n">Thread</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    start on main learning process.</span>
+<span class="sd">    start on main gaming process.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_env</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">50000</span><span class="p">):</span>
@@ -214,8 +209,14 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">s</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="DistributedEnvManager.get_envs_to_inference"><a class="viewcode-back" href="../../../api/rlpack.environment.html#rlpack.environment.distributed_env_wrapper.DistributedEnvManager.get_envs_to_inference">[docs]</a>    <span class="k">def</span> <span class="nf">get_envs_to_inference</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">state_only</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        取出n个env的 r_t, gameover_t, s_{t+1}</span>
+        <span class="sd">&quot;&quot;&quot;Get one step forward states, reward, dones, infos.</span>
+
+<span class="sd">        Parameters:</span>
+<span class="sd">            - n: an integer. the number of environmentsself.</span>
+<span class="sd">            - state_only: True at the first step for reset.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - 5 lists. environment_ids, next_observations, rewards, dones, infos.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">srdis</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">env_ids</span> <span class="o">=</span> <span class="p">[]</span>

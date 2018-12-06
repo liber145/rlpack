@@ -74,25 +74,40 @@ class AsyncMujocoWrapper(object):
         return env
 
     def step(self, actions: List):
+        """Forward one step according to the given actions.
+
+        Parameters:
+            - actions: a list of actions.
+
+        Returns:
+            - states (np.ndarray): (n_inference, state_dimension)
+            - rewards (np.ndarray): (n_inference)
+            - dones (np.ndarray): (n_inference)
+            - infos
+        """
         act_dict = {env_id: act for env_id, act in zip(self._env_ids, actions)}
         self.env_manager.step(act_dict)
         self._env_ids, obs, rewards, dones, infos = self.env_manager.get_envs_to_inference(n=self.n_inference)
         return np.asarray(obs, dtype=np.float32), np.asarray(rewards, dtype=np.float32), np.asarray(dones, dtype=np.float32), infos
 
     def reset(self):
+        """Reset environment."""
         self._env_ids, states = self.env_manager.get_envs_to_inference(n=self.n_env, state_only=True)
         return np.asarray(states, dtype=np.float32)
 
     @property
     def dim_observation(self):
+        """The dimension of observation."""
         return self._dim_observation
 
     @property
     def dim_action(self):
+        """The dimension of action."""
         return self._dim_action[0]
 
     @property
     def env_id(self):
+        """The ID of environment."""
         return self._env_ids
 
 
@@ -129,15 +144,18 @@ class DistributedMujocoWrapper(object):
         return np.asarray(obs, dtype=np.float32), np.asarray(rewards, dtype=np.float32), np.asarray(dones, dtype=np.float32), infos
 
     def reset(self):
+        """Reset the environment."""
         self.env_ids, states = self.env_manager.get_envs_to_inference(n=self.n_env, state_only=True)
         return np.asarray(states, dtype=np.float32)
 
     @property
     def dim_observation(self):
+        """The dimension of observation."""
         return self._dim_observation
 
     @property
     def dim_action(self):
+        """The dimension of action."""
         return self._dim_action
 
     @property
@@ -209,6 +227,17 @@ class AsyncAtariWrapper(object):
         return env
 
     def step(self, actions: List):
+        """Forward one step according to the given actions.
+
+        Parameters:
+            - actions: a list of actions.
+
+        Returns:
+            - states (np.ndarray): (n_inference, state_dimension)
+            - rewards (np.ndarray): (n_inference)
+            - dones (np.ndarray): (n_inference)
+            - infos
+        """
         act_dict = {env_id: act for env_id, act in zip(self.env_ids, actions)}
         self.env_manager.step(act_dict)
         self.env_ids, obs, rewards, dones, infos = self.env_manager.get_envs_to_inference(n=self.n_inference)
@@ -217,19 +246,23 @@ class AsyncAtariWrapper(object):
         return np.asarray(obs, dtype=np.float32), np.asarray(rewards, dtype=np.float32), dones, infos
 
     def reset(self):
+        """Reset the environment."""
         self.env_ids, states = self.env_manager.get_envs_to_inference(n=self.n_env, state_only=True)
         return np.asarray(states, dtype=np.float32)
 
     @property
     def env_id(self):
+        """The id of environment."""
         return self.env_ids
 
     @property
     def dim_observation(self):
+        """The dimension of observation."""
         return self._dim_observation
 
     @property
     def dim_action(self):
+        """The dimension of action."""
         return self._dim_action
 
 # class CartpoleWrapper(StackEnv):

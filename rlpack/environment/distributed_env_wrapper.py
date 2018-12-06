@@ -1,8 +1,3 @@
-"""
-
-通过共享内存的方式实现多机多进程并行Env.
-
-"""
 import signal
 import sys
 import time
@@ -23,7 +18,7 @@ signal.signal(signal.SIGINT, exit_gracefully)
 
 class DistributedEnvManager(Thread):
     """
-    start on main learning process.
+    start on main gaming process.
     """
 
     def __init__(self, n_env, port=50000):
@@ -51,8 +46,14 @@ class DistributedEnvManager(Thread):
         self.s.serve_forever()
 
     def get_envs_to_inference(self, n: int, state_only: bool = False):
-        """
-        取出n个env的 r_t, gameover_t, s_{t+1}
+        """Get one step forward states, reward, dones, infos.
+
+        Parameters:
+            - n: an integer. the number of environmentsself.
+            - state_only: True at the first step for reset.
+
+        Returns:
+            - 5 lists. environment_ids, next_observations, rewards, dones, infos.
         """
         srdis = []
         env_ids = []
