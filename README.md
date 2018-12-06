@@ -14,7 +14,7 @@ by providing a basic explanation of how to do it easily.
 
 ### Usage
 
-Look how easy it is to use:
+Look how to use it:
 
 
 ```python
@@ -24,6 +24,7 @@ from rlpack.algos import PPO
 from rlpack.environment import AsyncAtariWrapper
 from rlpack.common import DistributedMemory
 
+# initialization.
 env = AsyncAtariWrapper("BreakoutNoFrameskip-v4")
 class Config:
     def __init__(self):
@@ -40,6 +41,7 @@ memory = DistributedMemory(10000)
 memory.register(env)
 epinfos = []
 
+# training process.
 obs = env.reset()
 memory.store_s(obs)
 for i in tqdm(range(10000)):

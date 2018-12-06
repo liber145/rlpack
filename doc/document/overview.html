@@ -178,13 +178,14 @@ by providing a basic explanation of how to do it easily.</p>
 </div>
 <div class="section" id="usage">
 <h1>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h1>
-<p>Look how easy it is to use:</p>
+<p>Look how to use it:</p>
 <div class="code python highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">tqdm</span> <span class="k">import</span> <span class="n">tqdm</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">rlpack.algos</span> <span class="k">import</span> <span class="n">PPO</span>
 <span class="kn">from</span> <span class="nn">rlpack.environment</span> <span class="k">import</span> <span class="n">AsyncAtariWrapper</span>
 <span class="kn">from</span> <span class="nn">rlpack.common</span> <span class="k">import</span> <span class="n">DistributedMemory</span>
 
+<span class="c1"># initialization.</span>
 <span class="n">env</span> <span class="o">=</span> <span class="n">AsyncAtariWrapper</span><span class="p">(</span><span class="s2">&quot;BreakoutNoFrameskip-v4&quot;</span><span class="p">)</span>
 <span class="k">class</span> <span class="nc">Config</span><span class="p">:</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -201,6 +202,7 @@ by providing a basic explanation of how to do it easily.</p>
 <span class="n">memory</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">env</span><span class="p">)</span>
 <span class="n">epinfos</span> <span class="o">=</span> <span class="p">[]</span>
 
+<span class="c1"># training process.</span>
 <span class="n">obs</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
 <span class="n">memory</span><span class="o">.</span><span class="n">store_s</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">10000</span><span class="p">)):</span>

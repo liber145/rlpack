@@ -16,7 +16,7 @@ by providing a basic explanation of how to do it easily.
 Usage
 =====
 
-Look how easy it is to use:
+Look how to use it:
 
 .. code:: python
 
@@ -26,6 +26,7 @@ Look how easy it is to use:
     from rlpack.environment import AsyncAtariWrapper
     from rlpack.common import DistributedMemory
 
+    # initialization.
     env = AsyncAtariWrapper("BreakoutNoFrameskip-v4")
     class Config:
         def __init__(self):
@@ -42,6 +43,7 @@ Look how easy it is to use:
     memory.register(env)
     epinfos = []
 
+    # training process.
     obs = env.reset()
     memory.store_s(obs)
     for i in tqdm(range(10000)):
