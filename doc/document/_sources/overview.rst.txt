@@ -2,15 +2,14 @@ Introduction
 ============
 
 **rlpack** is an intuitive, lightweight and flexible reinforcement learning library.
-It bundles will solve your problem of where to start with documentation,
-by providing a basic explanation of how to do it easily.
+It bundles up-to-date reinforcement learning algorithms. 
 
 
 **Features:**
 
 - Lightweight, depending only on TensorFlow and Numpy
 - Decoupling agent and environment, making it easy to integrate and use
-- Easy to reproduce up-to-date RL algorithms
+- Providing an asynchronous environment framework to reduce the interaction waiting time
 
 
 Usage
