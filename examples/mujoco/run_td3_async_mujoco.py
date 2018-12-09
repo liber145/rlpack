@@ -112,7 +112,7 @@ def learn(env, agent, config):
 
 
 if __name__ == "__main__":
-    env = AsyncMujocoWrapper(f"{args.env_name}", 1, 1, 5007)
+    env = AsyncMujocoWrapper(f"{args.env_name}", 1, 1, 50011)
     config = process_env(env)
     agent = TD3(config)
     learn(env, agent, config)

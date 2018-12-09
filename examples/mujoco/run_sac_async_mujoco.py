@@ -6,11 +6,12 @@ from collections import deque
 
 
 import numpy as np
-from rlpack.algos import ContinuousPPO
+from rlpack.algos import SAC
 from rlpack.common import DistributedMemory
 from rlpack.environment import AsyncMujocoWrapper
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
+
 import argparse
 
 parser = argparse.ArgumentParser(description='Process some integers.')
@@ -23,8 +24,8 @@ class Config(object):
 
     def __init__(self):
         """All papameters here."""
-        self.rnd = 10
-        self.save_path = f"./log/ppo_{args.env_name}"
+        self.rnd = 4
+        self.save_path = f"./log/td3_{args.env_name}_2"
 
         # 环境
         self.n_env = 1
@@ -32,27 +33,20 @@ class Config(object):
         self.dim_action = None   # gym中不同环境的action数目不同。
 
         # 训练长度
-        self.trajectory_length = 2048
+        self.trajectory_length = 1000
         self.update_step = 5000   # for each env
-        self.warm_start_length = 2000
-        self.memory_size = 2149
+        self.warm_start_length = 10000
+        self.memory_size = int(1e6)
 
         # 周期参数
-        self.training_epoch = 10
         self.save_model_freq = 50
         self.log_freq = 1
 
         # 算法参数
-        self.batch_size = 64
+        self.batch_size = 128
         self.discount = 0.99
-        self.gae = 0.95
-        self.policy_lr_schedule = lambda x: 3e-4
-        self.value_lr_schedule = lambda x: 3e-4
-
-        self.clip_schedule = lambda x: (1 - x) * 0.1
-        self.vf_coef = 1.0
-        self.entropy_coef = 0.01
-        self.max_grad_norm = 40
+        self.policy_lr_schedule = lambda x: 1e-3
+        self.value_lr_schedule = lambda x: 1e-3
 
 
 def process_env(env):
@@ -102,8 +96,10 @@ def learn(env, agent, config):
             obs = next_obs
 
         update_ratio = i / config.update_step
-        data_batch = memory.get_last_n_samples(config.trajectory_length)
-        agent.update(data_batch, update_ratio)
+
+        for _ in range(config.trajectory_length):
+            data_batch = memory.sample_transition(config.batch_size)
+            agent.update(data_batch, update_ratio)
 
         epinfobuf.extend(epinfos)
         summary_writer.add_scalar("eprewmean", safemean([epinfo["r"] for epinfo in epinfobuf]), global_step=i)
@@ -116,7 +112,7 @@ def learn(env, agent, config):
 
 
 if __name__ == "__main__":
-    env = AsyncMujocoWrapper(f"{args.env_name}", 1, 1, 50003)
+    env = AsyncMujocoWrapper(f"{args.env_name}", 1, 1, 50011)
     config = process_env(env)
-    agent = ContinuousPPO(config)
+    agent = SAC(config)
     learn(env, agent, config)

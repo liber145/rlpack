@@ -71,7 +71,7 @@ class A2C(Base):
         Parameters:
             - minibatch: A list of ndarray containing a minibatch of state, action, reward, done.
 
-                - state shape: (n_env, batch_size, state_dimension)
+                - state shape: (n_env, batch_size+1, state_dimension)
                 - action shape: (n_env, batch_size, state_dimension)
                 - reward shape: (n_env, batch_size)
                 - done shape: (n_env, batch_size)

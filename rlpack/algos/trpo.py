@@ -84,7 +84,8 @@ class TRPO(Base):
         # self.train_critic_op = self.critic_optimizer.minimize(self.critic_loss, global_step=tf.train.get_global_step(), var_list=self.critic_vars)
 
         # Build sample action.
-        self.sample_action = self.mu + tf.exp(self.log_var / 2.0) * tf.random.normal(shape=[4, self.dim_action], dtype=tf.float32)
+        self.n_output_action = tf.placeholder(tf.int32)
+        self.sample_action = self.mu + tf.exp(self.log_var / 2.0) * tf.random_normal(shape=[self.n_output_action, self.dim_action], dtype=tf.float32)
 
     def update(self, minibatch, update_ratio):
         """Update the algorithm by suing a batch of data.
@@ -92,7 +93,7 @@ class TRPO(Base):
         Parameters:
             - minibatch: A list of ndarray containing a minibatch of state, action, reward, done.
 
-                - state shape: (n_env, batch_size, state_dimension)
+                - state shape: (n_env, batch_size+1, state_dimension)
                 - action shape: (n_env, batch_size, state_dimension)
                 - reward shape: (n_env, batch_size)
                 - done shape: (n_env, batch_size)
@@ -243,5 +244,6 @@ class TRPO(Base):
         Returns:
             - An ndarray for action with shape (n, action_dimension).
         """
-        actions = self.sess.run(self.sample_action, feed_dict={self.observation: obs})
+        n = obs.shape[0]
+        actions = self.sess.run(self.sample_action, feed_dict={self.observation: obs, self.n_output_action: n})
         return actions
