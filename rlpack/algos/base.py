@@ -36,6 +36,7 @@ class Base(ABC):
         tf.reset_default_graph()
         tf.set_random_seed(self.rnd)
         tf.Variable(0, name="global_step", trainable=False)
+        self.increment_global_step = tf.assign_add(tf.train.get_global_step(), 1)
         np.random.seed(self.rnd)
 
         # ------------------------ Build network ------------------------

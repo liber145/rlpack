@@ -25,7 +25,7 @@ class Config(object):
     def __init__(self):
         """All papameters here."""
         self.rnd = 4
-        self.save_path = f"./log/td3_{args.env_name}_2"
+        self.save_path = f"./log/sac_{args.env_name}_2"
 
         # 环境
         self.n_env = 1
@@ -35,7 +35,7 @@ class Config(object):
         # 训练长度
         self.trajectory_length = 1000
         self.update_step = 5000   # for each env
-        self.warm_start_length = 10000
+        self.warm_start_length = 1000
         self.memory_size = int(1e6)
 
         # 周期参数
