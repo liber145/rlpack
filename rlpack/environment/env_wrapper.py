@@ -12,38 +12,31 @@ from .distributed_env_wrapper import DistributedEnvManager
 from .mujoco_wrappers import make_mujoco
 from .stack_env import StackEnv
 
-# class MujocoWrapper(StackEnv):
-#     def __init__(self, env_id: str, n_env: int):
-#         super().__init__(env_id, n_env)
-#         self.trajectory_rewards = [0 for _ in range(self.n_env)]
-#         self.trajectory_length = [0 for _ in range(self.n_env)]
-#         self._dim_observation = self.envs[0].observation_space.shape
-#         self._dim_action = self.envs[0].action_space.shape[0]
-#
-#     def step(self, actions):
-#         obs, rewards, dones, _ = super().step(actions)
-#         epinfos = []
-#         for i in range(self.n_env):
-#             if self.last_dones[i]:
-#                 epinfos.append({"episode": {"r": self.trajectory_rewards[i], "l": self.trajectory_length[i]}})
-#                 self.trajectory_length[i] = 0
-#                 self.trajectory_rewards[i] = 0
-#             else:
-#                 self.trajectory_length[i] += 1
-#                 self.trajectory_rewards[i] += rewards[i]
-#         return obs, rewards, dones, epinfos
-#
-#     @property
-#     def dim_observation(self):
-#         return self._dim_observation
-#
-#     @property
-#     def dim_action(self):
-#         return self._dim_action
-#
-#     @property
-#     def is_continuous(self):
-#         return True
+
+class MujocoWrapper(StackEnv):
+    def __init__(self, env_id: str, n_env: int):
+        self._n_env = n_env
+        super().__init__(lambda x: self._make_env(env_id, x), n_env)
+        print(self.envs)
+        self._dim_observation = self.envs[0].dim_observation
+        self._dim_action = self.envs[0].dim_action
+
+    def _make_env(self, env_id: str, rank: int):
+        env = make_mujoco(env_id)
+        env.seed(rank + 1)
+        return env
+
+    @property
+    def dim_observation(self):
+        return self._dim_observation
+
+    @property
+    def dim_action(self):
+        return self._dim_action
+
+    @property
+    def n_env(self):
+        return self._n_env
 
 
 class AsyncMujocoWrapper(object):
@@ -100,7 +93,7 @@ class AsyncMujocoWrapper(object):
     @property
     def dim_action(self):
         """The dimension of action."""
-        return self._dim_action[0]
+        return self._dim_action
 
     @property
     def env_id(self):

@@ -28,7 +28,7 @@ class LogTrajectory(gym.Wrapper):
 
     @property
     def dim_action(self):
-        return self.env.action_space.shape
+        return self.env.action_space.shape[0]
 
     @property
     def action_range(self):

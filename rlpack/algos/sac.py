@@ -14,6 +14,7 @@ class SAC(Base):
         self.action_low = -1.0
         self.policy_mean_reg_weight = 1e-3
         self.policy_std_reg_weight = 1e-3
+        self.alpha = 0.2
         super().__init__(config)
         self.sess.run(self.init_target_vf)
 
@@ -21,48 +22,49 @@ class SAC(Base):
         self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], name="observation")
         self.action = tf.placeholder(tf.float32, [None, self.dim_action], name="action")
         self.target_observation = tf.placeholder(tf.float32, [None, *self.dim_observation], name="target_observation")
+        print("observation:", self.dim_observation)
 
         with tf.variable_scope("policy_net"):
-            x = tf.layers.dense(self.observation, 64, activation=tf.nn.relu)
-            x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+            x = tf.layers.dense(self.observation, 100, activation=tf.nn.relu)
+            x = tf.layers.dense(x, 100, activation=tf.nn.relu)
             self.mu = tf.layers.dense(x, self.dim_action, activation=tf.nn.tanh)
             self.log_std = tf.layers.dense(x, self.dim_action, activation=tf.nn.tanh)
             self.normal_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.mu, scale_diag=tf.exp(self.log_std))
             self.sampled_action = self.normal_dist.sample()
-            self.sampled_action = tf.tanh(self.sampled_action)
+            self.sampled_action = tf.tanh(self.sampled_action)   # squash into [-1, 1]
 
         with tf.variable_scope("state_value_net"):
-            x = tf.layers.dense(self.observation, 64, activation=tf.nn.relu)
-            x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+            x = tf.layers.dense(self.observation, 100, activation=tf.nn.relu)
+            x = tf.layers.dense(x, 100, activation=tf.nn.relu)
             self.sval = tf.squeeze(tf.layers.dense(x, 1))
 
         with tf.variable_scope("target_state_value_net"):
-            x = tf.layers.dense(self.target_observation, 64, activation=tf.nn.relu)
-            x = tf.layers.dense(x, 64, activation=tf.nn.relu, )
+            x = tf.layers.dense(self.target_observation, 100, activation=tf.nn.relu)
+            x = tf.layers.dense(x, 100, activation=tf.nn.relu)
             self.target_sval = tf.squeeze(tf.layers.dense(x, 1))
 
         with tf.variable_scope("action_value_net"):
             x = tf.concat([self.observation, self.action], axis=1)
-            x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-            x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+            x = tf.layers.dense(x, 100, activation=tf.nn.relu)
+            x = tf.layers.dense(x, 100, activation=tf.nn.relu)
             self.qval = tf.squeeze(tf.layers.dense(x, 1))
 
         with tf.variable_scope("action_value_net", reuse=True):
             x = tf.concat([self.observation, self.sampled_action], axis=1)
-            x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-            x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+            x = tf.layers.dense(x, 100, activation=tf.nn.relu)
+            x = tf.layers.dense(x, 100, activation=tf.nn.relu)
             self.qval_sampled_action = tf.squeeze(tf.layers.dense(x, 1))
 
         with tf.variable_scope("action_value_net_2"):
             x = tf.concat([self.observation, self.action], axis=1)
-            x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-            x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+            x = tf.layers.dense(x, 100, activation=tf.nn.relu)
+            x = tf.layers.dense(x, 100, activation=tf.nn.relu)
             self.qval_2 = tf.squeeze(tf.layers.dense(x, 1))
 
         with tf.variable_scope("action_value_net_2", reuse=True):
             x = tf.concat([self.observation, self.sampled_action], axis=1)
-            x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-            x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+            x = tf.layers.dense(x, 100, activation=tf.nn.relu)
+            x = tf.layers.dense(x, 100, activation=tf.nn.relu)
             self.qval_sampled_action_2 = tf.squeeze(tf.layers.dense(x, 1))
 
     def clip_but_pass_gradient(self, x, l=-1., u=1.):
@@ -71,8 +73,8 @@ class SAC(Base):
         return x + tf.stop_gradient((u - x)*clip_up + (l - x)*clip_low)
 
     def build_algorithm(self):
-        self.actor_optimizer = tf.train.AdamOptimizer(3e-4)
-        self.critic_optimizer = tf.train.AdamOptimizer(3e-4)
+        self.actor_optimizer = tf.train.AdamOptimizer(1e-3)
+        self.critic_optimizer = tf.train.AdamOptimizer(1e-3)
 
         self.reward = tf.placeholder(tf.float32, [None], name="reward")
         self.mask = tf.placeholder(tf.float32, [None], name="mask")   # 1 - done
@@ -84,7 +86,7 @@ class SAC(Base):
 
         # Compute VF loss.
         min_qval_sampled_action = tf.minimum(self.qval_sampled_action, self.qval_sampled_action_2)
-        tmp = 0.5 * (self.sval - tf.stop_gradient(min_qval_sampled_action - logp)) ** 2
+        tmp = 0.5 * (self.sval - tf.stop_gradient(min_qval_sampled_action - self.alpha * logp)) ** 2
         self.VF_loss = tf.reduce_mean(tmp)
         # tf.print("tmp:", tmp.shape, output_stream=sys.stdout)
 
@@ -95,7 +97,7 @@ class SAC(Base):
         self.Value_loss = self.VF_loss + q1_loss + q2_loss
 
         # Compute Policy loss.
-        self.Policy_loss = tf.reduce_mean(logp - self.qval_sampled_action)
+        self.Policy_loss = tf.reduce_mean(self.alpha * logp - self.qval_sampled_action)
         mean_reg_loss = self.policy_mean_reg_weight * tf.reduce_mean(self.mu**2)
         std_reg_loss = self.policy_std_reg_weight * tf.reduce_mean(self.log_std**2)
         self.Policy_loss += mean_reg_loss + std_reg_loss
@@ -114,10 +116,13 @@ class SAC(Base):
 
         # Update network.
         self.update_policy = self.actor_optimizer.minimize(self.Policy_loss, var_list=tf.trainable_variables("policy_net"))
+        
         with tf.control_dependencies([self.update_policy]):
             self.update_value = self.critic_optimizer.minimize(self.Value_loss, var_list=tf.trainable_variables("state_value_net")+tf.trainable_variables("action_value_net"))
+
         with tf.control_dependencies([self.update_value]):
             self.update_target_vf = _update_target("target_state_value_net", "state_value_net", bili=self.tau)
+
         self.init_target_vf = _update_target("target_state_value_net", "state_value_net", bili=0.0)
 
         # Staistics.
@@ -132,16 +137,16 @@ class SAC(Base):
         d_batch = d_batch.reshape(n_env * batch_size)
         next_s_batch = next_s_batch.reshape(n_env * batch_size, *self.dim_observation)
 
-        self.sess.run(self.increment_global_step)
-        self.sess.run([self.update_policy, self.update_value, self.update_target_vf], feed_dict={
+        global_step, _ = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
+        value_loss, policy_loss, _, _, _ = self.sess.run([self.Value_loss, self.Policy_loss, self.update_policy, self.update_value, self.update_target_vf], feed_dict={
             self.observation: s_batch,
             self.action: a_batch,
             self.target_observation: next_s_batch,
             self.reward: r_batch,
             self.mask: 1 - d_batch})
 
-        # statistics = self.sess.run(self.all_variables_norm)
-        # print(f"varnorm: {statistics}")
+        # if global_step % 128 == 0:
+        #     print(f"value loss: {value_loss}  policy loss: {policy_loss}")
 
     def get_action(self, obs):
         if obs.ndim == 1 or obs.ndim == 3:
@@ -150,8 +155,5 @@ class SAC(Base):
             assert obs.ndim == 2 or obs.ndim == 4
             newobs = obs
 
-        mu, log_std = self.sess.run([self.mu, self.log_std], feed_dict={self.observation: newobs})
-        # print(f"std: {np.exp(log_std)}")
-        action = mu + np.random.normal(scale=np.exp(log_std), size=mu.shape)
-        action = np.clip(action, self.action_low, self.action_high)
+        action = self.sess.run(self.sampled_action, feed_dict={self.observation: newobs})
         return action

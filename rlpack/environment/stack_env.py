@@ -1,16 +1,14 @@
-import gym
 import numpy as np
+from typing import List, Callable
 
-from .mujoco_wrappers import make_mujoco
 
 class StackEnv(object):
     """
     一次reset，周而复始。
     """
 
-    def __init__(self, env_id: str, n_env: int):
-        self.envs = [gym.make(env_id) for _ in range(n_env)]
-        self.last_dones = [False for _ in range(self.n_env)]
+    def __init__(self, env_func: Callable, n_env: int):
+        self.envs = [env_func(i) for i in range(n_env)]
 
     def reset(self) -> np.ndarray:
         """
@@ -22,25 +20,20 @@ class StackEnv(object):
             obs.append(ob)
         return np.asarray(obs)
 
-    def step(self, actions):
-        obs, rewards, dones, infos = [], [], [], []
+    def step(self, actions: List):
+        next_obs, rewards, dones, infos = [], [], [], []
         for i in range(self.n_env):
-            if self.last_dones[i]:
-                ob = self.envs[i].reset()
-                obs.append(ob)
-                rewards.append(0)
-                dones.append(True)
-                self.last_dones[i] = False
-                infos.append({"real_reward": 0, "real_done": False})
-            else:
-                ob, reward, done, info = self.envs[i].step(actions[i])
-                obs.append(ob)
-                rewards.append(reward)
-                dones.append(done)
-                infos.append(info)
-                self.last_dones[i] = done
+            obs, rew, done, info = self.envs[i].step(actions[i])
 
-        return np.asarray(obs), np.asarray(rewards), np.asarray(dones), infos
+            if done:
+                obs = self.envs[i].reset()
+
+            next_obs.append(obs)
+            rewards.append(rew)
+            dones.append(done)
+            infos.append(info)
+
+        return np.asarray(next_obs), np.asarray(rewards), np.asarray(dones), infos
 
     def close(self):
         for i in range(len(self.n_env)):
@@ -57,14 +50,7 @@ class StackEnv(object):
     @property
     def dim_action(self):
         """
-        :return: the dimension of continuous action
-        """
-        pass
-
-    @property
-    def n_action(self):
-        """
-        :return: the number of discrete action
+        :return: the dimension of continuous action, or the number of discrete action.
         """
         pass
 

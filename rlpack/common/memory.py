@@ -66,17 +66,46 @@ class Memory(object):
         ob_shape = state_batch.shape[2:]
         act_shape = action_batch.shape[2:]
 
-        state_batch = state_batch.swapaxes(0, 1).reshape(n_env * n, *ob_shape)
-        action_batch = action_batch.swapaxes(0, 1).reshape(n_env * n, *act_shape)
-        reward_batch = reward_batch.swapaxes(0, 1).reshape(n_env * n)
-        done_batch = done_batch.swapaxes(0, 1).reshape(n_env * n)
-        next_state_batch = next_state_batch.swapaxes(0, 1).reshape(n_env * n, *ob_shape)
+        state_batch = state_batch.swapaxes(0, 1)
+        action_batch = action_batch.swapaxes(0, 1)
+        reward_batch = reward_batch.swapaxes(0, 1)
+        done_batch = done_batch.swapaxes(0, 1)
+        next_state_batch = next_state_batch.swapaxes(0, 1)
 
         return state_batch, action_batch, reward_batch, done_batch, next_state_batch
 
     @property
     def size(self):
         return len(self.done_queue)
+
+
+class SimpleMemory(object):
+    def __init__(self, maxlen: int = 100): 
+        self.obs_queue = deque(maxlen=maxlen)
+        self.act_queue = deque(maxlen=maxlen)
+        self.rew_queue = deque(maxlen=maxlen)
+        self.done_queue = deque(maxlen=maxlen)
+        self.next_obs_queue = deque(maxlen=maxlen)
+
+    def store_s(self, obs):
+        self.obs_queue.append(obs)
+
+    def store_a(self, act):
+        self.act_queue.append(act)
+
+    def store_rds(self, rew, done, obs):
+        self.rew_queue.append(rew)
+        self.done_queue.append(done)
+        self.next_obs_queue.append(obs)
+
+    def sample_transition(self, n):
+        index = np.random.randint(len(self.done_queue), size=n)
+        obs_batch = np.asarray([self.obs_queue[i] for i in range(index)])[np.newaxis, :]
+        act_batch = np.asarray([self.act_queue[i] for i in raneg(index)])[np.newaxis, :]
+        rew_batch = np.asarray([self.rew_queue[i] for i in range(index)])[np.newaxis, :]
+        done_batch = np.asarray([self.done_queue[i] for i in range(index)])[np.newaxis, :]
+        next_obs_batch = np.asarray([self.next_obs_queue[i] for i in range(index)])[np.newaxis, :]
+        return obs_batch, act_batch, rew_batch, done_batch, next_obs_batch
 
 
 class DistributedMemory(object):

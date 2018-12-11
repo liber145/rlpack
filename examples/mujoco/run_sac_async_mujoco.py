@@ -35,7 +35,7 @@ class Config(object):
         # 训练长度
         self.trajectory_length = 1000
         self.update_step = 5000   # for each env
-        self.warm_start_length = 1000
+        self.warm_start_length = 10000
         self.memory_size = int(1e6)
 
         # 周期参数
@@ -78,6 +78,8 @@ def learn(env, agent, config):
         memory.store_rds(rewards, dones, next_obs)
         obs = next_obs
 
+    all_r = []
+
     print("Finish warm start.")
     print("Start training.")
     for i in tqdm(range(config.update_step)):
@@ -86,6 +88,7 @@ def learn(env, agent, config):
             actions = agent.get_action(obs)
             memory.store_a(actions)
             next_obs, rewards, dones, infos = env.step(actions)
+            all_r.extend(rewards)
 
             for info in infos:
                 maybeepinfo = info.get('episode')
@@ -108,7 +111,7 @@ def learn(env, agent, config):
         if i > 0 and i % config.log_freq == 0:
             rewmean = safemean([epinfo["r"] for epinfo in epinfobuf])
             lenmean = safemean([epinfo['l'] for epinfo in epinfobuf])
-            print(f"eprewmean: {rewmean}  eplenmean: {lenmean}  rew: {epinfobuf[-1]['r']}  len: {epinfobuf[-1]['l']}")
+            print(f"eprewmean: {rewmean}  eplenmean: {lenmean}  rew: {epinfobuf[-1]['r']}  len: {epinfobuf[-1]['l']}, max r: {max(all_r)}, min r: {min(all_r)}")
 
 
 if __name__ == "__main__":
