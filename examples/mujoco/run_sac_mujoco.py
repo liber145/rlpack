@@ -90,7 +90,7 @@ def learn(env, agent, config):
     memory = Memory(config.dim_observation[0], config.dim_action, config.memory_size)
     summary_writer = SummaryWriter(os.path.join(config.save_path, "summary"))
 
-    epr, all_r = [], []
+    epr, all_r = deque(maxlen=20), []
     o, r, d, ep_ret, ep_len = env.reset(), 0, False, 0, 0
     steps_per_epoch = 5000
     epochs = 100
@@ -152,6 +152,7 @@ def learn(env, agent, config):
 
 if __name__ == "__main__":
     env = gym.make(f"{args.env_name}")
+    env.seed(2)
     config = process_env(env)
     agent = SAC(config)
     learn(env, agent, config)

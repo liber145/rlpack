@@ -15,6 +15,9 @@ class SAC(Base):
         self.policy_mean_reg_weight = 1e-3
         self.policy_std_reg_weight = 1e-3
         self.alpha = 0.2
+        self.LOG_STD_MAX = 2.0
+        self.LOG_STD_MIN = -20.0
+        self.EPS = 1e-8
         super().__init__(config)
         self.sess.run(self.init_target_vf)
 
@@ -27,11 +30,36 @@ class SAC(Base):
         with tf.variable_scope("policy_net"):
             x = tf.layers.dense(self.observation, 100, activation=tf.nn.relu)
             x = tf.layers.dense(x, 100, activation=tf.nn.relu)
-            self.mu = tf.layers.dense(x, self.dim_action, activation=tf.nn.tanh)
+            self.mu = tf.layers.dense(x, self.dim_action)
             self.log_std = tf.layers.dense(x, self.dim_action, activation=tf.nn.tanh)
-            self.normal_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.mu, scale_diag=tf.exp(self.log_std))
-            self.sampled_action = self.normal_dist.sample()
-            self.sampled_action = tf.tanh(self.sampled_action)   # squash into [-1, 1]
+            self.log_std = self.LOG_STD_MIN + 0.5 * (self.LOG_STD_MAX - self.LOG_STD_MIN) * (self.log_std + 1)
+            std = tf.exp(self.log_std)
+            self.sampled_action = self.mu + tf.random_normal(tf.shape(self.mu)) * std
+
+            # self.normal_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.mu, scale_diag=tf.exp(self.log_std)+self.EPS)
+            # self.sampled_action = self.normal_dist.sample()
+            # squash into [-1, 1]
+
+    def clip_but_pass_gradient(self, x, l=-1., u=1.):
+        clip_up = tf.cast(x > u, tf.float32)
+        clip_low = tf.cast(x < l, tf.float32)
+        return x + tf.stop_gradient((u - x)*clip_up + (l - x)*clip_low)
+
+    def build_algorithm(self):
+        self.actor_optimizer = tf.train.AdamOptimizer(1e-3)
+        self.critic_optimizer = tf.train.AdamOptimizer(1e-3)
+
+        self.reward = tf.placeholder(tf.float32, [None], name="reward")
+        self.mask = tf.placeholder(tf.float32, [None], name="mask")   # 1 - done
+
+        # Compute log(pi).
+        logp = tf.reduce_sum(-0.5 * (((self.sampled_action-self.mu)/(tf.exp(self.log_std)+self.EPS))**2 + 2*self.log_std + np.log(2*np.pi)), axis=1)
+        self.mu = tf.tanh(self.mu)
+        self.sampled_action = tf.tanh(self.sampled_action)
+        logp -= tf.reduce_sum(tf.log(self.clip_but_pass_gradient(1 - self.sampled_action**2, l=0.0, u=1.0) + 1e-6), axis=1)
+        # logp = self.normal_dist.log_prob(self.sampled_action)
+        # logp -= tf.reduce_sum(tf.log(self.clip_but_pass_gradient(1 - self.sampled_action**2, l=0.0, u=1.0) + 1e-6), axis=1)
+        assert_shape(logp, [None])
 
         with tf.variable_scope("state_value_net"):
             x = tf.layers.dense(self.observation, 100, activation=tf.nn.relu)
@@ -67,23 +95,6 @@ class SAC(Base):
             x = tf.layers.dense(x, 100, activation=tf.nn.relu)
             self.qval_sampled_action_2 = tf.squeeze(tf.layers.dense(x, 1))
 
-    def clip_but_pass_gradient(self, x, l=-1., u=1.):
-        clip_up = tf.cast(x > u, tf.float32)
-        clip_low = tf.cast(x < l, tf.float32)
-        return x + tf.stop_gradient((u - x)*clip_up + (l - x)*clip_low)
-
-    def build_algorithm(self):
-        self.actor_optimizer = tf.train.AdamOptimizer(1e-3)
-        self.critic_optimizer = tf.train.AdamOptimizer(1e-3)
-
-        self.reward = tf.placeholder(tf.float32, [None], name="reward")
-        self.mask = tf.placeholder(tf.float32, [None], name="mask")   # 1 - done
-
-        # Compute log(pi).
-        logp = self.normal_dist.log_prob(self.sampled_action)
-        logp -= tf.reduce_sum(tf.log(self.clip_but_pass_gradient(1 - self.sampled_action**2, l=0, u=1) + 1e-6), axis=1)
-        assert_shape(logp, [None])
-
         # Compute VF loss.
         min_qval_sampled_action = tf.minimum(self.qval_sampled_action, self.qval_sampled_action_2)
         tmp = 0.5 * (self.sval - tf.stop_gradient(min_qval_sampled_action - self.alpha * logp)) ** 2
@@ -116,7 +127,7 @@ class SAC(Base):
 
         # Update network.
         self.update_policy = self.actor_optimizer.minimize(self.Policy_loss, var_list=tf.trainable_variables("policy_net"))
-        
+
         with tf.control_dependencies([self.update_policy]):
             self.update_value = self.critic_optimizer.minimize(self.Value_loss, var_list=tf.trainable_variables("state_value_net")+tf.trainable_variables("action_value_net"))
 
@@ -138,15 +149,15 @@ class SAC(Base):
         next_s_batch = next_s_batch.reshape(n_env * batch_size, *self.dim_observation)
 
         global_step, _ = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
-        value_loss, policy_loss, _, _, _ = self.sess.run([self.Value_loss, self.Policy_loss, self.update_policy, self.update_value, self.update_target_vf], feed_dict={
+        log_std, value_loss, policy_loss, _, _, _ = self.sess.run([self.log_std, self.Value_loss, self.Policy_loss, self.update_policy, self.update_value, self.update_target_vf], feed_dict={
             self.observation: s_batch,
             self.action: a_batch,
             self.target_observation: next_s_batch,
             self.reward: r_batch,
             self.mask: 1 - d_batch})
 
-        # if global_step % 128 == 0:
-        #     print(f"value loss: {value_loss}  policy loss: {policy_loss}")
+        # if global_step % 200 == 0:
+        #     print(f"log std: {log_std}")
 
     def get_action(self, obs):
         if obs.ndim == 1 or obs.ndim == 3:
@@ -155,5 +166,5 @@ class SAC(Base):
             assert obs.ndim == 2 or obs.ndim == 4
             newobs = obs
 
-        action = self.sess.run(self.sampled_action, feed_dict={self.observation: newobs})
+        log_std, action = self.sess.run([self.log_std, self.sampled_action], feed_dict={self.observation: newobs})
         return action
