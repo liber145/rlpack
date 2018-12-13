@@ -21,154 +21,13 @@ class SAC2(Base):
         super().__init__(config)
         self.sess.run(self.init_target)
 
-    # def mlp(self, x, hidden_sizes=(32,), activation=tf.tanh, output_activation=None):
-    #     for h in hidden_sizes[:-1]:
-    #         x = tf.layers.dense(x, units=h, activation=activation)
-    #     return tf.layers.dense(x, units=hidden_sizes[-1], activation=output_activation)
-
-    # def get_vars(self, scope):
-    #     return [x for x in tf.global_variables() if scope in x.name]
-
-    # def gaussian_likelihood(self, x, mu, log_std):
-    #     pre_sum = -0.5 * (((x-mu)/(tf.exp(log_std)+self.EPS))**2 + 2*log_std + np.log(2*np.pi))
-    #     return tf.reduce_sum(pre_sum, axis=1)
-
-    # def clip_but_pass_gradient(self, x, l=-1., u=1.):
-    #     clip_up = tf.cast(x > u, tf.float32)
-    #     clip_low = tf.cast(x < l, tf.float32)
-    #     return x + tf.stop_gradient((u - x)*clip_up + (l - x)*clip_low)
-
-    # """
-    # Policies
-    # """
-    # def mlp_gaussian_policy(self, x, a, hidden_sizes, activation, output_activation):
-    #     act_dim = a.shape.as_list()[-1]
-    #     net = self.mlp(x, list(hidden_sizes), activation, activation)
-    #     mu = tf.layers.dense(net, act_dim, activation=output_activation)
-
-    #     """
-    #     Because algorithm maximizes trade-off of reward and entropy,
-    #     entropy must be unique to state---and therefore log_stds need
-    #     to be a neural network output instead of a shared-across-states
-    #     learnable parameter vector. But for deep Relu and other nets,
-    #     simply sticking an activationless dense layer at the end would
-    #     be quite bad---at the beginning of training, a randomly initialized
-    #     net could produce extremely large values for the log_stds, which
-    #     would result in some actions being either entirely deterministic
-    #     or too random to come back to earth. Either of these introduces
-    #     numerical instability which could break the algorithm. To
-    #     protect against that, we'll constrain the output range of the
-    #     log_stds, to lie within [LOG_STD_MIN, LOG_STD_MAX]. This is
-    #     slightly different from the trick used by the original authors of
-    #     SAC---they used tf.clip_by_value instead of squashing and rescaling.
-    #     I prefer this approach because it allows gradient propagation
-    #     through log_std where clipping wouldn't, but I don't know if
-    #     it makes much of a difference.
-    #     """
-    #     log_std = tf.layers.dense(net, act_dim, activation=tf.tanh)
-    #     log_std = self.LOG_STD_MIN + 0.5 * (self.LOG_STD_MAX - self.LOG_STD_MIN) * (log_std + 1)
-
-    #     std = tf.exp(log_std)
-    #     pi = mu + tf.random_normal(tf.shape(mu)) * std
-    #     logp_pi = self.gaussian_likelihood(pi, mu, log_std)
-    #     return mu, pi, logp_pi
-
-    # def apply_squashing_func(self, mu, pi, logp_pi):
-    #     mu = tf.tanh(mu)
-    #     pi = tf.tanh(pi)
-    #     # To avoid evil machine precision error, strictly clip 1-pi**2 to [0,1] range.
-    #     logp_pi -= tf.reduce_sum(tf.log(self.clip_but_pass_gradient(1 - pi**2, l=0, u=1) + 1e-6), axis=1)
-    #     return mu, pi, logp_pi
-
-    # """
-    # Actor-Critics
-    # """
-    # def mlp_actor_critic(self, x, a, policy, hidden_sizes=(400,300), activation=tf.nn.relu,
-    #                      output_activation=None, action_space=None):
-    #     # policy
-    #     with tf.variable_scope('pi'):
-    #         mu, pi, logp_pi = policy(x, a, hidden_sizes, activation, output_activation)
-    #         mu, pi, logp_pi = self.apply_squashing_func(mu, pi, logp_pi)
-
-    #     # make sure actions are in correct range
-    #     # action_scale = action_space.high[0]
-    #     # mu *= action_scale
-    #     # pi *= action_scale
-
-    #     # vfs
-    #     vf_mlp = lambda x : tf.squeeze(self.mlp(x, list(hidden_sizes)+[1], activation, None), axis=1)
-    #     with tf.variable_scope('q1'):
-    #         q1 = vf_mlp(tf.concat([x,a], axis=-1))
-    #     with tf.variable_scope('q1', reuse=True):
-    #         q1_pi = vf_mlp(tf.concat([x,pi], axis=-1))
-    #     with tf.variable_scope('q2'):
-    #         q2 = vf_mlp(tf.concat([x,a], axis=-1))
-    #     with tf.variable_scope('q2', reuse=True):
-    #         q2_pi = vf_mlp(tf.concat([x,pi], axis=-1))
-    #     with tf.variable_scope('v'):
-    #         v = vf_mlp(x)
-    #     return mu, pi, logp_pi, q1, q2, q1_pi, q2_pi, v
-
-    # ---------------------
-
-    # def mlp(self, x, hidden_sizes=(100, 100), activation=None, output_activation=None):
-    #     for h in hidden_sizes[:-1]:
-    #         x = tf.layers.dense(x, units=h, activation=activation)
-    #     return tf.layers.dense(x, units=hidden_sizes[-1], activation=output_activation)
-
     def get_vars(self, scope):
         return [x for x in tf.global_variables() if scope in x.name]
-
-    # def gaussian_likelihood(self, x, mu, log_std):
-    #     presum = -0.5 * (((x-mu)/(tf.exp(log_std)+self.EPS))**2 + np.log(2*np.pi) + 2*log_std)
-    #     return tf.reduce_sum(presum, axis=1)
 
     def clip_but_pass_gradient(self, x, l=-1, u=1):
         clip_up = tf.cast(x > u, tf.float32)
         clip_low = tf.cast(x < l, tf.float32)
         return x + tf.stop_gradient(clip_up * (u - x) + clip_low * (l - x))
-
-    # def mlp_gaussian_policy(self, x, a, hidden_sizes, activation, output_activation):
-    #     act_dim = a.shape.as_list()[-1]
-    #     net = self.mlp(x, list(hidden_sizes), activation, activation)
-    #     mu = tf.layers.dense(net, act_dim, activation=output_activation)
-    #     # mu = tf.layers.dense(net, act_dim, activation=tf.tanh)   # Change output_activation to tf.tanh
-
-    #     log_std = tf.layers.dense(net, act_dim, activation=tf.tanh)
-    #     log_std = self.LOG_STD_MIN + 0.5 * (self.LOG_STD_MAX - self.LOG_STD_MIN) * (log_std + 1)
-
-    #     # normal_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=mu, scale_diag=tf.exp(log_std))
-    #     # pi = normal_dist.sample()
-    #     # logp_pi = normal_dist.log_prob(pi)
-
-    #     std = tf.exp(log_std)
-    #     pi = mu + tf.random_normal(tf.shape(mu)) * std
-    #     logp_pi = self.gaussian_likelihood(pi, mu, log_std)
-    #     return mu, pi, logp_pi
-
-    # def apply_squashing_func(self, mu, pi, logp_pi):
-    #     mu = tf.tanh(mu)
-    #     pi = tf.tanh(pi)
-    #     logp_pi -= tf.reduce_sum(tf.log(self.clip_but_pass_gradient(1 - pi**2, l=0, u=1) + 1e-6), axis=1)
-    #     return mu, pi, logp_pi
-
-    # def mlp_actor_critic(self, x, a, policy, hidden_sizes=(100, 100), activation=tf.nn.relu, output_activation=None):
-    #     with tf.variable_scope("pi"):
-    #         mu, pi, logp_pi = self.mlp_gaussian_policy(x, a, hidden_sizes, activation, output_activation)
-    #         mu, pi, logp_pi = self.apply_squashing_func(mu, pi, logp_pi)
-
-    #     def vf_mlp(x): return tf.squeeze(self.mlp(x, list(hidden_sizes)+[1], activation=activation, output_activation=None), axis=1)
-    #     with tf.variable_scope("q1"):
-    #         q1 = vf_mlp(tf.concat([x, a], axis=-1))
-    #     with tf.variable_scope("q1", reuse=True):
-    #         q1_pi = vf_mlp(tf.concat([x, pi], axis=-1))
-    #     with tf.variable_scope("q2"):
-    #         q2 = vf_mlp(tf.concat([x, a], axis=-1))
-    #     with tf.variable_scope("q2", reuse=True):
-    #         q2_pi = vf_mlp(tf.concat([x, pi], axis=-1))
-    #     with tf.variable_scope("v"):
-    #         v = vf_mlp(x)
-    #     return mu, pi, logp_pi, q1, q2, q1_pi, q2_pi, v
 
     def build_network(self):
         self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], name="observation")
@@ -184,14 +43,14 @@ class SAC2(Base):
             self.log_std = tf.layers.dense(x, units=self.dim_action, activation=tf.tanh)
             self.log_std = self.LOG_STD_MIN + 0.5 * (self.LOG_STD_MAX - self.LOG_STD_MIN) * (self.log_std + 1)
 
-            std = tf.exp(self.log_std)
-            self.pi = self.mu + tf.random_normal(tf.shape(self.mu)) * std
-            presum = -0.5 * (((self.pi-self.mu)/(tf.exp(self.log_std)+self.EPS))**2 + np.log(2*np.pi) + 2*self.log_std)
-            self.logp_pi = tf.reduce_sum(presum, axis=1)
+            # std = tf.exp(self.log_std)
+            # self.pi = self.mu + tf.random_normal(tf.shape(self.mu)) * std
+            # presum = -0.5 * (((self.pi-self.mu)/(tf.exp(self.log_std)+self.EPS))**2 + np.log(2*np.pi) + 2*self.log_std)
+            # self.logp_pi = tf.reduce_sum(presum, axis=1)
 
-            # normal_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.mu, scale_diag=tf.exp(self.log_std))
-            # self.pi = normal_dist.sample()
-            # self.logp_pi = normal_dist.log_prob(self.pi)
+            normal_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.mu, scale_diag=tf.exp(self.log_std))
+            self.pi = normal_dist.sample()
+            self.logp_pi = normal_dist.log_prob(self.pi)
 
             # Squash into an appropriate scale.
             self.mu = tf.tanh(self.mu)
@@ -292,6 +151,12 @@ class SAC2(Base):
             self.reward: r_batch,
             self.done: d_batch,
             self.next_observation: next_s_batch})
+
+        # first_var = self.sess.run(self.first_var)
+        # if global_step % 10 == 0:
+        #     print(">>>>>>> state first row:", s_batch[0, :])
+        #     print(">>>>>>> first var:", first_var)
+        #     input()
 
     def get_action(self, obs):
         if obs.ndim == 1 or obs.ndim == 3:
