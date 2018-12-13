@@ -6,7 +6,7 @@ from collections import deque
 
 import gym
 import numpy as np
-from rlpack.algos import SAC
+from rlpack.algos import SAC2
 from rlpack.environment import MujocoWrapper
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
@@ -23,7 +23,7 @@ class Config(object):
 
     def __init__(self):
         """All papameters here."""
-        self.rnd = 4
+        self.rnd = 1
         self.save_path = f"./log/sac_{args.env_name}_2"
 
         # 环境
@@ -154,5 +154,5 @@ if __name__ == "__main__":
     env = gym.make(f"{args.env_name}")
     env.seed(2)
     config = process_env(env)
-    agent = SAC(config)
+    agent = SAC2(config)
     learn(env, agent, config)

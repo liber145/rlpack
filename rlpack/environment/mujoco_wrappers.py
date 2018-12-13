@@ -1,9 +1,13 @@
+"""
+Environment wrapper for gym.mujoco.
+"""
 import gym
 
 
-class LogTrajectory(gym.Wrapper):
-    def __init__(self, env):
-        self.env = env
+class LogTrajectory(object):
+    def __init__(self, env_name):
+        self.env = gym.make(env_name)
+        self.env_name = env_name
         self.trajectory_length = 0
         self.trajectory_reward = 0
 
@@ -22,6 +26,9 @@ class LogTrajectory(gym.Wrapper):
     def reset(self):
         return self.env.reset()
 
+    def seed(self, rnd):
+        self.env.seed(rnd)
+
     @property
     def dim_observation(self):
         return self.env.observation_space.shape
@@ -32,10 +39,13 @@ class LogTrajectory(gym.Wrapper):
 
     @property
     def action_range(self):
-        return self.env.action_space.low, self.env.action_space.high
+        return self.env.action_space.low[0], self.env.action_space.high[0]
+
+    @property
+    def horizon_length(self):
+        pass
 
 
 def make_mujoco(env_name):
-    env = gym.make(env_name)
-    env = LogTrajectory(env)
+    env = LogTrajectory(env_name)
     return env
