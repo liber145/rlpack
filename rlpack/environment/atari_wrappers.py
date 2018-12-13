@@ -95,6 +95,17 @@ class EpisodicLifeEnv(gym.Wrapper):
             # the environment advertises done.
             done = True
         self.lives = lives
+
+        # if self.was_real_done is True:
+        #     print("real done in self mode")
+        #     obs = self.env.reset()
+        #     self.lives = self.env.unwrapped.ale.lives()
+        # elif done is True:
+        #     print("wei done in self mode")
+        #     obs, _, _, _ = self.env.step(0)
+        #     print(np.array(obs)[32, 32, :])
+        #     self.lives = self.env.unwrapped.ale.lives()
+
         return obs, reward, done, info
 
     def reset(self, **kwargs):
@@ -104,9 +115,12 @@ class EpisodicLifeEnv(gym.Wrapper):
         """
         if self.was_real_done:
             obs = self.env.reset(**kwargs)
+            # print("real done <<<<")
         else:
             # no-op step to advance from terminal/lost life state
             obs, _, _, _ = self.env.step(0)
+            # print("wei done <<<<")
+            # print(np.array(obs)[32, 32, :])
         self.lives = self.env.unwrapped.ale.lives()
         return obs
 
@@ -193,8 +207,8 @@ class FrameStack(gym.Wrapper):
         shp = env.observation_space.shape
         self.observation_space = spaces.Box(low=0, high=255, shape=(shp[:-1] + (shp[-1] * k,)), dtype=env.observation_space.dtype)
 
-        self._dim_action = self.env.action_space.n
-        self._dim_observation = self.observation_space.shape
+        # self._dim_action = self.env.action_space.n
+        # self._dim_observation = self.observation_space.shape
 
     def reset(self):
         ob = self.env.reset()
@@ -211,6 +225,24 @@ class FrameStack(gym.Wrapper):
         assert len(self.frames) == self.k
         return LazyFrames(list(self.frames))
 
+
+class NeverStop(gym.Wrapper):
+    def __init__(self, env):
+        gym.Wrapper.__init__(self, env)
+
+        self._dim_action = self.env.action_space.n
+        self._dim_observation = self.env.observation_space.shape
+
+    def reset(self):
+        ob = self.env.reset()
+        return ob
+
+    def step(self, action):
+        ob, rew, done, info = self.env.step(action)
+        if done is True:
+            ob = env.reset()
+        return ob, rew, done, info
+
     @property
     def dim_action(self):
         return self._dim_action
@@ -218,6 +250,9 @@ class FrameStack(gym.Wrapper):
     @property
     def dim_observation(self):
         return self._dim_observation
+
+    def sample_action(self):
+        return self.env.action_space.sample()
 
 
 class ScaledFloatFrame(gym.ObservationWrapper):
@@ -262,7 +297,7 @@ class LazyFrames(object):
         return self._force()[i]
 
 
-def make_atari(env_id, timelimit=True):
+def old_make_atari(env_id, timelimit=True):
     # XXX(john): remove timelimit argument after gym is upgraded to allow double wrapping
     env = gym.make(env_id)
     if not timelimit:
@@ -290,20 +325,26 @@ def wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=False, 
     return env
 
 
-if __name__ == "__main__":
-    env = make_atari("BreakoutNoFrameskip-v4")
-    env = wrap_deepmind(env)
-    s = env.reset()
-    print(s)
-    cnt = 0
-    for _ in range(100):
-        s, r, d, info = env.step(env.action_space.sample())
-        print("=================")
-        print(s.shape)
-        print(r)
-        print(d)
-        print(info)
-        if d is True:
-            cnt += 1
+def make_atari(env_name):
+    env = old_make_atari(env_name)
+    env = wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=True, scale=True)
+    env = NeverStop(env)
+    return env
 
-    print(cnt)
+
+if __name__ == "__main__":
+    env = make_atari("AlienNoFrameskip-v4")
+    s = env.reset()
+    env.seed(1)
+
+    all_r = []
+    for i in range(10000):
+        s, r, d, info = env.step(env.action_space.sample())
+
+        all_r.append(r)
+        if d is True:
+            print(f"r max: {np.max(all_r)} min: {np.min(all_r)}")
+
+            if "episode" in info:
+                print("info:", info["episode"]["r"], info["episode"]["l"])
+            input()
