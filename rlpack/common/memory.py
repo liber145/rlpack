@@ -15,14 +15,16 @@ class Memory(object):
         self.action_queue = deque(maxlen=capacity)
         self.reward_queue = deque(maxlen=capacity)
         self.done_queue = deque(maxlen=capacity)
+        self.next_state_queue = deque(maxlen=capacity)
 
         # self.cnt = 0
 
-    def store_sard(self, state, action, reward, done):
+    def store_sards(self, state, action, reward, done, next_state):
         self.state_queue.append(state)
         self.action_queue.append(action)
         self.reward_queue.append(reward)
         self.done_queue.append(done)
+        self.next_state_queue.append(next_state)
 
         # self.cnt += 1
         # if self.cnt == 200:
@@ -62,10 +64,6 @@ class Memory(object):
         done_batch = np.asarray([self.done_queue[i] for i in index])
         next_state_batch = np.asarray([self.state_queue[i + 1] for i in index])
 
-        n_env = state_batch.shape[1]
-        ob_shape = state_batch.shape[2:]
-        act_shape = action_batch.shape[2:]
-
         state_batch = state_batch.swapaxes(0, 1)
         action_batch = action_batch.swapaxes(0, 1)
         reward_batch = reward_batch.swapaxes(0, 1)
@@ -80,7 +78,7 @@ class Memory(object):
 
 
 class SimpleMemory(object):
-    def __init__(self, maxlen: int = 100): 
+    def __init__(self, maxlen: int = 100):
         self.obs_queue = deque(maxlen=maxlen)
         self.act_queue = deque(maxlen=maxlen)
         self.rew_queue = deque(maxlen=maxlen)
