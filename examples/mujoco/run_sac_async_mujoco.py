@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 
 
+import argparse
 import os
+import time
 from collections import deque
 
-
 import numpy as np
-from rlpack.algos import SAC2
+from rlpack.algos import SAC
 from rlpack.common import AsyncContinuousActionMemory
 from rlpack.environment import AsyncMujocoWrapper
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
-import argparse
 
 parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('--env_name',  type=str, default="Reacher-v2")
@@ -32,33 +32,26 @@ class Config(object):
         self.dim_action = None   # gym中不同环境的action数目不同。
 
         # 训练长度
-        self.trajectory_length = 2048
-        self.update_step = 500   # for each env
+        self.trajectory_length = None
+        self.update_step = 5000   # for each env
         self.warm_start_length = 10000
         self.memory_size = int(1e6)
 
         # 周期参数
-        self.training_epoch = 10
         self.save_model_freq = 50
         self.log_freq = 1
 
         # 算法参数
         self.batch_size = 64
         self.discount = 0.99
-        self.gae = 0.95
-        self.policy_lr_schedule = lambda x: 3e-4
-        self.value_lr_schedule = lambda x: 3e-4
-
-        self.clip_schedule = lambda x: (1 - x) * 0.1
-        self.vf_coef = 1.0
-        self.entropy_coef = 0.01
-        self.max_grad_norm = 40
 
 
 def process_env(env):
     config = Config()
     config.dim_observation = env.dim_observation
     config.dim_action = env.dim_action
+    config.trajectory_length = env.horizon_length if env.horizon_length > 0 else 500
+    config.trajectory_length = 1000
     return config
 
 
@@ -89,7 +82,7 @@ def learn(env, agent, config):
     print("Start training.")
     for i in tqdm(range(config.update_step)):
         epinfos = []
-        for _ in range(env.horizon_length):
+        for _ in range(config.trajectory_length):
             actions = agent.get_action(obs)
             memory.store_a(actions)
             next_obs, rewards, dones, infos = env.step(actions)
@@ -103,9 +96,18 @@ def learn(env, agent, config):
             obs = next_obs
 
         update_ratio = i / config.update_step
-        for _ in range(env.horizon_length):
+
+        lap_sample = 0
+        lap_train = 0
+        end2 = time.time()
+        for _ in range(config.trajectory_length):
             data_batch = memory.sample_transition(100)
+            end1 = time.time()
+            lap_sample += end1 - end2
             agent.update(data_batch, update_ratio)
+            end2 = time.time()
+            lap_train += end2 - end1
+        print("lap time sample:", lap_sample, "train:", lap_train)
 
         epinfobuf.extend(epinfos)
         summary_writer.add_scalar("eprewmean", safemean([epinfo["r"] for epinfo in epinfobuf]), global_step=i)
@@ -114,11 +116,11 @@ def learn(env, agent, config):
         if i > 0 and i % config.log_freq == 0:
             rewmean = safemean([epinfo["r"] for epinfo in epinfobuf])
             lenmean = safemean([epinfo['l'] for epinfo in epinfobuf])
-            print(f"eprewmean: {rewmean}  eplenmean: {lenmean}  rew: {epinfobuf[-1]['r']}  len: {epinfobuf[-1]['l']}")
+            tqdm.write(f"iter: {i} eprewmean: {rewmean}  eplenmean: {lenmean}  rew: {epinfobuf[-1]['r']}  len: {epinfobuf[-1]['l']}")
 
 
 if __name__ == "__main__":
     env = AsyncMujocoWrapper(f"{args.env_name}", 1, 1, 50013)
     config = process_env(env)
-    agent = SAC2(config)
+    agent = SAC(config)
     learn(env, agent, config)

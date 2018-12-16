@@ -51,10 +51,10 @@ class ContinuousActionMemory(object):
     def _get_last_n_index(self, n_sample):
 
         if self.ptr >= n_sample:
-            index = np.array(range(self.ptr - n_sample, self.ptr))
+            index = list(range(self.ptr - n_sample, self.ptr))
         else:
             rest = n_sample - self.ptr
-            index = np.array(list(range(self.capacity - rest, self.capacity)) + list(range(self.ptr)))
+            index = list(range(self.capacity - rest, self.capacity)) + list(range(self.ptr))
 
         return index
 
@@ -158,7 +158,6 @@ class AsyncContinuousActionMemory(object):
 
     def store_s(self, states):
 
-        print(states.shape)
         for env_id, s in zip(self._env_ids, states):
             self.state_queue[env_id][self.ptr_queue[(env_id, "s")]] = s
             self.ptr_queue[(env_id, "s")] = (self.ptr_queue[(env_id, "s")] + 1) % self.s_maxsize
@@ -243,41 +242,57 @@ class AsyncContinuousActionMemory(object):
         a_cnt = self.cnt_queue[(env_id, "a")]
 
         if s_ptr == s_cnt:
-            s_slice = np.array(range(s_ptr))
+            # s_slice = list(range(s_ptr))
+            s_start = 0
         else:
-            s_slice = list(range(self.s_maxsize))
-            s_slice = np.array(s_slice[s_ptr:] + s_slice[:s_ptr])
+            # s_slice = list(range(self.s_maxsize))
+            # s_slice = s_slice[s_ptr:] + s_slice[:s_ptr]
+            s_start = s_ptr
 
         if r_ptr == r_cnt:
-            r_slice = np.array(range(r_ptr))
+            # r_slice = range(r_ptr)
+            r_start = 0
         else:
-            r_slice = list(range(self.r_maxsize))
-            r_slice = np.array(r_slice[r_ptr:] + r_slice[:r_ptr])
+            # r_slice = list(range(self.r_maxsize))
+            # r_slice = r_slice[r_ptr:] + r_slice[:r_ptr]
+            r_start = r_ptr
 
         if d_ptr == d_cnt:
-            d_slice = np.array(range(d_ptr))
+            # d_slice = range(d_ptr)
+            d_start = 0
         else:
-            d_slice = list(range(self.d_maxsize))
-            d_slice = np.array(d_slice[d_ptr:] + d_slice[:d_ptr])
+            # d_slice = list(range(self.d_maxsize))
+            # d_slice = d_slice[d_ptr:] + d_slice[:d_ptr]
+            d_start = d_ptr
 
         if a_ptr == a_cnt:
-            a_slice = np.array(range(a_ptr))
+            # a_slice = range(a_ptr)
+            a_start = 0
+
         else:
-            a_slice = list(range(self.a_maxsize))
-            a_slice = np.array(a_slice[a_ptr:] + a_slice[:a_ptr])
+            # a_slice = list(range(self.a_maxsize))
+            # a_slice = a_slice[a_ptr:] + a_slice[:a_ptr]
+            a_start = a_ptr
 
         s_size = min(s_cnt, self.s_maxsize)
         index = np.random.randint(s_size-1, size=n_sample)
 
-        s_index = s_slice[index]
-        r_index = r_slice[index]
-        d_index = d_slice[index]
-        next_s_index = s_slice[index + 1]
+        # s_index = [s_slice[x] for x in index]
+        # r_index = [r_slice[x] for x in index]
+        # d_index = [d_slice[x] for x in index]
+        # next_s_index = [s_slice[x + 1] for x in index]
+
+        s_index = (index + s_start) % self.s_maxsize
+        r_index = (index + r_start) % self.r_maxsize
+        d_index = (index + d_start) % self.d_maxsize
+        next_s_index = (index + s_start + 1) % self.s_maxsize
 
         if a_cnt >= self.a_maxsize and a_cnt < s_cnt:
-            a_index = a_slice[index + 1]
+            # a_index = [a_slice[x + 1] for x in index]
+            a_index = (index + a_start + 1) % self.a_maxsize
         else:
-            a_index = a_slice[index]
+            # a_index = [a_slice[x] for x in index]
+            a_index = (index + a_start) % self.a_maxsize
 
         return s_index, a_index, r_index, d_index, next_s_index
 
@@ -286,17 +301,17 @@ class AsyncContinuousActionMemory(object):
         state_batch, action_batch, reward_batch, done_batch, next_state_batch = [], [], [], [], []
 
         env_id_keys = self.done_queue.keys()
-        n_queue = len(env_id_keys)
-        n_not_last = math.ceil(n / n_queue)
-        n_last = n - (n_queue - 1) * n_not_last
+        # n_queue = len(env_id_keys)
+        # n_not_last = math.ceil(n / n_queue)
+        # n_last = n - (n_queue - 1) * n_not_last
 
         for j, env_id in enumerate(env_id_keys):
-            if j == len(env_id_keys) - 1:
-                n_sample = n_last
-            else:
-                n_sample = n_not_last
+            # if j == len(env_id_keys) - 1:
+            #     n_sample = n_last
+            # else:
+            #     n_sample = n_not_last
 
-            s_index, a_index, r_index, d_index, next_s_index = self._sample_transition_index(env_id, n_sample)
+            s_index, a_index, r_index, d_index, next_s_index = self._sample_transition_index(env_id, n)
             state_batch.append(self.state_queue[env_id][s_index])
             action_batch.append(self.action_queue[env_id][a_index])
             reward_batch.append(self.reward_queue[env_id][r_index])
