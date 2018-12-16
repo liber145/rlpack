@@ -44,12 +44,11 @@ class DistributedEnvClient(Process):
         """Run forever. If done, reset."""
         while True:
             action = self.a_queue.get()
-            info = {}
 
             ob, reward, done, info = self.env.step(action)
 
-            if done:
-                ob = self.env.reset()
+            # if done:
+            #     ob = self.env.reset()
 
             self.srd_queue.put((ob, reward, done, info))
 

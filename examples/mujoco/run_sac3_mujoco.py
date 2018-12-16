@@ -6,7 +6,7 @@ from collections import deque
 
 import gym
 import numpy as np
-from rlpack.algos import SAC2
+from rlpack.algos import SAC3
 from rlpack.environment import MujocoWrapper
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
@@ -24,7 +24,7 @@ class Config(object):
     def __init__(self):
         """All papameters here."""
         self.rnd = 1
-        self.save_path = f"./log/sac/exp_{args.env_name}"
+        self.save_path = f"./log/sac/sac3_{args.env_name}"
 
         # 环境
         self.n_env = 1
@@ -148,11 +148,12 @@ def learn(env, agent, config):
             epoch = t // steps_per_epoch
 
             print(f"epoch: {epoch}  rewmean: {np.mean(epr)}")
+            summary_writer.add_scalar("eprew", np.mean(epr), epoch)
 
 
 if __name__ == "__main__":
     env = gym.make(f"{args.env_name}")
     env.seed(2)
     config = process_env(env)
-    agent = SAC2(config)
+    agent = SAC3(config)
     learn(env, agent, config)

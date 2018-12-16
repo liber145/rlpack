@@ -240,7 +240,7 @@ class NeverStop(gym.Wrapper):
     def step(self, action):
         ob, rew, done, info = self.env.step(action)
         if done is True:
-            ob = env.reset()
+            ob = self.env.reset()
         return ob, rew, done, info
 
     @property
@@ -334,8 +334,8 @@ def make_atari(env_name):
 
 if __name__ == "__main__":
     env = make_atari("AlienNoFrameskip-v4")
-    s = env.reset()
     env.seed(1)
+    s = env.reset()
 
     all_r = []
     for i in range(10000):

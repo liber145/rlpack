@@ -1,2 +1,1 @@
-from .env_wrapper import (AsyncAtariWrapper, AsyncMujocoWrapper, AtariWrapper2,
-                          DistributedAtariWrapper, DistributedMujocoWrapper, MujocoWrapper)
+from .env_wrapper import AsyncAtariWrapper, AsyncMujocoWrapper, AtariWrapper, MujocoWrapper

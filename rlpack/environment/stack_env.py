@@ -4,7 +4,7 @@ from typing import List, Callable
 
 class StackEnv(object):
     """
-    一次reset，周而复始。
+    Stack several environments.
     """
 
     def __init__(self, env_func: Callable, n_env: int):
@@ -24,9 +24,6 @@ class StackEnv(object):
         next_obs, rewards, dones, infos = [], [], [], []
         for i in range(self.n_env):
             obs, rew, done, info = self.envs[i].step(actions[i])
-
-            if done:
-                obs = self.envs[i].reset()
 
             next_obs.append(obs)
             rewards.append(rew)
@@ -53,37 +50,3 @@ class StackEnv(object):
         :return: the dimension of continuous action, or the number of discrete action.
         """
         pass
-
-
-if __name__ == "__main__":
-    pass
-    # envs = [gym.make("CartPole-v1") for _ in range(2)]
-    # stack_env = StackEnv(envs)
-
-    # obs = stack_env.reset()
-    # print(f"obs: {obs}")
-
-    # next_obs, rewards, dones, infos = stack_env.step(np.array([0, 0]))
-    # print(f"next obs: {next_obs}")
-    # print(f"rewards: {rewards}")
-    # print(f"dones: {dones}")
-    # print(f"infos: {infos}")
-
-    # next_obs, rewards, dones, infos = stack_env.step(np.asarray([0, 0]))
-    # print(f"next obs: {next_obs}")
-    # print(f"rewards: {rewards}")
-    # print(f"dones: {dones}")
-    # print(f"infos: {infos}")
-
-    # env = MujocoWrapper([gym.make("Reacher-v2") for _ in range(2)])
-    # obs = env.reset()
-    # print(f"obs: {obs}")
-
-    # for _ in range(10000):
-    #     obs, rewards, dones, epinfos = env.step([np.array([0, 0]), np.array([1, 1])])
-    #     print(f"obs: {obs.shape}")
-    #     print(f"rewards: {rewards}")
-    #     print(f"dones: {dones}")
-    #     print(f"epinfos: {epinfos}")
-    #     if dones[0] or dones[1]:
-    #         input()

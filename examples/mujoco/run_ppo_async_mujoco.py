@@ -7,7 +7,7 @@ from collections import deque
 
 import numpy as np
 from rlpack.algos import ContinuousPPO
-from rlpack.common import DistributedMemory
+from rlpack.common import AsyncContinuousActionMemory
 from rlpack.environment import AsyncMujocoWrapper
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
@@ -23,8 +23,8 @@ class Config(object):
 
     def __init__(self):
         """All papameters here."""
-        self.rnd = 10
-        self.save_path = f"./log/ppo_{args.env_name}"
+        self.rnd = 1
+        self.save_path = f"./log/ppo/async_exp_{args.env_name}"
 
         # 环境
         self.n_env = 1
@@ -67,13 +67,14 @@ def safemean(x):
 
 
 def learn(env, agent, config):
-    memory = DistributedMemory(config.memory_size)
+    memory = AsyncContinuousActionMemory(maxsize=config.memory_size, dim_obs=config.dim_observation, dim_act=config.dim_action)
     memory.register(env)
-    epinfobuf = deque(maxlen=100)
+    epinfobuf = deque(maxlen=20)
     summary_writer = SummaryWriter(os.path.join(config.save_path, "summary"))
 
     # 热启动，随机收集数据。
     obs = env.reset()
+    print("obs shape:", obs.shape)
     memory.store_s(obs)
     print(f"observation: max={np.max(obs)} min={np.min(obs)}")
     for i in tqdm(range(config.warm_start_length)):
@@ -88,7 +89,7 @@ def learn(env, agent, config):
     print("Start training.")
     for i in tqdm(range(config.update_step)):
         epinfos = []
-        for _ in range(int(config.trajectory_length * 3 / 3)):
+        for _ in range(config.trajectory_length):
             actions = agent.get_action(obs)
             memory.store_a(actions)
             next_obs, rewards, dones, infos = env.step(actions)
@@ -116,7 +117,7 @@ def learn(env, agent, config):
 
 
 if __name__ == "__main__":
-    env = AsyncMujocoWrapper(f"{args.env_name}", 1, 1, 50003)
+    env = AsyncMujocoWrapper(f"{args.env_name}", 1, 1, 50013)
     config = process_env(env)
     agent = ContinuousPPO(config)
     learn(env, agent, config)

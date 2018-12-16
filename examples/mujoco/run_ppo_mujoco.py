@@ -6,9 +6,10 @@ from collections import deque
 
 
 import numpy as np
-from rlpack.algos import SAC2
-from rlpack.common import AsyncContinuousActionMemory
-from rlpack.environment import AsyncMujocoWrapper
+from rlpack.algos import ContinuousPPO
+from rlpack.common import ContinuousActionMemory
+from rlpack.environment import MujocoWrapper
+from rlpack.environment.mujoco_wrappers import make_mujoco
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
 import argparse
@@ -24,7 +25,7 @@ class Config(object):
     def __init__(self):
         """All papameters here."""
         self.rnd = 1
-        self.save_path = f"./log/sac/exp_async_{args.env_name}"
+        self.save_path = f"./log/ppo/exp_{args.env_name}"
 
         # 环境
         self.n_env = 1
@@ -33,9 +34,9 @@ class Config(object):
 
         # 训练长度
         self.trajectory_length = 2048
-        self.update_step = 500   # for each env
-        self.warm_start_length = 10000
-        self.memory_size = int(1e6)
+        self.update_step = 5000   # for each env
+        self.warm_start_length = 2000
+        self.memory_size = 2149
 
         # 周期参数
         self.training_epoch = 10
@@ -67,31 +68,27 @@ def safemean(x):
 
 
 def learn(env, agent, config):
-    memory = AsyncContinuousActionMemory(maxsize=config.memory_size, dim_obs=config.dim_observation, dim_act=config.dim_action)
-    memory.register(env)
+    memory = ContinuousActionMemory(capacity=config.memory_size, n_env=config.n_env, dim_obs=config.dim_observation, dim_act=config.dim_action)
     epinfobuf = deque(maxlen=20)
     summary_writer = SummaryWriter(os.path.join(config.save_path, "summary"))
 
     # 热启动，随机收集数据。
     obs = env.reset()
     print("obs shape:", obs.shape)
-    memory.store_s(obs)
     print(f"observation: max={np.max(obs)} min={np.min(obs)}")
     for i in tqdm(range(config.warm_start_length)):
-        actions = env.sample_action(obs.shape[0])
-        memory.store_a(actions)
+        actions = agent.get_action(obs)
         next_obs, rewards, dones, infos = env.step(actions)
 
-        memory.store_rds(rewards, dones, next_obs)
+        memory.store_sards(obs, actions, rewards, dones, next_obs)
         obs = next_obs
 
     print("Finish warm start.")
     print("Start training.")
     for i in tqdm(range(config.update_step)):
         epinfos = []
-        for _ in range(env.horizon_length):
+        for _ in range(config.trajectory_length):
             actions = agent.get_action(obs)
-            memory.store_a(actions)
             next_obs, rewards, dones, infos = env.step(actions)
 
             for info in infos:
@@ -99,13 +96,12 @@ def learn(env, agent, config):
                 if maybeepinfo:
                     epinfos.append(maybeepinfo)
 
-            memory.store_rds(rewards, dones, next_obs)
+            memory.store_sards(obs, actions, rewards, dones, next_obs)
             obs = next_obs
 
         update_ratio = i / config.update_step
-        for _ in range(env.horizon_length):
-            data_batch = memory.sample_transition(100)
-            agent.update(data_batch, update_ratio)
+        data_batch = memory.get_last_n_samples(config.trajectory_length)
+        agent.update(data_batch, update_ratio)
 
         epinfobuf.extend(epinfos)
         summary_writer.add_scalar("eprewmean", safemean([epinfo["r"] for epinfo in epinfobuf]), global_step=i)
@@ -118,7 +114,8 @@ def learn(env, agent, config):
 
 
 if __name__ == "__main__":
-    env = AsyncMujocoWrapper(f"{args.env_name}", 1, 1, 50013)
+    config = Config()
+    env = MujocoWrapper(f"{args.env_name}", config.n_env)
     config = process_env(env)
-    agent = SAC2(config)
+    agent = ContinuousPPO(config)
     learn(env, agent, config)

@@ -7,7 +7,7 @@ from collections import deque
 
 import numpy as np
 from rlpack.algos import TD3
-from rlpack.common import DistributedMemory
+from rlpack.common import AsyncContinuousActionMemory
 from rlpack.environment import AsyncMujocoWrapper
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
@@ -25,7 +25,7 @@ class Config(object):
     def __init__(self):
         """All papameters here."""
         self.rnd = 4
-        self.save_path = f"./log/td3_{args.env_name}_2"
+        self.save_path = f"./log/td3/async_exp_{args.env_name}"
 
         # 环境
         self.n_env = 1
@@ -61,9 +61,9 @@ def safemean(x):
 
 
 def learn(env, agent, config):
-    memory = DistributedMemory(config.memory_size)
+    memory = AsyncContinuousActionMemory(maxsize=config.memory_size, dim_obs=config.dim_observation, dim_act=config.dim_action)
     memory.register(env)
-    epinfobuf = deque(maxlen=100)
+    epinfobuf = deque(maxlen=20)
     summary_writer = SummaryWriter(os.path.join(config.save_path, "summary"))
 
     # 热启动，随机收集数据。
@@ -71,7 +71,7 @@ def learn(env, agent, config):
     memory.store_s(obs)
     print(f"observation: max={np.max(obs)} min={np.min(obs)}")
     for i in tqdm(range(config.warm_start_length)):
-        actions = agent.get_action(obs)
+        actions = env.sample_action(obs.shape[0])
         memory.store_a(actions)
         next_obs, rewards, dones, infos = env.step(actions)
 
@@ -82,7 +82,7 @@ def learn(env, agent, config):
     print("Start training.")
     for i in tqdm(range(config.update_step)):
         epinfos = []
-        for _ in range(int(config.trajectory_length * 3 / 3)):
+        for _ in range(env.horizon_length):
             actions = agent.get_action(obs)
             memory.store_a(actions)
             next_obs, rewards, dones, infos = env.step(actions)
@@ -97,7 +97,7 @@ def learn(env, agent, config):
 
         update_ratio = i / config.update_step
 
-        for _ in range(config.trajectory_length):
+        for _ in range(env.horizon_length):
             data_batch = memory.sample_transition(config.batch_size)
             agent.update(data_batch, update_ratio)
 

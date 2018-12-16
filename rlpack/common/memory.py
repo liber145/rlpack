@@ -1,48 +1,72 @@
 import pickle
 import random
 from collections import defaultdict, deque
-from typing import List
+from typing import List, Tuple
 import math
 
 import numpy as np
 
 
-class Memory(object):
-    def __init__(self, capacity=0):
-        """ state_queue 存储交互得到的state，假设state是(84*84*4)，有8个env同时传递，那么每个state存储格式为$(8*84*84*4)$。
-        """
-        self.state_queue = deque(maxlen=capacity)
-        self.action_queue = deque(maxlen=capacity)
-        self.reward_queue = deque(maxlen=capacity)
-        self.done_queue = deque(maxlen=capacity)
-        self.next_state_queue = deque(maxlen=capacity)
+class ContinuousActionMemory(object):
+    """ 
+    Memory for continuous-action environments.
 
-        # self.cnt = 0
+    Arguments:
+        - capacity: replay buffer size.
+        - n_env: the number of environments.
+        - dim_obs: tuple. the dimension of observaitons, like (16,) or (84, 84, 4).
+        - dim_act: int. the dimension of actions.
+    """
+
+    def __init__(self, *, capacity=0, n_env: int=1, dim_obs: Tuple=None, dim_act: int=None):
+        self.state_queue = np.zeros((capacity, n_env, *dim_obs), dtype=np.float32)
+        self.action_queue = np.zeros((capacity, n_env, dim_act), dtype=np.float32)
+        self.reward_queue = np.zeros((capacity, n_env), dtype=np.float32)
+        self.done_queue = np.zeros((capacity, n_env), dtype=np.float32)
+        self.next_state_queue = np.zeros((capacity, n_env, *dim_obs), dtype=np.float32)
+
+        self.ptr, self.size = 0, 0
+        self.capacity = capacity
+        self.dim_obs = dim_obs
+        self.dim_act = dim_act
+        self.n_env = n_env
 
     def store_sards(self, state, action, reward, done, next_state):
-        self.state_queue.append(state)
-        self.action_queue.append(action)
-        self.reward_queue.append(reward)
-        self.done_queue.append(done)
-        self.next_state_queue.append(next_state)
 
-        # self.cnt += 1
-        # if self.cnt == 200:
-        #     for j in range(8):
-        #         f = open(f"naive_state{j}.p", "wb")
-        #         pickle.dump([self.state_queue[i][j] for i in range(200)], f)
-        #         f = open(f"naive_reward{j}.p", "wb")
-        #         pickle.dump([self.reward_queue[i][j] for i in range(200)], f)
-        #         f = open(f"naive_done{j}.p", "wb")
-        #         pickle.dump([self.done_queue[i][j] for i in range(200)], f)
+        assert state.shape == (self.n_env, *self.dim_obs)
+        assert action.shape == (self.n_env, self.dim_act)
+        assert reward.shape == (self.n_env,)
+        assert done.shape == (self.n_env,)
+        assert next_state.shape == (self.n_env, *self.dim_obs)
 
-    def get_last_n_step(self, n):
-        assert n < self.size, "No enough sample in memory."
+        self.state_queue[self.ptr, :] = state
+        self.action_queue[self.ptr, :] = action
+        self.reward_queue[self.ptr, :] = reward
+        self.done_queue[self.ptr, :] = done
+        self.next_state_queue[self.ptr, :] = next_state
 
-        state_batch = np.asarray([self.state_queue[-i - 1] for i in reversed(range(n + 1))])
-        action_batch = np.asarray([self.action_queue[-i - 1] for i in reversed(range(1, n + 1))])
-        reward_batch = np.asarray([self.reward_queue[-i - 1] for i in reversed(range(1, n + 1))])
-        done_batch = np.asarray([self.done_queue[-i - 1] for i in reversed(range(1, n + 1))])
+        self.ptr = (self.ptr+1) % self.capacity
+        self.size = min(self.size+1, self.capacity)
+
+    def _get_last_n_index(self, n_sample):
+
+        if self.ptr >= n_sample:
+            index = np.array(range(self.ptr - n_sample, self.ptr))
+        else:
+            rest = n_sample - self.ptr
+            index = np.array(list(range(self.capacity - rest, self.capacity)) + list(range(self.ptr)))
+
+        return index
+
+    def get_last_n_samples(self, n):
+        assert n <= self.size, "No enough sample in memory."
+
+        index = self._get_last_n_index(n)
+
+        state_batch = np.concatenate([self.state_queue[index], self.next_state_queue[index[-1]][np.newaxis, :]], axis=0)
+        action_batch = self.action_queue[index]
+        reward_batch = self.reward_queue[index]
+        done_batch = self.done_queue[index]
 
         n_env = state_batch.shape[1]
         ob_shape = state_batch.shape[2:]
@@ -57,12 +81,12 @@ class Memory(object):
         return state_batch, action_batch, reward_batch, done_batch
 
     def sample_transition(self, n):
-        index = np.random.randint(self.size - 1, size=n)
-        state_batch = np.asarray([self.state_queue[i] for i in index])
-        action_batch = np.asarray([self.action_queue[i] for i in index])
-        reward_batch = np.asarray([self.reward_queue[i] for i in index])
-        done_batch = np.asarray([self.done_queue[i] for i in index])
-        next_state_batch = np.asarray([self.state_queue[i + 1] for i in index])
+        idxs = np.random.randint(self.size, size=n)
+        state_batch = self.state_queue[idxs, :]
+        action_batch = self.action_queue[idxs, :]
+        reward_batch = self.reward_queue[idxs, :]
+        done_batch = self.done_queue[idxs, :]
+        next_state_batch = self.next_state_queue[idxs, :]
 
         state_batch = state_batch.swapaxes(0, 1)
         action_batch = action_batch.swapaxes(0, 1)
@@ -72,49 +96,57 @@ class Memory(object):
 
         return state_batch, action_batch, reward_batch, done_batch, next_state_batch
 
-    @property
-    def size(self):
-        return len(self.done_queue)
+
+class DiscreteActionMemory(ContinuousActionMemory):
+    """ 
+    Memory for discrete-action environments.
+
+    Arguments:
+        - capacity: replay buffer size.
+        - n_env: the number of environments.
+        - dim_obs: tuple. the dimension of observaitons, like (16,) or (84, 84, 4).
+    """
+
+    def __init__(self, *, capacity=0, n_env: int=1, dim_obs: Tuple=None):
+        self.state_queue = np.zeros((capacity, n_env, *dim_obs), dtype=np.float32)
+        self.action_queue = np.zeros((capacity, n_env), dtype=np.int32)
+        self.reward_queue = np.zeros((capacity, n_env), dtype=np.float32)
+        self.done_queue = np.zeros((capacity, n_env), dtype=np.float32)
+        self.next_state_queue = np.zeros((capacity, n_env, *dim_obs), dtype=np.float32)
+
+        self.ptr, self.size = 0, 0
+        self.capacity = capacity
+        self.dim_obs = dim_obs
+        self.n_env = n_env
+
+    def store_sards(self, state, action, reward, done, next_state):
+
+        assert state.shape == (self.n_env, *self.dim_obs)
+        assert action.shape == (self.n_env,)
+        assert reward.shape == (self.n_env,)
+        assert done.shape == (self.n_env,)
+        assert next_state.shape == (self.n_env, *self.dim_obs)
+
+        self.state_queue[self.ptr, :] = state
+        self.action_queue[self.ptr, :] = action
+        self.reward_queue[self.ptr, :] = reward
+        self.done_queue[self.ptr, :] = done
+        self.next_state_queue[self.ptr, :] = next_state
+
+        self.ptr = (self.ptr+1) % self.capacity
+        self.size = min(self.size+1, self.capacity)
 
 
-class SimpleMemory(object):
-    def __init__(self, maxlen: int = 100):
-        self.obs_queue = deque(maxlen=maxlen)
-        self.act_queue = deque(maxlen=maxlen)
-        self.rew_queue = deque(maxlen=maxlen)
-        self.done_queue = deque(maxlen=maxlen)
-        self.next_obs_queue = deque(maxlen=maxlen)
-
-    def store_s(self, obs):
-        self.obs_queue.append(obs)
-
-    def store_a(self, act):
-        self.act_queue.append(act)
-
-    def store_rds(self, rew, done, obs):
-        self.rew_queue.append(rew)
-        self.done_queue.append(done)
-        self.next_obs_queue.append(obs)
-
-    def sample_transition(self, n):
-        index = np.random.randint(len(self.done_queue), size=n)
-        obs_batch = np.asarray([self.obs_queue[i] for i in range(index)])[np.newaxis, :]
-        act_batch = np.asarray([self.act_queue[i] for i in raneg(index)])[np.newaxis, :]
-        rew_batch = np.asarray([self.rew_queue[i] for i in range(index)])[np.newaxis, :]
-        done_batch = np.asarray([self.done_queue[i] for i in range(index)])[np.newaxis, :]
-        next_obs_batch = np.asarray([self.next_obs_queue[i] for i in range(index)])[np.newaxis, :]
-        return obs_batch, act_batch, rew_batch, done_batch, next_obs_batch
-
-
-class DistributedMemory(object):
-    def __init__(self, maxlen: int = 128):
+class AsyncContinuousActionMemory(object):
+    def __init__(self, maxsize: int = 0, dim_obs: Tuple=None, dim_act: int=None):
         self.env_wrapper = None
-        self.state_queue = defaultdict(lambda: deque(maxlen=maxlen + 1))
-        self.action_queue = defaultdict(lambda: deque(maxlen=maxlen))
-        self.reward_queue = defaultdict(lambda: deque(maxlen=maxlen))
-        self.done_queue = defaultdict(lambda: deque(maxlen=maxlen))
-
-        self.cnt = 0
+        self.state_queue = defaultdict(lambda: np.zeros((maxsize + 1, *dim_obs), dtype=np.float32))
+        self.action_queue = defaultdict(lambda: np.zeros((maxsize + 1, dim_act), dtype=np.float32))
+        self.reward_queue = defaultdict(lambda: np.zeros((maxsize), dtype=np.float32))
+        self.done_queue = defaultdict(lambda: np.zeros((maxsize), dtype=np.float32))
+        self.ptr_queue = defaultdict(int)
+        self.cnt_queue = defaultdict(int)
+        self.s_maxsize, self.a_maxsize, self.r_maxsize, self.d_maxsize = maxsize + 1, maxsize + 1, maxsize, maxsize
 
     def register(self, env_wrapper):
         self.env_wrapper = env_wrapper
@@ -125,112 +157,162 @@ class DistributedMemory(object):
         return self.env_wrapper.env_id
 
     def store_s(self, states):
+
+        print(states.shape)
         for env_id, s in zip(self._env_ids, states):
-            self.state_queue[env_id].append(s)
+            self.state_queue[env_id][self.ptr_queue[(env_id, "s")]] = s
+            self.ptr_queue[(env_id, "s")] = (self.ptr_queue[(env_id, "s")] + 1) % self.s_maxsize
+            self.cnt_queue[(env_id, "s")] += 1
 
     def store_a(self, actions):
         for env_id, a in zip(self._env_ids, actions):
-            self.action_queue[env_id].append(a)
+            self.action_queue[env_id][self.ptr_queue[(env_id, "a")]] = a
+            self.ptr_queue[(env_id, "a")] = (self.ptr_queue[(env_id, "a")] + 1) % self.a_maxsize
+            self.cnt_queue[(env_id, "a")] += 1
 
     def store_rds(self, rewards, dones, states):
         for env_id, r, d, s in zip(self._env_ids, rewards, dones, states):
-            self.reward_queue[env_id].append(r)
-            self.done_queue[env_id].append(d)
-            self.state_queue[env_id].append(s)
+            self.reward_queue[env_id][self.ptr_queue[(env_id, "r")]] = r
+            self.done_queue[env_id][self.ptr_queue[(env_id, "d")]] = d
+            self.state_queue[env_id][self.ptr_queue[(env_id, "s")]] = s
+
+            self.ptr_queue[(env_id, "r")] = (self.ptr_queue[(env_id, "r")] + 1) % self.r_maxsize
+            self.ptr_queue[(env_id, "d")] = (self.ptr_queue[(env_id, "d")] + 1) % self.d_maxsize
+            self.ptr_queue[(env_id, "s")] = (self.ptr_queue[(env_id, "s")] + 1) % self.s_maxsize
+            self.cnt_queue[(env_id, "r")] += 1
+            self.cnt_queue[(env_id, "d")] += 1
+            self.cnt_queue[(env_id, "s")] += 1
+
+    def _get_last_n_index(self, env_id, n_sample):
+        s_ptr = self.ptr_queue[(env_id, "s")]
+        r_ptr = self.ptr_queue[(env_id, "r")]
+        d_ptr = self.ptr_queue[(env_id, "d")]
+        a_ptr = self.ptr_queue[(env_id, "a")]
+
+        if s_ptr >= n_sample + 1:
+            s_index = np.array(range(s_ptr - n_sample - 1, s_ptr))
+        else:
+            rest = n_sample + 1 - s_ptr
+            s_index = np.array(list(range(self.s_maxsize - rest, self.s_maxsize)) + list(range(s_ptr)))
+
+        if r_ptr >= n_sample:
+            r_index = np.array(range(r_ptr - n_sample, r_ptr))
+        else:
+            rest = n_sample - r_ptr
+            r_index = np.array(list(range(self.r_maxsize - rest, self.r_maxsize)) + list(range(r_ptr)))
+
+        if d_ptr >= n_sample:
+            d_index = np.array(range(d_ptr - n_sample, d_ptr))
+        else:
+            rest = n_sample - d_ptr
+            d_index = np.array(list(range(self.d_maxsize - rest, self.d_maxsize)) + list(range(d_ptr)))
+
+        a_ptr = (a_ptr - 1) % self.a_maxsize if s_ptr == a_ptr else a_ptr
+        if a_ptr >= n_sample:
+            a_index = np.array(range(a_ptr - n_sample, a_ptr))
+        else:
+            rest = n_sample - a_ptr
+            a_index = np.array(list(range(self.a_maxsize - rest, self.a_maxsize)) + list(range(a_ptr)))
+
+        return s_index, a_index, r_index, d_index
 
     def get_last_n_samples(self, n_sample):
         state_batch, action_batch, reward_batch, done_batch = [], [], [], []
 
         for env_id in self.done_queue.keys():
-            if len(self.done_queue[env_id]) < n_sample:
-                assert False, "Not enough warm steps or requiring too many samples."
+            assert self.cnt_queue[(env_id, "d")] >= n_sample, "Not enough warm steps or requiring too many samples."
 
-            state_batch.append(np.asarray([self.state_queue[env_id][-i - 1] for i in reversed(range(n_sample + 1))]))
-            reward_batch.append(np.asarray([self.reward_queue[env_id][-i - 1] for i in reversed(range(n_sample))]))
-            done_batch.append(np.asarray([self.done_queue[env_id][-i - 1] for i in reversed(range(n_sample))]))
+            s_index, a_index, r_index, d_index = self._get_last_n_index(env_id, n_sample)
 
-            # Sometimes, we have n_action = n_state due to the asynchronism.
-            if len(self.action_queue[env_id]) + 1 == len(self.state_queue[env_id]):
-                action_batch.append(np.asarray([self.action_queue[env_id][-i - 1] for i in reversed(range(n_sample))]))
-            else:
-                assert len(self.action_queue[env_id]) == len(self.state_queue[env_id])
-                action_batch.append(np.asarray([self.action_queue[env_id][-i - 2] for i in reversed(range(n_sample))]))
+            state_batch.append(self.state_queue[env_id][s_index])
+            action_batch.append(self.action_queue[env_id][a_index])
+            reward_batch.append(self.reward_queue[env_id][r_index])
+            done_batch.append(self.done_queue[env_id][d_index])
 
         return np.stack(state_batch), np.stack(action_batch), np.stack(reward_batch), np.stack(done_batch)
+
+    def _sample_transition_index(self, env_id, n_sample):
+        s_ptr = self.ptr_queue[(env_id, "s")]
+        r_ptr = self.ptr_queue[(env_id, "r")]
+        d_ptr = self.ptr_queue[(env_id, "d")]
+        a_ptr = self.ptr_queue[(env_id, "a")]
+
+        s_cnt = self.cnt_queue[(env_id, "s")]
+        r_cnt = self.cnt_queue[(env_id, "r")]
+        d_cnt = self.cnt_queue[(env_id, "d")]
+        a_cnt = self.cnt_queue[(env_id, "a")]
+
+        if s_ptr == s_cnt:
+            s_slice = np.array(range(s_ptr))
+        else:
+            s_slice = list(range(self.s_maxsize))
+            s_slice = np.array(s_slice[s_ptr:] + s_slice[:s_ptr])
+
+        if r_ptr == r_cnt:
+            r_slice = np.array(range(r_ptr))
+        else:
+            r_slice = list(range(self.r_maxsize))
+            r_slice = np.array(r_slice[r_ptr:] + r_slice[:r_ptr])
+
+        if d_ptr == d_cnt:
+            d_slice = np.array(range(d_ptr))
+        else:
+            d_slice = list(range(self.d_maxsize))
+            d_slice = np.array(d_slice[d_ptr:] + d_slice[:d_ptr])
+
+        if a_ptr == a_cnt:
+            a_slice = np.array(range(a_ptr))
+        else:
+            a_slice = list(range(self.a_maxsize))
+            a_slice = np.array(a_slice[a_ptr:] + a_slice[:a_ptr])
+
+        s_size = min(s_cnt, self.s_maxsize)
+        index = np.random.randint(s_size-1, size=n_sample)
+
+        s_index = s_slice[index]
+        r_index = r_slice[index]
+        d_index = d_slice[index]
+        next_s_index = s_slice[index + 1]
+
+        if a_cnt >= self.a_maxsize and a_cnt < s_cnt:
+            a_index = a_slice[index + 1]
+        else:
+            a_index = a_slice[index]
+
+        return s_index, a_index, r_index, d_index, next_s_index
 
     def sample_transition(self, n):
 
         state_batch, action_batch, reward_batch, done_batch, next_state_batch = [], [], [], [], []
 
         env_id_keys = self.done_queue.keys()
-
         n_queue = len(env_id_keys)
-        each_sample = math.floor(n / n_queue)
-        n_last = n - (n_queue - 1) * each_sample
+        n_not_last = math.ceil(n / n_queue)
+        n_last = n - (n_queue - 1) * n_not_last
 
         for j, env_id in enumerate(env_id_keys):
             if j == len(env_id_keys) - 1:
                 n_sample = n_last
             else:
-                n_sample = each_sample
-            index = np.random.randint(len(self.state_queue[env_id])-1, size=n_sample)
-            state_batch.append(np.asarray([self.state_queue[env_id][i] for i in index]))
-            action_batch.append(np.asarray([self.action_queue[env_id][i] for i in index]))
-            reward_batch.append(np.asarray([self.reward_queue[env_id][i] for i in index]))
-            done_batch.append(np.asarray([self.done_queue[env_id][i] for i in index]))
-            next_state_batch.append(np.asarray([self.state_queue[env_id][i+1] for i in index]))
+                n_sample = n_not_last
+
+            s_index, a_index, r_index, d_index, next_s_index = self._sample_transition_index(env_id, n_sample)
+            state_batch.append(self.state_queue[env_id][s_index])
+            action_batch.append(self.action_queue[env_id][a_index])
+            reward_batch.append(self.reward_queue[env_id][r_index])
+            done_batch.append(self.done_queue[env_id][d_index])
+            next_state_batch.append(self.state_queue[env_id][next_s_index])
 
         return np.stack(state_batch), np.stack(action_batch), np.stack(reward_batch), np.stack(done_batch), np.stack(next_state_batch)
 
 
-class NonBlockMemory(object):
-    def __init__(self, n_env):
-        """
-        state_queue 存储交互得到的state，假设state是(84*84*4)，有8个env同时传递，那么每个state存储格式为$(8*84*84*4)$。
-        """
-        self._n_env = n_env
-        self.state_queue = [list() for _ in range(n_env)]
-        self.action_queue = [list() for _ in range(n_env)]
-        self.reward_queue = [list() for _ in range(n_env)]
-        self.done_queue = [list() for _ in range(n_env)]
-
-    def store_tag_rds(self, tag: List[int], reward, done, state):
-        for i in range(len(tag)):
-            t = tag[i]
-            self.reward_queue[t].append(reward[i, ...])
-            self.done_queue[t].append(done[i, ...])
-            self.state_queue[t].append(state[i, ...])
-
-    def store_tag_s(self, tag: List[int], state):
-        for i in range(len(tag)):
-            t = tag[i]
-            self.state_queue[t].append(state[i, ...])
-
-    def store_tag_a(self, tag: List[int], action):
-        for i in range(len(tag)):
-            t = tag[i]
-            self.action_queue[t].append(action[i, ...])
-
-    def get_trajectory_and_clear(self):
-        state_batch, action_batch, reward_batch, done_batch = [], [], [], []
-        for i in range(self.n_env):
-            trajectory_length = len(self.done_queue[i])
-            if trajectory_length == 0:
-                continue
-            state_batch.append(np.asarray(self.state_queue[i]))
-            action_batch.append(np.asarray(self.action_queue[i][:trajectory_length]))
-            reward_batch.append(np.asarray(self.reward_queue[i]))
-            done_batch.append(np.asarray(self.done_queue[i]))
-
-            # Clear state, action, reward, done queue.
-            action_length = len(self.action_queue[i])
-            self.state_queue[i] = [self.state_queue[i][-1]]
-            self.action_queue[i] = [] if action_length == trajectory_length else [self.action_queue[i][-1]]
-            self.reward_queue[i] = []
-            self.done_queue[i] = []
-
-        return state_batch, action_batch, reward_batch, done_batch
-
-    @property
-    def n_env(self):
-        return self._n_env
+class AsyncDiscreteActionMemory(AsyncContinuousActionMemory):
+    def __init__(self, maxsize: int=0, dim_obs: Tuple=None):
+        self.env_wrapper = None
+        self.state_queue = defaultdict(lambda: np.zeros((maxsize + 1, *dim_obs), dtype=np.float32))
+        self.action_queue = defaultdict(lambda: np.zeros((maxsize + 1), dtype=np.int32))
+        self.reward_queue = defaultdict(lambda: np.zeros((maxsize), dtype=np.float32))
+        self.done_queue = defaultdict(lambda: np.zeros((maxsize), dtype=np.float32))
+        self.ptr_queue = defaultdict(int)
+        self.cnt_queue = defaultdict(int)
+        self.s_maxsize, self.a_maxsize, self.r_maxsize, self.d_maxsize = maxsize + 1, maxsize + 1, maxsize, maxsize

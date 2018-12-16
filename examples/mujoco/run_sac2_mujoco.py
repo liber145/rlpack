@@ -8,6 +8,7 @@ import gym
 import numpy as np
 from rlpack.algos import SAC2
 from rlpack.environment import MujocoWrapper
+# from rlpack.common import Memory
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
 
@@ -24,7 +25,7 @@ class Config(object):
     def __init__(self):
         """All papameters here."""
         self.rnd = 1
-        self.save_path = f"./log/sac/exp_{args.env_name}"
+        self.save_path = f"./log/sac/sac2_{args.env_name}"
 
         # 环境
         self.n_env = 1
@@ -148,6 +149,7 @@ def learn(env, agent, config):
             epoch = t // steps_per_epoch
 
             print(f"epoch: {epoch}  rewmean: {np.mean(epr)}")
+            summary_writer.add_scalar("eprew", np.mean(epr), epoch)
 
 
 if __name__ == "__main__":

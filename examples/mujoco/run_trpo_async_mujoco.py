@@ -7,7 +7,7 @@ from collections import deque
 
 import numpy as np
 from rlpack.algos import TRPO
-from rlpack.common import DistributedMemory
+from rlpack.common import AsyncContinuousActionMemory
 from rlpack.environment import AsyncMujocoWrapper
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
@@ -24,7 +24,7 @@ class Config(object):
     def __init__(self):
         """All papameters here."""
         self.rnd = 5
-        self.save_path = f"./log/trpo_{args.env_name}_2"
+        self.save_path = f"./log/trpo/async_exp_{args.env_name}"
 
         # 环境
         self.n_env = 1
@@ -62,7 +62,7 @@ def safemean(x):
 
 
 def learn(env, agent, config):
-    memory = DistributedMemory(config.memory_size)
+    memory = AsyncContinuousActionMemory(maxsize=config.memory_size, dim_obs=config.dim_observation, dim_act=config.dim_action)
     memory.register(env)
     epinfobuf = deque(maxlen=100)
     summary_writer = SummaryWriter(os.path.join(config.save_path, "summary"))
@@ -72,7 +72,7 @@ def learn(env, agent, config):
     memory.store_s(obs)
     print(f"observation: max={np.max(obs)} min={np.min(obs)}")
     for i in tqdm(range(config.warm_start_length)):
-        actions = agent.get_action(obs)
+        actions = env.sample_action(obs.shape[0])
         memory.store_a(actions)
         next_obs, rewards, dones, infos = env.step(actions)
 

@@ -7,8 +7,8 @@ from collections import deque
 
 import numpy as np
 from rlpack.algos import SAC2
-from rlpack.common import AsyncContinuousActionMemory
-from rlpack.environment import AsyncMujocoWrapper
+from rlpack.common import ContinuousActionMemory
+from rlpack.environment import MujocoWrapper
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
 import argparse
@@ -67,22 +67,19 @@ def safemean(x):
 
 
 def learn(env, agent, config):
-    memory = AsyncContinuousActionMemory(maxsize=config.memory_size, dim_obs=config.dim_observation, dim_act=config.dim_action)
-    memory.register(env)
+    memory = ContinuousActionMemory(capacity=config.memory_size, n_env=config.n_env, dim_obs=config.dim_observation, dim_act=config.dim_action)
     epinfobuf = deque(maxlen=20)
     summary_writer = SummaryWriter(os.path.join(config.save_path, "summary"))
 
     # 热启动，随机收集数据。
     obs = env.reset()
     print("obs shape:", obs.shape)
-    memory.store_s(obs)
     print(f"observation: max={np.max(obs)} min={np.min(obs)}")
     for i in tqdm(range(config.warm_start_length)):
-        actions = env.sample_action(obs.shape[0])
-        memory.store_a(actions)
+        actions = env.sample_action()
         next_obs, rewards, dones, infos = env.step(actions)
 
-        memory.store_rds(rewards, dones, next_obs)
+        memory.store_sards(obs, actions, rewards, dones, next_obs)
         obs = next_obs
 
     print("Finish warm start.")
@@ -91,7 +88,6 @@ def learn(env, agent, config):
         epinfos = []
         for _ in range(env.horizon_length):
             actions = agent.get_action(obs)
-            memory.store_a(actions)
             next_obs, rewards, dones, infos = env.step(actions)
 
             for info in infos:
@@ -99,7 +95,7 @@ def learn(env, agent, config):
                 if maybeepinfo:
                     epinfos.append(maybeepinfo)
 
-            memory.store_rds(rewards, dones, next_obs)
+            memory.store_sards(obs, actions, rewards, dones, next_obs)
             obs = next_obs
 
         update_ratio = i / config.update_step
@@ -118,7 +114,8 @@ def learn(env, agent, config):
 
 
 if __name__ == "__main__":
-    env = AsyncMujocoWrapper(f"{args.env_name}", 1, 1, 50013)
+    config = Config()
+    env = MujocoWrapper(f"{args.env_name}", config.n_env)
     config = process_env(env)
     agent = SAC2(config)
     learn(env, agent, config)

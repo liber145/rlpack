@@ -7,7 +7,8 @@ from collections import deque
 import gym
 import numpy as np
 from rlpack.algos import SAC2
-from rlpack.environment import MujocoWrapper
+from rlpack.environment.mujoco_wrappers import make_mujoco
+# from rlpack.common import Memory
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
 
@@ -24,7 +25,7 @@ class Config(object):
     def __init__(self):
         """All papameters here."""
         self.rnd = 1
-        self.save_path = f"./log/sac/exp_{args.env_name}"
+        self.save_path = f"./log/sac/sac2_{args.env_name}"
 
         # 环境
         self.n_env = 1
@@ -77,8 +78,8 @@ class Memory:
 
 def process_env(env):
     config = Config()
-    config.dim_observation = env.observation_space.shape
-    config.dim_action = env.action_space.shape[0]
+    config.dim_observation = env.dim_observation
+    config.dim_action = env.dim_action
     return config
 
 
@@ -107,7 +108,8 @@ def learn(env, agent, config):
         if t > 10000:
             a = agent.get_action(o)
         else:
-            a = env.action_space.sample()
+            # a = env.action_space.sample()
+            a = env.sample_action()
 
         # Step the env
         o2, r, d, _ = env.step(a)
@@ -120,7 +122,7 @@ def learn(env, agent, config):
         # Ignore the "done" signal if it comes from hitting the time
         # horizon (that is, when it's an artificial terminal signal
         # that isn't based on the agent's state)
-        d = False if ep_len == 1000 else d
+        # d = False if ep_len == 1000 else d
 
         # Store experience to replay buffer
         memory.store(o, a, r, o2, d)
@@ -141,18 +143,21 @@ def learn(env, agent, config):
                 agent.update(batch, update_ratio=0)
 
             epr.append(ep_ret)
-            o, r, d, ep_ret, ep_len = env.reset(), 0, False, 0, 0
+            ep_ret, ep_len = 0, 0
+            # o, r, d, ep_ret, ep_len = env.reset(), 0, False, 0, 0
 
         # End of epoch wrap-up
         if t > 0 and t % steps_per_epoch == 0:
             epoch = t // steps_per_epoch
 
             print(f"epoch: {epoch}  rewmean: {np.mean(epr)}")
+            summary_writer.add_scalar("eprew", np.mean(epr), epoch)
 
 
 if __name__ == "__main__":
-    env = gym.make(f"{args.env_name}")
-    env.seed(2)
+    # env = gym.make(f"{args.env_name}")
+    env = make_mujoco(f"{args.env_name}")
+    env.seed(4)
     config = process_env(env)
     agent = SAC2(config)
     learn(env, agent, config)
