@@ -3,7 +3,7 @@ from collections import deque
 
 import numpy as np
 from rlpack.algos import DoubleDQN
-from rlpack.common import DistributedMemory
+from rlpack.common import AsyncDiscreteActionMemory
 from rlpack.environment import AsyncAtariWrapper
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
@@ -30,7 +30,7 @@ class Config(object):
         self.warm_start_length = 2000
 
         # Cycle parameters.
-        self.save_model_freq = 1000
+        self.save_model_freq = 100
         self.log_freq = 100
         self.update_target_freq = 100
 
@@ -56,9 +56,9 @@ def safemean(x):
 
 def learn(env, agent, config):
 
-    memory = DistributedMemory(1000)
+    memory = AsyncDiscreteActionMemory(maxsize=config.memory_size, dim_obs=config.dim_observation)
     memory.register(env)
-    epinfobuf = deque(maxlen=100)
+    epinfobuf = deque(maxlen=20)
     summary_writer = SummaryWriter(os.path.join(config.save_path, "summary"))
 
     # ------------ Warm start --------------

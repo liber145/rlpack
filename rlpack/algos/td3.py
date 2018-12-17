@@ -169,14 +169,14 @@ class TD3(Base):
         mb_a = np.concatenate(mb_a)
         mb_target = np.concatenate(mb_target)
 
-        _, global_step = self.sess.run([self.increment_global_step, tf.train.get_global_step()])
-
         # Update critic net.
         self.sess.run(self.train_critic_op, feed_dict={
-                                                self.observation: mb_s,
-                                                self.action: mb_a,
-                                                self.target_qval: mb_target,
-                                                self.critic_lr: self.value_lr_schedule(update_ratio)})
+            self.observation: mb_s,
+            self.action: mb_a,
+            self.target_qval: mb_target,
+            self.critic_lr: self.value_lr_schedule(update_ratio)})
+
+        global_step, _ = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
 
         # Update actor net.
         if global_step % self.policy_delay == 0:

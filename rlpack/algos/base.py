@@ -30,7 +30,7 @@ class Base(ABC):
 
         # Save.
         self.save_path = config.save_path if hasattr(config, "save_path") else "./log"
-        self.save_model_freq = config.save_model_freq if hasattr(config, "save_model_freq") else 0.01
+        self.save_model_freq = config.save_model_freq if hasattr(config, "save_model_freq") else 100
 
         # ------------------------ Reset graph ------------------------
         tf.reset_default_graph()

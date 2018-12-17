@@ -129,13 +129,17 @@ class SAC(Base):
         d_batch = d_batch.reshape(n_env * batch_size)
         next_s_batch = next_s_batch.reshape(n_env * batch_size, *self.dim_observation)
 
-        global_step, _ = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
         value_loss, policy_loss, _, _, _ = self.sess.run([self.value_loss, self.pi_loss, self.update_policy, self.update_value, self.update_target], feed_dict={
             self.observation: s_batch,
             self.action: a_batch,
             self.reward: r_batch,
             self.done: d_batch,
             self.next_observation: next_s_batch})
+
+        # Save model.
+        global_step, _ = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
+        if global_step % self.save_model_freq == 0:
+            self.save_model()
 
     def get_action(self, obs):
         if obs.ndim == 1 or obs.ndim == 3:

@@ -57,8 +57,7 @@ class DistDQN(Base):
         self.action_probs_clip = tf.clip_by_value(self.action_probs, 0.00001, 0.99999)
 
         self.loss = tf.reduce_mean(-tf.reduce_sum(self.next_input * tf.log(self.action_probs_clip), axis=-1))
-        self.train_op = self.optimizer.minimize(
-            self.loss, global_step=tf.train.get_global_step(), var_list=trainable_variables)
+        self.train_op = self.optimizer.minimize(self.loss, var_list=trainable_variables)
 
         # 更新目标网络。
         def _update_target(new_net, old_net):
@@ -123,12 +122,13 @@ class DistDQN(Base):
             targets.append(compute_histogram(rew, prob, d))
 
         target_batch = np.array(targets)
-        _, global_step, loss = self.sess.run([self.train_op, tf.train.get_global_step(), self.loss],
-                                             feed_dict={self.observation: s_batch, self.action: a_batch, self.next_input: target_batch})
+        _, loss = self.sess.run([self.train_op, self.loss],
+                                feed_dict={self.observation: s_batch, self.action: a_batch, self.next_input: target_batch})
 
-        # 存储模型。
+        # Save model.
+        global_step, _ = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
         if global_step % self.save_model_freq == 0:
-            self.save_model(self.save_path)
+            self.save_model()
 
         # 更新目标策略。
         if global_step % self.update_target_freq == 0:

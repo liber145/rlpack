@@ -80,8 +80,8 @@ class TRPO(Base):
         self.critic_loss = tf.reduce_mean(tf.square(self.state_value - self.span_reward))
         grads = tf.gradients(self.critic_loss, self.critic_vars)
         clipped_grads, _ = tf.clip_by_global_norm(grads, self.max_grad_norm)
-        self.train_critic_op = self.critic_optimizer.apply_gradients(zip(clipped_grads, self.critic_vars), global_step=tf.train.get_global_step())
-        # self.train_critic_op = self.critic_optimizer.minimize(self.critic_loss, global_step=tf.train.get_global_step(), var_list=self.critic_vars)
+        self.train_critic_op = self.critic_optimizer.apply_gradients(zip(clipped_grads, self.critic_vars))
+        # self.train_critic_op = self.critic_optimizer.minimize(self.critic_loss, var_list=self.critic_vars)
 
         # Build sample action.
         self.n_output_action = tf.placeholder(tf.int32)
@@ -170,6 +170,11 @@ class TRPO(Base):
             #         self.sess.run(self.train_critic_op, feed_dict={self.observation: mb_s, self.span_reward: mb_target_value})
             #     except StopIteration:
             #         break
+
+        # Save model.
+        global_step, _ = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
+        if global_step % self.save_model_freq == 0:
+            self.save_model()
 
     def _target_func(self, theta):
         self._recover_param_list(theta)

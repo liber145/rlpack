@@ -70,8 +70,6 @@ class DDPG(Base):
         # Update actor parameters.
         self.train_actor_op = self.optimizer.apply_gradients(zip(grad_surr, actor_vars))
 
-        self.increment_global_step = tf.assign_add(tf.train.get_global_step(), 1)
-
         # ---------- Build Value Algorithm ----------
         critic_vars = tf.trainable_variables("qval_net")
         self.value_loss = tf.reduce_mean(tf.reduce_sum(tf.square(self.qval - self.target_qval_ph)))
@@ -119,8 +117,6 @@ class DDPG(Base):
         mb_a = np.concatenate(mb_a)
         mb_target = np.concatenate(mb_target)
 
-        self.sess.run(self.increment_global_step)
-
         # Update actor.
         grad = self.sess.run(self.grad_q_a, feed_dict={self.observation_ph: mb_s, self.action_ph: mb_a})[0]
         self.sess.run(self.train_actor_op, feed_dict={self.observation_ph: mb_s, self.action_ph: mb_a, self.grad_q_act_ph: grad})
@@ -131,13 +127,13 @@ class DDPG(Base):
             self.action_ph: mb_a,
             self.target_qval_ph: mb_target})
 
-        global_step = self.sess.run(tf.train.get_global_step())
-
+        global_step, _ = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
         if global_step % self.update_target_freq == 0:
             self._copy_parameters("qval_net", "dummy_qval_net")
             self._copy_parameters("act_net", "dummy_act_net")
 
-        return {"critic_loss": loss, "global_step": global_step}
+        if global_step % self.save_model_freq == 0:
+            self.save_model()
 
     def _copy_parameters(self, netnew, netold):
         """Copy parameters from netnew to netold.

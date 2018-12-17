@@ -24,7 +24,7 @@ class Config(object):
     def __init__(self):
         """All papameters here."""
         self.rnd = 5
-        self.save_path = f"./log/trpo/async_exp_{args.env_name}"
+        self.save_path = f"./log/trpo/exp_async_{args.env_name}"
 
         # 环境
         self.n_env = 1
@@ -83,7 +83,7 @@ def learn(env, agent, config):
     print("Start training.")
     for i in tqdm(range(config.update_step)):
         epinfos = []
-        for _ in range(int(config.trajectory_length * 3 / 3)):
+        for _ in range(config.trajectory_length):
             actions = agent.get_action(obs)
             memory.store_a(actions)
             next_obs, rewards, dones, infos = env.step(actions)
@@ -107,7 +107,7 @@ def learn(env, agent, config):
         if i > 0 and i % config.log_freq == 0:
             rewmean = safemean([epinfo["r"] for epinfo in epinfobuf])
             lenmean = safemean([epinfo['l'] for epinfo in epinfobuf])
-            print(f"eprewmean: {rewmean}  eplenmean: {lenmean}  rew: {epinfobuf[-1]['r']}  len: {epinfobuf[-1]['l']}")
+            tqdm.write(f"iter: {i}  eprewmean: {rewmean}  eplenmean: {lenmean}  rew: {epinfobuf[-1]['r']}  len: {epinfobuf[-1]['l']}")
 
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@ from collections import deque
 
 import numpy as np
 from rlpack.algos import DistDQN
-from rlpack.common import DistributedMemory
+from rlpack.common import AsyncDiscreteActionMemory
 from rlpack.environment import AsyncAtariWrapper
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
@@ -18,7 +18,7 @@ class Config(object):
     def __init__(self):
         # random seed and path.
         self.rnd = 1
-        self.save_path = f"./log/distdqn_{args.env_name}"
+        self.save_path = f"./log/distdqn/exp_{args.env_name}"
 
         # Environment parameters.
         self.n_env = 4
@@ -30,7 +30,7 @@ class Config(object):
         self.warm_start_length = 2000
 
         # Cycle parameters.
-        self.save_model_freq = 1000
+        self.save_model_freq = 100
         self.log_freq = 100
         self.update_target_freq = 100
 
@@ -56,17 +56,18 @@ def safemean(x):
 
 def learn(env, agent, config):
 
-    memory = DistributedMemory(1000)
+    memory = AsyncDiscreteActionMemory(maxsize=config.memory_size, dim_obs=config.dim_observation)
     memory.register(env)
-    epinfobuf = deque(maxlen=100)
+    epinfobuf = deque(maxlen=20)
     summary_writer = SummaryWriter(os.path.join(config.save_path, "summary"))
 
     # ------------ Warm start --------------
     obs = env.reset()
+    print("obs:", obs.shape)
     memory.store_s(obs)
     print(f"observation: max={np.max(obs)} min={np.min(obs)}")
     for i in tqdm(range(config.warm_start_length)):
-        actions = agent.get_action(obs)
+        actions = env.sample_action(obs.shape[0])
         memory.store_a(actions)
         obs, rewards, dones, infos = env.step(actions)
         memory.store_rds(rewards, dones, obs)
@@ -99,7 +100,7 @@ def learn(env, agent, config):
         if i > 0 and i % config.log_freq == 0:
             rewmean = safemean([epinfo["r"] for epinfo in epinfobuf])
             lenmean = safemean([epinfo['l'] for epinfo in epinfobuf])
-            print(f"eprewmean: {rewmean}  eplenmean: {lenmean}  rew: {epinfobuf[-1]['r']}   len: {epinfobuf[-1]['l']}")
+            tqdm.write(f"iter {i}  eprewmean: {rewmean}  eplenmean: {lenmean}  rew: {epinfobuf[-1]['r']}   len: {epinfobuf[-1]['l']}")
 
 
 if __name__ == "__main__":

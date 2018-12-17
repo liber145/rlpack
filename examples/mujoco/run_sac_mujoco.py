@@ -24,7 +24,7 @@ class Config(object):
     def __init__(self):
         """All papameters here."""
         self.rnd = 1
-        self.save_path = f"./log/sac/exp_async_{args.env_name}"
+        self.save_path = f"./log/sac/exp_{args.env_name}"
 
         # 环境
         self.n_env = 1
@@ -38,7 +38,7 @@ class Config(object):
         self.memory_size = int(1e6)
 
         # 周期参数
-        self.save_model_freq = 50
+        self.save_model_freq = 100
         self.log_freq = 1
 
         # 算法参数

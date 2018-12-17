@@ -3,7 +3,6 @@
 
 import argparse
 import os
-import time
 from collections import deque
 
 import numpy as np
@@ -38,7 +37,7 @@ class Config(object):
         self.memory_size = int(1e6)
 
         # 周期参数
-        self.save_model_freq = 50
+        self.save_model_freq = 100
         self.log_freq = 1
 
         # 算法参数
@@ -51,7 +50,6 @@ def process_env(env):
     config.dim_observation = env.dim_observation
     config.dim_action = env.dim_action
     config.trajectory_length = env.horizon_length if env.horizon_length > 0 else 500
-    config.trajectory_length = 1000
     return config
 
 
@@ -97,17 +95,9 @@ def learn(env, agent, config):
 
         update_ratio = i / config.update_step
 
-        lap_sample = 0
-        lap_train = 0
-        end2 = time.time()
         for _ in range(config.trajectory_length):
             data_batch = memory.sample_transition(100)
-            end1 = time.time()
-            lap_sample += end1 - end2
             agent.update(data_batch, update_ratio)
-            end2 = time.time()
-            lap_train += end2 - end1
-        print("lap time sample:", lap_sample, "train:", lap_train)
 
         epinfobuf.extend(epinfos)
         summary_writer.add_scalar("eprewmean", safemean([epinfo["r"] for epinfo in epinfobuf]), global_step=i)
@@ -120,7 +110,7 @@ def learn(env, agent, config):
 
 
 if __name__ == "__main__":
-    env = AsyncMujocoWrapper(f"{args.env_name}", 1, 1, 50013)
+    env = AsyncMujocoWrapper(f"{args.env_name}", 3, 2, 50013)
     config = process_env(env)
     agent = SAC(config)
     learn(env, agent, config)

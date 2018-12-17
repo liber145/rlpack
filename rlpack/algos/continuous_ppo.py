@@ -86,12 +86,12 @@ class ContinuousPPO(Base):
 
         # You can also build total loss and clip the gradients.
         # # Build total_loss.
-        # self.total_loss = self.surrogate + self.critic_coef * self.critic_loss + self.entropy_coef * self.entropy   # TODO
+        # self.total_loss = self.surrogate + self.critic_coef * self.critic_loss + self.entropy_coef * self.entropy
 
         # # Build training operation.
         # grads = tf.gradients(self.total_loss, tf.trainable_variables())
         # clipped_grads, _ = tf.clip_by_global_norm(grads, self.max_grad_norm)
-        # self.total_train_op = self.optimizer.apply_gradients(zip(clipped_grads, tf.trainable_variables()), global_step=tf.train.get_global_step())
+        # self.total_train_op = self.optimizer.apply_gradients(zip(clipped_grads, tf.trainable_variables()))
 
         # Build actor operation.
         actor_vars = tf.trainable_variables("policy_net")
@@ -188,7 +188,7 @@ class ContinuousPPO(Base):
                 try:
                     mb_s, mb_a, mb_advantage, mb_old_mu, mb_target_value = next(batch_generator)
 
-                    log_var_val, _ = self.sess.run([self.log_var, self.train_actor_op], feed_dict={
+                    self.sess.run(self.train_actor_op, feed_dict={
                         self.observation: mb_s,
                         self.action: mb_a,
                         self.span_reward: mb_target_value,
@@ -207,8 +207,10 @@ class ContinuousPPO(Base):
                 except StopIteration:
                     del batch_generator
                     break
-        # print("log_var_val: ", log_var_val)
-        if (update_ratio / self.save_model_freq) % 1 == 0:
+
+        # Save model.
+        global_step, _ = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
+        if global_step % self.save_model_freq == 0:
             self.save_model()
 
     def _generator(self, data_batch, batch_size=32):

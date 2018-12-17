@@ -52,10 +52,7 @@ class DQN(Base):
 
         # Compute loss and optimize the object.
         self.loss = tf.reduce_mean(tf.squared_difference(self.target, action_q))   # 损失值。
-        self.train_op = self.optimizer.minimize(self.loss,
-                                                global_step=tf.train.get_global_step(),
-                                                var_list=trainable_variables
-                                                )
+        self.train_op = self.optimizer.minimize(self.loss, var_list=trainable_variables)
 
         # Update target network.
         def _update_target(new_net, old_net):
@@ -136,9 +133,8 @@ class DQN(Base):
         mb_a = np.concatenate(mb_a)
         mb_target = np.concatenate(mb_target)
 
-        _, global_step, loss, max_q_val = self.sess.run(
+        _, loss, max_q_val = self.sess.run(
             [self.train_op,
-             tf.train.get_global_step(),
              self.loss,
              self.max_qval],
             feed_dict={
@@ -148,6 +144,7 @@ class DQN(Base):
             }
         )
 
+        global_step = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
         # Store model.
         if global_step % self.save_model_freq == 0:
             self.save_model()

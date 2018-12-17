@@ -53,8 +53,7 @@ class DuelDQN(Base):
         action_q = tf.gather(tf.reshape(self.qvals, [-1]), gather_indices)
 
         self.loss = tf.reduce_mean(tf.squared_difference(self.target, action_q))
-        self.train_op = self.optimizer.minimize(
-            self.loss, global_step=tf.train.get_global_step(), var_list=trainable_variables)
+        self.train_op = self.optimizer.minimize(self.loss, var_list=trainable_variables)
 
         # 更新目标网络。
         def _update_target(new_net, old_net):
@@ -141,9 +140,8 @@ class DuelDQN(Base):
         mb_a = np.concatenate(mb_a)
         mb_target = np.concatenate(mb_target)
 
-        _, global_step, loss, max_q_val = self.sess.run(
+        _, loss, max_q_val = self.sess.run(
             [self.train_op,
-             tf.train.get_global_step(),
              self.loss,
              self.max_qval],
             feed_dict={
@@ -153,6 +151,7 @@ class DuelDQN(Base):
             }
         )
 
+        global_step = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
         # 存储模型。
         if global_step % self.save_model_freq == 0:
             self.save_model(self.save_path)

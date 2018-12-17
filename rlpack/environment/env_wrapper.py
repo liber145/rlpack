@@ -317,6 +317,9 @@ class AsyncAtariWrapper(object):
         # rewards = [np.sign(r) for r in rewards]
         return np.asarray(obs, dtype=np.float32), np.asarray(rewards, dtype=np.float32), dones, infos
 
+    def sample_action(self, n):
+        return np.random.randint(self.dim_action, size=n)
+
     def reset(self):
         """Reset the environment."""
         self.env_ids, states = self.env_manager.get_envs_to_inference(n=self.n_env, state_only=True)
@@ -334,7 +337,7 @@ class AsyncAtariWrapper(object):
 
     @property
     def dim_action(self):
-        """The dimension of action."""
+        """The number of action."""
         return self._dim_action
 
 # class CartpoleWrapper(StackEnv):

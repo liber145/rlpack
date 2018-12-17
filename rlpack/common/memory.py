@@ -8,7 +8,7 @@ import numpy as np
 
 
 class ContinuousActionMemory(object):
-    """ 
+    """
     Memory for continuous-action environments.
 
     Arguments:
@@ -98,7 +98,7 @@ class ContinuousActionMemory(object):
 
 
 class DiscreteActionMemory(ContinuousActionMemory):
-    """ 
+    """
     Memory for discrete-action environments.
 
     Arguments:
@@ -189,29 +189,29 @@ class AsyncContinuousActionMemory(object):
         a_ptr = self.ptr_queue[(env_id, "a")]
 
         if s_ptr >= n_sample + 1:
-            s_index = np.array(range(s_ptr - n_sample - 1, s_ptr))
+            s_index = list(range(s_ptr - n_sample - 1, s_ptr))
         else:
             rest = n_sample + 1 - s_ptr
-            s_index = np.array(list(range(self.s_maxsize - rest, self.s_maxsize)) + list(range(s_ptr)))
+            s_index = list(range(self.s_maxsize - rest, self.s_maxsize)) + list(range(s_ptr))
 
         if r_ptr >= n_sample:
-            r_index = np.array(range(r_ptr - n_sample, r_ptr))
+            r_index = list(range(r_ptr - n_sample, r_ptr))
         else:
             rest = n_sample - r_ptr
-            r_index = np.array(list(range(self.r_maxsize - rest, self.r_maxsize)) + list(range(r_ptr)))
+            r_index = list(range(self.r_maxsize - rest, self.r_maxsize)) + list(range(r_ptr))
 
         if d_ptr >= n_sample:
-            d_index = np.array(range(d_ptr - n_sample, d_ptr))
+            d_index = list(range(d_ptr - n_sample, d_ptr))
         else:
             rest = n_sample - d_ptr
-            d_index = np.array(list(range(self.d_maxsize - rest, self.d_maxsize)) + list(range(d_ptr)))
+            d_index = list(range(self.d_maxsize - rest, self.d_maxsize)) + list(range(d_ptr))
 
         a_ptr = (a_ptr - 1) % self.a_maxsize if s_ptr == a_ptr else a_ptr
         if a_ptr >= n_sample:
-            a_index = np.array(range(a_ptr - n_sample, a_ptr))
+            a_index = list(range(a_ptr - n_sample, a_ptr))
         else:
             rest = n_sample - a_ptr
-            a_index = np.array(list(range(self.a_maxsize - rest, self.a_maxsize)) + list(range(a_ptr)))
+            a_index = list(range(self.a_maxsize - rest, self.a_maxsize)) + list(range(a_ptr))
 
         return s_index, a_index, r_index, d_index
 
@@ -241,46 +241,13 @@ class AsyncContinuousActionMemory(object):
         d_cnt = self.cnt_queue[(env_id, "d")]
         a_cnt = self.cnt_queue[(env_id, "a")]
 
-        if s_ptr == s_cnt:
-            # s_slice = list(range(s_ptr))
-            s_start = 0
-        else:
-            # s_slice = list(range(self.s_maxsize))
-            # s_slice = s_slice[s_ptr:] + s_slice[:s_ptr]
-            s_start = s_ptr
-
-        if r_ptr == r_cnt:
-            # r_slice = range(r_ptr)
-            r_start = 0
-        else:
-            # r_slice = list(range(self.r_maxsize))
-            # r_slice = r_slice[r_ptr:] + r_slice[:r_ptr]
-            r_start = r_ptr
-
-        if d_ptr == d_cnt:
-            # d_slice = range(d_ptr)
-            d_start = 0
-        else:
-            # d_slice = list(range(self.d_maxsize))
-            # d_slice = d_slice[d_ptr:] + d_slice[:d_ptr]
-            d_start = d_ptr
-
-        if a_ptr == a_cnt:
-            # a_slice = range(a_ptr)
-            a_start = 0
-
-        else:
-            # a_slice = list(range(self.a_maxsize))
-            # a_slice = a_slice[a_ptr:] + a_slice[:a_ptr]
-            a_start = a_ptr
+        s_start = 0 if s_ptr == s_cnt else s_ptr
+        r_start = 0 if r_ptr == r_cnt else r_ptr
+        d_start = 0 if d_ptr == d_cnt else d_ptr
+        a_start = 0 if a_ptr == a_cnt else a_ptr
 
         s_size = min(s_cnt, self.s_maxsize)
         index = np.random.randint(s_size-1, size=n_sample)
-
-        # s_index = [s_slice[x] for x in index]
-        # r_index = [r_slice[x] for x in index]
-        # d_index = [d_slice[x] for x in index]
-        # next_s_index = [s_slice[x + 1] for x in index]
 
         s_index = (index + s_start) % self.s_maxsize
         r_index = (index + r_start) % self.r_maxsize
@@ -288,10 +255,8 @@ class AsyncContinuousActionMemory(object):
         next_s_index = (index + s_start + 1) % self.s_maxsize
 
         if a_cnt >= self.a_maxsize and a_cnt < s_cnt:
-            # a_index = [a_slice[x + 1] for x in index]
             a_index = (index + a_start + 1) % self.a_maxsize
         else:
-            # a_index = [a_slice[x] for x in index]
             a_index = (index + a_start) % self.a_maxsize
 
         return s_index, a_index, r_index, d_index, next_s_index

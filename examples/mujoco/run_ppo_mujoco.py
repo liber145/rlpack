@@ -77,7 +77,7 @@ def learn(env, agent, config):
     print("obs shape:", obs.shape)
     print(f"observation: max={np.max(obs)} min={np.min(obs)}")
     for i in tqdm(range(config.warm_start_length)):
-        actions = agent.get_action(obs)
+        actions = env.sample_action()
         next_obs, rewards, dones, infos = env.step(actions)
 
         memory.store_sards(obs, actions, rewards, dones, next_obs)
@@ -110,7 +110,7 @@ def learn(env, agent, config):
         if i > 0 and i % config.log_freq == 0:
             rewmean = safemean([epinfo["r"] for epinfo in epinfobuf])
             lenmean = safemean([epinfo['l'] for epinfo in epinfobuf])
-            print(f"eprewmean: {rewmean}  eplenmean: {lenmean}  rew: {epinfobuf[-1]['r']}  len: {epinfobuf[-1]['l']}")
+            tqdm.write(f"iter: {i}  eprewmean: {rewmean}  eplenmean: {lenmean}  rew: {epinfobuf[-1]['r']}  len: {epinfobuf[-1]['l']}")
 
 
 if __name__ == "__main__":

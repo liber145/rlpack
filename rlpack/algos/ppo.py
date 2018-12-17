@@ -91,8 +91,7 @@ class PPO(Base):
 
         # Clip gradients.
         clipped_grads, _ = tf.clip_by_global_norm(grads, self.max_grad_norm)
-        self.total_train_op = self.optimizer.apply_gradients(
-            zip(clipped_grads, tf.trainable_variables()), global_step=tf.train.get_global_step())
+        self.total_train_op = self.optimizer.apply_gradients(zip(clipped_grads, tf.trainable_variables()))
 
     def get_action(self, obs):
         if obs.ndim == 1 or obs.ndim == 3:
@@ -100,7 +99,6 @@ class PPO(Base):
         else:
             assert obs.ndim == 2 or obs.ndim == 4
             newobs = obs
-
 
         logit = self.sess.run(self.logit_action_probability, feed_dict={self.observation: newobs})
         logit = logit - np.max(logit, axis=1, keepdims=True)
@@ -168,8 +166,6 @@ class PPO(Base):
                     mini_s_batch, mini_a_batch, mini_advantage_batch, mini_old_logit_action_probability_batch, mini_target_state_value_batch = next(
                         batch_generator)
 
-                    global_step = self.sess.run(tf.train.get_global_step())
-
                     # Train actor.
                     c_loss, surr, entro, p_ratio, _ = self.sess.run([self.critic_loss,
                                                                      self.surrogate,
@@ -189,7 +185,9 @@ class PPO(Base):
                     del batch_generator
                     break
 
-        if (update_ratio / self.save_model_freq) % 1 == 0:
+        # Save model.
+        global_step = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
+        if global_step % self.save_model_freq == 0:
             self.save_model()
 
         return {"critic_loss": c_loss, "surrogate": surr, "entropy": entro, "training_step": global_step, "sample_ratio": p_ratio[0]}

@@ -25,7 +25,7 @@ class Config(object):
     def __init__(self):
         """All papameters here."""
         self.rnd = 4
-        self.save_path = f"./log/td3/async_exp_{args.env_name}"
+        self.save_path = f"./log/td3/exp_async_{args.env_name}"
 
         # 环境
         self.n_env = 1
@@ -53,6 +53,7 @@ def process_env(env):
     config = Config()
     config.dim_observation = env.dim_observation
     config.dim_action = env.dim_action
+    config.trajectory_length = env.horizon_length if env.horizon_length > 0 else 500
     return config
 
 
@@ -82,7 +83,7 @@ def learn(env, agent, config):
     print("Start training.")
     for i in tqdm(range(config.update_step)):
         epinfos = []
-        for _ in range(env.horizon_length):
+        for _ in range(config.trajectory_length):
             actions = agent.get_action(obs)
             memory.store_a(actions)
             next_obs, rewards, dones, infos = env.step(actions)
@@ -97,7 +98,7 @@ def learn(env, agent, config):
 
         update_ratio = i / config.update_step
 
-        for _ in range(env.horizon_length):
+        for _ in range(config.trajectory_length):
             data_batch = memory.sample_transition(config.batch_size)
             agent.update(data_batch, update_ratio)
 
@@ -108,7 +109,7 @@ def learn(env, agent, config):
         if i > 0 and i % config.log_freq == 0:
             rewmean = safemean([epinfo["r"] for epinfo in epinfobuf])
             lenmean = safemean([epinfo['l'] for epinfo in epinfobuf])
-            print(f"eprewmean: {rewmean}  eplenmean: {lenmean}  rew: {epinfobuf[-1]['r']}  len: {epinfobuf[-1]['l']}")
+            tqdm.write(f"iter: {i}  eprewmean: {rewmean}  eplenmean: {lenmean}  rew: {epinfobuf[-1]['r']}  len: {epinfobuf[-1]['l']}")
 
 
 if __name__ == "__main__":

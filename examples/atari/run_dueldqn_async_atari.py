@@ -3,7 +3,7 @@ from collections import deque
 
 import numpy as np
 from rlpack.algos import DuelDQN
-from rlpack.common import DistributedMemory
+from rlpack.common import AsyncDiscreteActionMemory
 from rlpack.environment import AsyncAtariWrapper
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
@@ -42,6 +42,7 @@ class Config(object):
         self.epsilon_schedule = lambda x: (1-x) * 0.5
         self.memory_size = 100000
 
+
 def process_config(env):
     config = Config()
     config.dim_observation = env.dim_observation
@@ -55,9 +56,9 @@ def safemean(x):
 
 def learn(env, agent, config):
 
-    memory = DistributedMemory(1000)
+    memory = AsyncDiscreteActionMemory(maxsize=config.memory_size, dim_obs=config.dim_observation)
     memory.register(env)
-    epinfobuf = deque(maxlen=100)
+    epinfobuf = deque(maxlen=20)
     summary_writer = SummaryWriter(os.path.join(config.save_path, "summary"))
 
     # ------------ Warm start --------------
@@ -65,7 +66,7 @@ def learn(env, agent, config):
     memory.store_s(obs)
     print(f"observation: max={np.max(obs)} min={np.min(obs)}")
     for i in tqdm(range(config.warm_start_length)):
-        actions = agent.get_action(obs)
+        actions = env.sample_action(obs.shape[0])
         memory.store_a(actions)
         obs, rewards, dones, infos = env.step(actions)
         memory.store_rds(rewards, dones, obs)
