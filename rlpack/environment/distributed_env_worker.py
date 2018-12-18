@@ -47,9 +47,6 @@ class DistributedEnvClient(Process):
 
             ob, reward, done, info = self.env.step(action)
 
-            # if done:
-            #     ob = self.env.reset()
-
             self.srd_queue.put((ob, reward, done, info))
 
     @property
@@ -68,10 +65,11 @@ class DistributedEnvClient(Process):
 
 
 if __name__ == '__main__':
+    import gym
     n_env = 8
     processes = []
     for _ in range(n_env):
-        p = DistributedEnvClient()
+        p = DistributedEnvClient(gym.make("Alien"))
         p.daemon = True
         p.start()
         processes.append(p)

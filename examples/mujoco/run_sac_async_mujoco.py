@@ -110,6 +110,7 @@ def learn(env, agent, config):
 
 
 if __name__ == "__main__":
+    print("name:", args.env_name)
     env = AsyncMujocoWrapper(f"{args.env_name}", 3, 2, 50013)
     config = process_env(env)
     agent = SAC(config)

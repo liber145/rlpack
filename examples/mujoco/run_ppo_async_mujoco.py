@@ -27,7 +27,7 @@ class Config(object):
         self.save_path = f"./log/ppo/exp_async_{args.env_name}"
 
         # 环境
-        self.n_env = 1
+        self.n_env = 2
         self.dim_observation = None
         self.dim_action = None   # gym中不同环境的action数目不同。
 
@@ -123,7 +123,7 @@ def learn(env, agent, config):
 
 
 if __name__ == "__main__":
-    env = AsyncMujocoWrapper(f"{args.env_name}", 1, 1, 50013)
+    env = AsyncMujocoWrapper(f"{args.env_name}", 2, 2, 50013)
     config = process_env(env)
     agent = ContinuousPPO(config)
     learn(env, agent, config)

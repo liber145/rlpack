@@ -1,109 +1,122 @@
 import numpy as np
-import gym
+from .env_wrapper import AsyncEnvWrapper
+import sys
+sys.path.append("/home/liyujun/Programs/Keras-FlappyBird/game")
+sys.path.append("/home/liyujun/Programs/Keras-FlappyBird")
+sys.path.append("/home/liyujun/Programs/Keras-FlappyBird/assets")
+from flappybird_env import FlappyBirdEnv
 
 
-class FakeSingleEnv(object):
-    def __init__(self, dim_observation: list, n_action: int):
-        self._dim_observation = dim_observation
-        self._n_action = n_action
+class FakeDiscreteEnv(object):
+    def __init__(self):
+        self._dim_observation = (11,)
+        self._dim_action = 3
+        self.obs1 = np.array([-1 for i in range(11)])
+        self.obs2 = np.array([0 for i in range(11)])
+        self.obs3 = np.array([1 for i in range(11)])
+        self.cnt = 0
 
     def reset(self):
-        return np.random.rand(*self.dim_observation)
+        self.cnt = 0
+        return self.obs1
 
     def step(self, action):
-        ob = np.random.rand(*self.dim_observation)
-        reward = np.random.rand(1)
-        done = np.random.rand(1) > 0.5
-        info_dict = dict()
-        return ob, reward, done, info_dict
+        self.cnt += 1
+        if self.cnt < 50:
+            terminal = False
+        else:
+            terminal = True
+            self.cnt = 0
 
-    def close(self):
-        """Close environment."""
+        if action == 0:
+            obs = self.obs1
+            rew = 1
+        elif action == 1:
+            obs = self.obs2
+            rew = 0
+        else:
+            obs = self.obs3
+            rew = 0
 
-    @property
-    def dim_observation(self):
-        return self._dim_observation
+        return obs, rew, terminal, dict()
 
-    @property
-    def n_action(self):
-        """
-        :return: the dimension of continuous action
-        """
-        return self._n_action
-
-
-class FakeBatchEnv(object):
-    """
-    一次reset，周而复始。下面是顺序形式，需要改装成并行化。
-    """
-
-    def __init__(self, envs: list):
-        """
-        :param dim_observation: dimension of observation
-        :param n_action: number of action
-        :param n_env: number of environments
-        """
-        self.envs = envs
-        self.last_dones = [False for _ in range(self.n_env)]
-
-        self._dim_observation = self.envs[0].dim_observation
-        self._n_action = self.envs[0].n_action
-        self._n_env = len(self.envs)
-
-    def reset(self) -> np.ndarray:
-        """
-        :return: a batch of observations
-        """
-        obs = [env.reset() for env in self.envs]
-        return np.asarray(obs)
-
-    def step(self, actions):
-        """
-        :param actions: Actions for all environments. It is list or np.ndarray.
-        :return: observation_batch, reward_batch, done_batch, info_list
-        """
-        if type(actions) is list:
-            assert len(actions) == self.n_env
-        if type(actions) is np.ndarray:
-            assert actions.shape[0] == self.n_env
-        assert actions[0] < self.n_action and actions[0] >= 0
-
-        obs, rewards, dones, infos = [], [], [], []
-        for i in range(self.n_env):
-            if self.last_dones[i]:
-                ob = self.envs[i].reset()
-                obs.append(ob)
-                rewards.append(0)
-                dones.append(True)
-                self.last_dones[i] = False
-            else:
-                ob, reward, done, info = self.envs[i].step(actions[i])
-                obs.append(ob)
-                rewards.append(reward)
-                dones.append(done)
-                info.append(info)
-                self.last_dones[i] = done
-        return np.asarray(obs), np.asarray(rewards), np.asarray(dones), infos
-
-    def close(self):
-        """Close all environments."""
-        pass
-
-    @property
-    def n_env(self):
-        return self._n_env
+    def sample_action(self):
+        return np.random.randint(self.dim_action)
 
     @property
     def dim_observation(self):
         return self._dim_observation
 
     @property
-    def n_action(self):
+    def dim_action(self):
+        return self._dim_action
+
+
+class FakeContinuousEnv(object):
+    def __init__(self):
+        self._dim_observation = (11,)
+        self._dim_action = 3
+        self._w = np.array([1, 1, 1])
+        self.cnt = 0
+
+    def reset(self):
+        self.cnt = 0
+        return np.zeros((11,))
+
+    def step(self, action):
+        self.cnt += 1
+        if self.cnt < 50:
+            terminal = False
+        else:
+            self.cnt = 0
+            terminal = True
+
+        if np.dot(action, self._w) > 0:
+            obs = np.random.rand(11) + 1
+            rew = 1
+        else:
+            obs = np.random.rand(11) - 1
+            rew = 0
+
+        return obs, rew, terminal, dict()
+
+    def sample_action(self):
         """
-        :return: the dimension of continuous action
+        Sample #n actions each of which in {0, 1, 2, ..., dim_action-1}
         """
-        return self._n_action
+        return np.random.normal(size=(self.dim_action,))
 
     @property
-    def n_env(self):
-        return self._n_env
+    def dim_observation(self):
+        return self._dim_observation
+
+    @property
+    def dim_action(self):
+        return self._dim_action
+
+
+class AsyncFakeContinuousEnv(AsyncEnvWrapper):
+    def __init__(self, n_env: int = 8, n_inference: int = None, port: int = 50000):
+        super().__init__(n_env, n_inference, port)
+
+    def _make_env(self):
+        env = FakeContinuousEnv()
+        return env
+
+
+class AsyncFakeDiscreteEnv(AsyncEnvWrapper):
+    def __init__(self, n_env: int = 8, n_inference: int = None, port: int = 50000):
+        super().__init__(n_env, n_inference, port)
+
+    def _make_env(self):
+        env = FakeDiscreteEnv()
+        return env
+
+
+class AsyncFlappyBirdEnv(AsyncEnvWrapper):
+    def __init__(self, n_env, n_inference, port=50000):
+        return super().__init__(n_env, n_inference, port=port)
+
+    def _make_env(self):
+        env = FlappyBirdEnv()
+        return env
