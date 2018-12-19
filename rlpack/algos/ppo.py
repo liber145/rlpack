@@ -21,11 +21,22 @@ class PPO(Base):
         self.critic_coefficient = config.vf_coef
         self.trajectory_length = config.trajectory_length
         self.clip_schedule = config.clip_schedule
+        self.init_clip_epsilon = 0.1
+        self.init_lr = 2.5e-4
 
         super().__init__(config)
 
     def build_network(self):
         """Build networks for algorithm."""
+
+        self.clip_epsilon = tf.placeholder(tf.float32)
+        self.moved_lr = tf.placeholder(tf.float32)
+
+        self.old_logit_action_probability = tf.placeholder(tf.float32, [None, self.dim_action])
+        self.action = tf.placeholder(tf.int32, [None], name="action")
+        self.advantage = tf.placeholder(tf.float32, [None], name="advantage")
+        self.target_state_value = tf.placeholder(tf.float32, [None], "target_state_value")
+
         self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], name="observation")
 
         x = tf.layers.conv2d(self.observation, 32, 8, 4, activation=tf.nn.relu)
@@ -35,19 +46,6 @@ class PPO(Base):
         x = tf.layers.dense(x, 512, activation=tf.nn.relu)
         self.logit_action_probability = tf.layers.dense(x, self.dim_action, activation=None, kernel_initializer=tf.truncated_normal_initializer(0.0, 0.01))
         self.state_value = tf.squeeze(tf.layers.dense(x, 1, activation=None, kernel_initializer=tf.truncated_normal_initializer()))
-
-    def build_algorithm(self):
-        """Build networks for algorithm."""
-        self.init_clip_epsilon = 0.1
-        self.init_lr = 2.5e-4
-        self.clip_epsilon = tf.placeholder(tf.float32)
-        self.moved_lr = tf.placeholder(tf.float32)
-        self.optimizer = tf.train.AdamOptimizer(self.moved_lr, epsilon=1e-5)
-
-        self.old_logit_action_probability = tf.placeholder(tf.float32, [None, self.dim_action])
-        self.action = tf.placeholder(tf.int32, [None], name="action")
-        self.advantage = tf.placeholder(tf.float32, [None], name="advantage")
-        self.target_state_value = tf.placeholder(tf.float32, [None], "target_state_value")
 
         # Get selected action index.
         batch_size = tf.shape(self.observation)[0]
@@ -75,18 +73,20 @@ class PPO(Base):
 
         self.ratio = tf.exp(logit_act1 - logit_act2)
 
-        # Get surrogate object.
+    def build_algorithm(self):
+        """Build networks for algorithm."""
+        self.optimizer = tf.train.AdamOptimizer(self.moved_lr, epsilon=1e-5)
+
+        # Compute policy loss.
         surrogate_1 = self.ratio * self.advantage
         surrogate_2 = tf.clip_by_value(self.ratio, 1.0 - self.clip_epsilon, 1.0 + self.clip_epsilon) * self.advantage
-        assert_shape(self.ratio, [None])
-        assert_shape(surrogate_1, [None])
-        self.surrogate = -tf.reduce_mean(tf.minimum(surrogate_1, surrogate_2))
+        self.policy_loss = -tf.reduce_mean(tf.minimum(surrogate_1, surrogate_2))
 
         # Compute critic loss.
         self.critic_loss = tf.reduce_mean(tf.squared_difference(self.state_value, self.target_state_value))
 
         # Compute gradients.
-        self.total_loss = self.surrogate + self.critic_coefficient * self.critic_loss - self.entropy_coefficient * self.entropy
+        self.total_loss = self.policy_loss + self.critic_coefficient * self.critic_loss - self.entropy_coefficient * self.entropy
         grads = tf.gradients(self.total_loss, tf.trainable_variables())
 
         # Clip gradients.
@@ -167,12 +167,11 @@ class PPO(Base):
                         batch_generator)
 
                     # Train actor.
-                    c_loss, surr, entro, p_ratio, _ = self.sess.run([self.critic_loss,
-                                                                     self.surrogate,
-                                                                     self.entropy,
-                                                                     self.ratio,
-                                                                     self.total_train_op],
-                                                                    feed_dict={
+                    c_loss, entro, p_ratio, _ = self.sess.run([self.critic_loss,
+                                                               self.entropy,
+                                                               self.ratio,
+                                                               self.total_train_op],
+                                                              feed_dict={
                         self.observation: mini_s_batch,
                         self.old_logit_action_probability: mini_old_logit_action_probability_batch,
                         self.action: mini_a_batch,
@@ -186,11 +185,11 @@ class PPO(Base):
                     break
 
         # Save model.
-        global_step = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
+        global_step, _ = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
         if global_step % self.save_model_freq == 0:
             self.save_model()
 
-        return {"critic_loss": c_loss, "surrogate": surr, "entropy": entro, "training_step": global_step, "sample_ratio": p_ratio[0]}
+        return {"critic_loss": c_loss, "entropy": entro, "training_step": global_step, "sample_ratio": p_ratio[0]}
 
     def _generator(self, data_batch, batch_size=32):
         n_sample = data_batch[0].shape[0]

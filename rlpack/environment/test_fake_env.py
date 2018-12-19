@@ -1,12 +1,11 @@
-from rlpack.environment.fake_env import AsyncFakeContinuousEnv, AsyncFakeDiscreteEnv, AsyncFlappyBirdEnv
+from rlpack.environment.fake_env import AsyncFakeContinuousEnv, AsyncFakeDiscreteEnv
 
 # env = AsyncFakeDiscreteEnv(4, 4)
-# env = AsyncFakeContinuousEnv(4, 4)
-env = AsyncFlappyBirdEnv(4, 4)
+env = AsyncFakeContinuousEnv(4, 4)
 s = env.reset()
 print(s.shape)
 
-for i in range(100):
+for i in range(10000):
     a = env.sample_action(4)
     s, r, d, info = env.step(a)
 

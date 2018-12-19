@@ -38,20 +38,20 @@ class DoubleDQN(Base):
             self.target_qvals = tf.layers.dense(x, self.dim_action, trainable=False)
 
     def build_algorithm(self):
-        """Build networks for algorithm."""
         self.action = tf.placeholder(shape=[None], dtype=tf.int32, name="action")
-        self.target = tf.placeholder(shape=[None], dtype=tf.float32, name="target")
-        self.optimizer = tf.train.AdamOptimizer(self.lr, epsilon=1.5e-8)
+        self.target = tf.placeholder(shape=[None], dtype=tf.float32, name="target_qvalue")
+        self.optimizer = tf.train.AdamOptimizer(self.lr)
         trainable_variables = tf.trainable_variables("qnet")
 
         batch_size = tf.shape(self.observation)[0]
         gather_indices = tf.range(batch_size) * self.dim_action + self.action
         action_q = tf.gather(tf.reshape(self.qvals, [-1]), gather_indices)
 
-        self.loss = tf.reduce_mean(tf.squared_difference(self.target, action_q))
+        self.loss = tf.reduce_mean(tf.squared_difference(
+            self.target, action_q))
         self.train_op = self.optimizer.minimize(self.loss, var_list=trainable_variables)
 
-        # 更新目标网络。
+        # Update target network.
         def _update_target(new_net, old_net):
             params1 = tf.trainable_variables(old_net)
             params1 = sorted(params1, key=lambda v: v.name)
@@ -168,7 +168,7 @@ class DoubleDQN(Base):
             }
         )
 
-        global_step = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
+        global_step, _ = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
         # Save model.
         if global_step % self.save_model_freq == 0:
             self.save_model()

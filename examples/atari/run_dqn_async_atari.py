@@ -40,7 +40,7 @@ class Config(object):
         self.max_grad_norm = 0.5
         self.value_lr_schedule = lambda x: 2.5e-4
         self.epsilon_schedule = lambda x: (1-x) * 0.5
-        self.memory_size = 100000
+        self.memory_size = 10000
 
 
 def process_config(env):

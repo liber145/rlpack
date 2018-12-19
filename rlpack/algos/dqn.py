@@ -144,7 +144,7 @@ class DQN(Base):
             }
         )
 
-        global_step = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
+        global_step, _ = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
         # Store model.
         if global_step % self.save_model_freq == 0:
             self.save_model()

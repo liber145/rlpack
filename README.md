@@ -21,7 +21,7 @@ from tqdm import tqdm
 import numpy as np
 from rlpack.algos import PPO
 from rlpack.environment import AsyncAtariWrapper
-from rlpack.common import DistributedMemory
+from rlpack.common import AsyncDiscreteActionMemory
 
 # initialization.
 env = AsyncAtariWrapper("BreakoutNoFrameskip-v4")
@@ -36,7 +36,7 @@ class Config:
         self.dim_action = env.dim_action
 config = Config()
 agent = PPO(config)
-memory = DistributedMemory(10000)
+memory = AsyncDiscreteActionMemory(capacity=10000, n_env=config.n_env, dim_obs=config.dim_observation)
 memory.register(env)
 epinfos = []
 
@@ -91,3 +91,5 @@ To install more environments like mujoco, please refer to https://github.com/ope
 - [Asynchronous Methods for Deep Reinforcement Learning](https://arxiv.org/abs/1602.01783)
 - [Continuous control with deep reinforcement learning](https://arxiv.org/abs/1509.02971)
 - [Introduction to Reinforcement Learning](https://dl.acm.org/citation.cfm?id=551283)
+- [openai.baselines](https://github.com/openai/baselines)
+- [openai.spinningup](https://github.com/openai/spinningup)

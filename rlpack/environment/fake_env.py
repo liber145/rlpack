@@ -1,19 +1,13 @@
 import numpy as np
 from .env_wrapper import AsyncEnvWrapper
-import sys
-sys.path.append("/home/liyujun/Programs/Keras-FlappyBird/game")
-sys.path.append("/home/liyujun/Programs/Keras-FlappyBird")
-sys.path.append("/home/liyujun/Programs/Keras-FlappyBird/assets")
-from flappybird_env import FlappyBirdEnv
 
 
 class FakeDiscreteEnv(object):
     def __init__(self):
         self._dim_observation = (11,)
-        self._dim_action = 3
+        self._dim_action = 2
         self.obs1 = np.array([-1 for i in range(11)])
         self.obs2 = np.array([0 for i in range(11)])
-        self.obs3 = np.array([1 for i in range(11)])
         self.cnt = 0
 
     def reset(self):
@@ -22,23 +16,13 @@ class FakeDiscreteEnv(object):
 
     def step(self, action):
         self.cnt += 1
-        if self.cnt < 50:
-            terminal = False
-        else:
-            terminal = True
-            self.cnt = 0
+        terminal = False if self.cnt < 50 else True 
+        self.cnt = 0 if terminal else self.cnt
 
         if action == 0:
-            obs = self.obs1
-            rew = 1
-        elif action == 1:
-            obs = self.obs2
-            rew = 0
+            return self.obs1, 1, terminal, dict()
         else:
-            obs = self.obs3
-            rew = 0
-
-        return obs, rew, terminal, dict()
+            return self.obs2, 0, terminal, dict()
 
     def sample_action(self):
         return np.random.randint(self.dim_action)
@@ -104,19 +88,12 @@ class AsyncFakeContinuousEnv(AsyncEnvWrapper):
         return env
 
 
+from rlpack.environment import AsyncEnvWrapper
+
 class AsyncFakeDiscreteEnv(AsyncEnvWrapper):
     def __init__(self, n_env: int = 8, n_inference: int = None, port: int = 50000):
         super().__init__(n_env, n_inference, port)
 
     def _make_env(self):
         env = FakeDiscreteEnv()
-        return env
-
-
-class AsyncFlappyBirdEnv(AsyncEnvWrapper):
-    def __init__(self, n_env, n_inference, port=50000):
-        return super().__init__(n_env, n_inference, port=port)
-
-    def _make_env(self):
-        env = FlappyBirdEnv()
         return env
