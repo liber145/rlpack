@@ -55,7 +55,6 @@ def safemean(x):
 
 
 def learn(env, agent, config):
-
     memory = AsyncDiscreteActionMemory(maxsize=config.memory_size, dim_obs=config.dim_observation)
     memory.register(env)
     epinfobuf = deque(maxlen=20)
@@ -100,7 +99,7 @@ def learn(env, agent, config):
         if i > 0 and i % config.log_freq == 0:
             rewmean = safemean([epinfo["r"] for epinfo in epinfobuf])
             lenmean = safemean([epinfo['l'] for epinfo in epinfobuf])
-            tqdm.write(f"iter {i}  eprewmean: {rewmean}  eplenmean: {lenmean}  rew: {epinfobuf[-1]['r']}   len: {epinfobuf[-1]['l']}")
+            tqdm.write(f"iter {i}  eprewmean: {rewmean}  eplenmean: {lenmean}")
 
 
 if __name__ == "__main__":

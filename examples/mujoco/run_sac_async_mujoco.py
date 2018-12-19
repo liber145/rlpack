@@ -26,7 +26,7 @@ class Config(object):
         self.save_path = f"./log/sac/exp_async_{args.env_name}"
 
         # 环境
-        self.n_env = 1
+        self.n_env = 3
         self.dim_observation = None
         self.dim_action = None   # gym中不同环境的action数目不同。
 

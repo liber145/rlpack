@@ -151,7 +151,7 @@ class DuelDQN(Base):
             }
         )
 
-        global_step = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
+        global_step, _ = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
         # 存储模型。
         if global_step % self.save_model_freq == 0:
             self.save_model(self.save_path)

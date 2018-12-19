@@ -108,10 +108,6 @@ class DiscreteActionMemory(ContinuousActionMemory):
     """
 
     def __init__(self, *, capacity=0, n_env: int=1, dim_obs: Tuple=None):
-        print("here")
-        print(capacity)
-        print(n_env)
-        print(dim_obs)
         a = np.zeros((capacity, n_env, *dim_obs))
         self.state_queue = np.zeros((capacity, n_env, *dim_obs), dtype=np.float32)
         self.action_queue = np.zeros((capacity, n_env), dtype=np.int32)

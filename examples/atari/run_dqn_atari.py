@@ -97,7 +97,7 @@ def learn(env, agent, config):
         if i > 0 and i % config.log_freq == 0:
             rewmean = safemean([epinfo["r"] for epinfo in epinfobuf])
             lenmean = safemean([epinfo['l'] for epinfo in epinfobuf])
-            print(f"eprewmean: {rewmean}  eplenmean: {lenmean} ")
+            tqdm.write(f"eprewmean: {rewmean}  eplenmean: {lenmean} ")
 
 
 if __name__ == "__main__":

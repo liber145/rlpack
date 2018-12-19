@@ -41,14 +41,14 @@ class SAC(Base):
             self.log_std = tf.layers.dense(x, units=self.dim_action, activation=tf.tanh)
             self.log_std = self.LOG_STD_MIN + 0.5 * (self.LOG_STD_MAX - self.LOG_STD_MIN) * (self.log_std + 1)
 
-            # std = tf.exp(self.log_std)
-            # self.pi = self.mu + tf.random_normal(tf.shape(self.mu)) * std
-            # presum = -0.5 * (((self.pi-self.mu)/(tf.exp(self.log_std)+self.EPS))**2 + np.log(2*np.pi) + 2*self.log_std)
-            # self.logp_pi = tf.reduce_sum(presum, axis=1)
+            std = tf.exp(self.log_std)
+            self.pi = self.mu + tf.random_normal(tf.shape(self.mu)) * std
+            presum = -0.5 * (((self.pi-self.mu)/(tf.exp(self.log_std)+self.EPS))**2 + np.log(2*np.pi) + 2*self.log_std)
+            self.logp_pi = tf.reduce_sum(presum, axis=1)
 
-            normal_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.mu, scale_diag=tf.exp(self.log_std))
-            self.pi = normal_dist.sample()
-            self.logp_pi = normal_dist.log_prob(self.pi)
+            # normal_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.mu, scale_diag=tf.exp(self.log_std))
+            # self.pi = normal_dist.sample()
+            # self.logp_pi = normal_dist.log_prob(self.pi)
 
             # Squash into an appropriate scale.
             self.mu = tf.tanh(self.mu)

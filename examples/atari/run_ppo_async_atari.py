@@ -20,7 +20,7 @@ class Config(object):
         self.save_path = f"./log/ppo/exp_{args.env_name}"
 
         # Environment.
-        self.n_env = 4
+        self.n_env = 2
         self.dim_observation = None
         self.dim_action = None   # For continuous action.
 
@@ -102,11 +102,11 @@ def learn(env, agent, config):
         if i > 0 and i % config.log_freq == 0:
             rewmean = safemean([epinfo["r"] for epinfo in epinfobuf])
             lenmean = safemean([epinfo['l'] for epinfo in epinfobuf])
-            print(f"eprewmean: {rewmean}  eplenmean: {lenmean}  rew: {epinfobuf[-1]['r']}   len: {epinfobuf[-1]['l']}")
+            tqdm.write(f"eprewmean: {rewmean}  eplenmean: {lenmean}")
 
 
 if __name__ == "__main__":
-    env = AsyncAtariWrapper(f"{args.env_name}", 4, 3, 50000)
+    env = AsyncAtariWrapper(f"{args.env_name}", 2, 2, 50000)
     config = process_config(env)
     pol = PPO(config)
 
