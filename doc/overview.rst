@@ -19,11 +19,12 @@ Look how to use it:
 
 .. code:: python
 
+
     from tqdm import tqdm
     import numpy as np
     from rlpack.algos import PPO
     from rlpack.environment import AsyncAtariWrapper
-    from rlpack.common import DistributedMemory
+    from rlpack.common import AsyncDiscreteActionMemory
 
     # initialization.
     env = AsyncAtariWrapper("BreakoutNoFrameskip-v4")
@@ -38,7 +39,7 @@ Look how to use it:
             self.dim_action = env.dim_action
     config = Config()
     agent = PPO(config)
-    memory = DistributedMemory(10000)
+    memory = AsyncDiscreteActionMemory(maxsize=10000, dim_obs=config.dim_observation)
     memory.register(env)
     epinfos = []
 
@@ -58,6 +59,7 @@ Look how to use it:
         data_batch = memory.get_last_n_samples(config.trajectory_length)
         agent.update(data_batch, update_ratio)
         print("eprewmean:", np.mean([info["r"] for info in epinfos]))
+
 
 
 

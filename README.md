@@ -1,6 +1,6 @@
 ### Introduction
 
-**rlpack** is an intuitive, lightweight and flexible reinforcement learning library.
+**rlpack** is an intuitive, lightweight and flexible reinforcement learning library based on TensorFlow.
 It bundles up-to-date reinforcement learning algorithms. 
 
 
@@ -36,7 +36,7 @@ class Config:
         self.dim_action = env.dim_action
 config = Config()
 agent = PPO(config)
-memory = AsyncDiscreteActionMemory(capacity=10000, n_env=config.n_env, dim_obs=config.dim_observation)
+memory = AsyncDiscreteActionMemory(maxsize=10000, dim_obs=config.dim_observation)
 memory.register(env)
 epinfos = []
 
