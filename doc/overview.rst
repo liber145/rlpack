@@ -80,7 +80,7 @@ Python3.6+ is required.
 
 .. code:: bash
 
-    $ git clone https://github.com/smsxgz/rl-algo.git
+    $ git clone https://github.com/liber145/rlpack
     $ cd rl-algo
     $ python setup.py install
 

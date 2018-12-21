@@ -66,7 +66,7 @@ Python3.6+ is required.
 1. Install the dependencies using `environment.yml`:
 
 ```bash
-    $ git clone https://github.com/smsxgz/rl-algo.git
+    $ git clone https://github.com/liber145/rlpack
     $ cd rl-algo
     $ conda env create -f environment.yml
     $ conda activate py36
