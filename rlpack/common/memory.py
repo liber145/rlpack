@@ -109,11 +109,11 @@ class DiscreteActionMemory(ContinuousActionMemory):
 
     def __init__(self, *, capacity=0, n_env: int=1, dim_obs: Tuple=None, datatype=np.float32):
         a = np.zeros((capacity, n_env, *dim_obs))
-        self.state_queue = np.zeros((capacity, n_env, *dim_obs), dtype=np.float32)
+        self.state_queue = np.zeros((capacity, n_env, *dim_obs), dtype=datatype)
         self.action_queue = np.zeros((capacity, n_env), dtype=np.int32)
         self.reward_queue = np.zeros((capacity, n_env), dtype=np.float32)
         self.done_queue = np.zeros((capacity, n_env), dtype=np.float32)
-        self.next_state_queue = np.zeros((capacity, n_env, *dim_obs), dtype=np.float32)
+        self.next_state_queue = np.zeros((capacity, n_env, *dim_obs), dtype=datatype)
 
         self.ptr, self.size = 0, 0
         self.capacity = capacity
@@ -293,7 +293,7 @@ class AsyncDiscreteActionMemory(AsyncContinuousActionMemory):
         self.state_queue = defaultdict(lambda: np.zeros((maxsize + 1, *dim_obs), dtype=datatype))
         self.action_queue = defaultdict(lambda: np.zeros((maxsize + 1), dtype=np.int32))
         self.reward_queue = defaultdict(lambda: np.zeros((maxsize), dtype=np.float32))
-        self.done_queue = defaultdict(lambda: np.zeros((maxsize), dtype=np.float32))
+        self.done_queue = defaultdict(lambda: np.zeros((maxsize), dtype=datatype))
         self.ptr_queue = defaultdict(int)
         self.cnt_queue = defaultdict(int)
         self.s_maxsize, self.a_maxsize, self.r_maxsize, self.d_maxsize = maxsize + 1, maxsize + 1, maxsize, maxsize

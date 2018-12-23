@@ -76,6 +76,8 @@ def learn(env, agent, config):
         epinfos = []
         actions = agent.get_action(obs)
         next_obs, rewards, dones, infos = env.step(actions)
+        # print(f"type: {next_obs.dtype}, max: {np.max(next_obs)} min: {np.min(next_obs)} shape: {next_obs.shape}")
+
         memory.store_sards(obs, actions, rewards, dones, obs)
 
         obs = next_obs
