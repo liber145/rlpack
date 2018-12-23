@@ -18,7 +18,7 @@ class Config(object):
     def __init__(self):
         # random seed and path.
         self.rnd = 1
-        self.save_path = f"./log/dueldqn_{args.env_name}"
+        self.save_path = f"./log/dueldqn/exp_async_{args.env_name}"
 
         # Environment parameters.
         self.n_env = 4
@@ -56,7 +56,7 @@ def safemean(x):
 
 def learn(env, agent, config):
 
-    memory = AsyncDiscreteActionMemory(maxsize=config.memory_size, dim_obs=config.dim_observation)
+    memory = AsyncDiscreteActionMemory(maxsize=config.memory_size, dim_obs=config.dim_observation, datatype=np.uint8)
     memory.register(env)
     epinfobuf = deque(maxlen=20)
     summary_writer = SummaryWriter(os.path.join(config.save_path, "summary"))

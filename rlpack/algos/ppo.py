@@ -37,7 +37,8 @@ class PPO(Base):
         self.advantage = tf.placeholder(tf.float32, [None], name="advantage")
         self.target_state_value = tf.placeholder(tf.float32, [None], "target_state_value")
 
-        self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], name="observation")
+        self.observation = tf.placeholder(shape=[None, *self.dim_observation], dtype=tf.uint8, name="observation")
+        self.observation = tf.to_float(self.observation) / 256.0
 
         x = tf.layers.conv2d(self.observation, 32, 8, 4, activation=tf.nn.relu)
         x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu)

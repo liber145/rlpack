@@ -107,7 +107,7 @@ class DiscreteActionMemory(ContinuousActionMemory):
         - dim_obs: tuple. the dimension of observaitons, like (16,) or (84, 84, 4).
     """
 
-    def __init__(self, *, capacity=0, n_env: int=1, dim_obs: Tuple=None):
+    def __init__(self, *, capacity=0, n_env: int=1, dim_obs: Tuple=None, datatype=np.float32):
         a = np.zeros((capacity, n_env, *dim_obs))
         self.state_queue = np.zeros((capacity, n_env, *dim_obs), dtype=np.float32)
         self.action_queue = np.zeros((capacity, n_env), dtype=np.int32)
@@ -288,9 +288,9 @@ class AsyncContinuousActionMemory(object):
 
 
 class AsyncDiscreteActionMemory(AsyncContinuousActionMemory):
-    def __init__(self, maxsize: int=0, dim_obs: Tuple=None):
+    def __init__(self, maxsize: int=0, dim_obs: Tuple=None, datatype=np.float32):
         self.env_wrapper = None
-        self.state_queue = defaultdict(lambda: np.zeros((maxsize + 1, *dim_obs), dtype=np.float32))
+        self.state_queue = defaultdict(lambda: np.zeros((maxsize + 1, *dim_obs), dtype=datatype))
         self.action_queue = defaultdict(lambda: np.zeros((maxsize + 1), dtype=np.int32))
         self.reward_queue = defaultdict(lambda: np.zeros((maxsize), dtype=np.float32))
         self.done_queue = defaultdict(lambda: np.zeros((maxsize), dtype=np.float32))

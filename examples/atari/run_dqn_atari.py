@@ -18,7 +18,7 @@ class Config(object):
     def __init__(self):
         # random seed and path.
         self.rnd = 1
-        self.save_path = f"./log/dqn_{args.env_name}"
+        self.save_path = f"./log/dqn/exp_{args.env_name}"
 
         # Environment parameters.
         self.n_env = 1
@@ -40,7 +40,7 @@ class Config(object):
         self.max_grad_norm = 0.5
         self.value_lr_schedule = lambda x: 2.5e-4
         self.epsilon_schedule = lambda x: (1-x) * 0.5
-        self.memory_size = 10000
+        self.memory_size = 100000
 
 
 def process_config(env):
@@ -56,7 +56,7 @@ def safemean(x):
 
 def learn(env, agent, config):
 
-    memory = DiscreteActionMemory(capacity=config.memory_size, n_env=config.n_env, dim_obs=config.dim_observation)
+    memory = DiscreteActionMemory(capacity=config.memory_size, n_env=config.n_env, dim_obs=config.dim_observation, datatype=np.uint8)
     epinfobuf = deque(maxlen=20)
     summary_writer = SummaryWriter(os.path.join(config.save_path, "summary"))
 

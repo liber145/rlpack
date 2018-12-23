@@ -17,7 +17,7 @@ args = parser.parse_args()
 class Config(object):
     def __init__(self):
         self.seed = 1
-        self.save_path = f"./log/ppo/exp_{args.env_name}"
+        self.save_path = f"./log/ppo/exp_async_{args.env_name}"
 
         # Environment.
         self.n_env = 2
@@ -59,7 +59,7 @@ def safemean(x):
 
 def learn(env, agent, config):
 
-    memory = AsyncDiscreteActionMemory(maxsize=config.memory_size, dim_obs=config.dim_observation)
+    memory = AsyncDiscreteActionMemory(maxsize=config.memory_size, dim_obs=config.dim_observation, datatype=np.uint8)
     memory.register(env)
     epinfobuf = deque(maxlen=20)
     summary_writer = SummaryWriter(os.path.join(config.save_path, "summary"))

@@ -235,13 +235,13 @@ class NeverStop(gym.Wrapper):
 
     def reset(self):
         ob = self.env.reset()
-        return ob
+        return np.asarray(ob, dtype=np.uint8)
 
     def step(self, action):
         ob, rew, done, info = self.env.step(action)
         if done is True:
             ob = self.env.reset()
-        return ob, rew, done, info
+        return np.asarray(ob, dtype=np.uint8), rew, done, info
 
     @property
     def dim_action(self):
@@ -327,7 +327,7 @@ def wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=False, 
 
 def make_atari(env_name):
     env = old_make_atari(env_name)
-    env = wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=True, scale=True)
+    env = wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=True, scale=False)
     env = NeverStop(env)
     return env
 

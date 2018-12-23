@@ -16,7 +16,8 @@ class DuelDQN(Base):
 
     def build_network(self):
         """Build networks for algorithm."""
-        self.observation = tf.placeholder(shape=[None, *self.dim_observation], dtype=tf.float32, name="observation")
+        self.observation = tf.placeholder(shape=[None, *self.dim_observation], dtype=tf.uint8, name="observation")
+        self.observation = tf.to_float(self.observation) / 256.0
 
         with tf.variable_scope("net"):
             x = tf.layers.conv2d(self.observation, 32, 8, 4, activation=tf.nn.relu)
