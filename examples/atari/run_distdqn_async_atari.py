@@ -17,7 +17,6 @@ args = parser.parse_args()
 class Config(object):
     def __init__(self):
         # random seed and path.
-        self.rnd = 1
         self.save_path = f"./log/distdqn/exp_async_{args.env_name}"
 
         # Environment parameters.
@@ -30,16 +29,10 @@ class Config(object):
         self.warm_start_length = 2000
 
         # Cycle parameters.
-        self.save_model_freq = 100
         self.log_freq = 100
-        self.update_target_freq = 100
 
         # Algorithm parameters.
         self.batch_size = 64
-        self.discount = 0.99
-        self.max_grad_norm = 0.5
-        self.value_lr_schedule = lambda x: 2.5e-4
-        self.epsilon_schedule = lambda x: (1-x) * 0.5
         self.memory_size = 10000
 
 
@@ -105,6 +98,19 @@ def learn(env, agent, config):
 if __name__ == "__main__":
     env = AsyncAtariWrapper(f"{args.env_name}", 4, 3, 50000)
     config = process_config(env)
-    pol = DistDQN(config)
+    pol = DistDQN(rnd=1,
+                  n_env=4,
+                  dim_obs=config.dim_observation,
+                  dim_act=config.dim_action,
+                  discount=0.99,
+                  save_path=config.save_path,
+                  save_model_freq=1000,
+                  update_target_freq=10000,
+                  epsilon_schedule=lambda x: (1-x),
+                  lr=2.5e-4,
+                  n_histogram=51,
+                  vmax=1,
+                  vmin=-10
+                  )
 
     learn(env, pol, config)
