@@ -76,6 +76,7 @@ class EpisodicLifeEnv(gym.Wrapper):
     def step(self, action):
 
         obs, reward, done, info = self.env.step(action)
+        # print(f"info: {info}")
         self.was_real_done = done
 
         # Log trajectory length and trajectory reward.

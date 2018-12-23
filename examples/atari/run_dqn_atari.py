@@ -16,12 +16,11 @@ args = parser.parse_args()
 
 class Config(object):
     def __init__(self):
-        # random seed and path.
-        self.rnd = 1
+
+        self.n_env = 1
         self.save_path = f"./log/dqn/exp_{args.env_name}"
 
         # Environment parameters.
-        self.n_env = 1
         self.dim_observation = None
         self.dim_action = None   # For continuous action.
 
@@ -30,16 +29,10 @@ class Config(object):
         self.warm_start_length = 2000
 
         # Cycle parameters.
-        self.save_model_freq = 1000
-        self.log_freq = 100
-        self.update_target_freq = 100
+        self.log_freq = 1000
 
         # Algorithm parameters.
         self.batch_size = 64
-        self.discount = 0.99
-        self.max_grad_norm = 0.5
-        self.value_lr_schedule = lambda x: 2.5e-4
-        self.epsilon_schedule = lambda x: (1-x) * 0.5
         self.memory_size = 100000
 
 
@@ -76,7 +69,6 @@ def learn(env, agent, config):
         epinfos = []
         actions = agent.get_action(obs)
         next_obs, rewards, dones, infos = env.step(actions)
-        # print(f"type: {next_obs.dtype}, max: {np.max(next_obs)} min: {np.min(next_obs)} shape: {next_obs.shape}")
 
         memory.store_sards(obs, actions, rewards, dones, obs)
 
@@ -105,6 +97,15 @@ def learn(env, agent, config):
 if __name__ == "__main__":
     env = AtariWrapper(f"{args.env_name}", 1)
     config = process_config(env)
-    pol = DQN(config)
+    pol = DQN(n_env=config.n_env,
+              rnd=1,
+              dim_obs=config.dim_observation,
+              dim_act=config.dim_action,
+              discount=0.99,
+              save_path=config.save_path,
+              save_model_freq=1000,
+              update_target_freq=10000,
+              epsilon_schedule=lambda x: (1-x)*0.5,
+              lr=2.5e-4)
 
     learn(env, pol, config)

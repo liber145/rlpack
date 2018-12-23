@@ -15,7 +15,6 @@ s = env.reset()
 for i in range(1000):
     a = env.sample_action()
     next_s, r, d, _ = env.step(a)
-    # next_s = np.asarray(next_s, dtype=np.uint8)
 
     print(f"a: {a} \t s: max: {np.max(next_s)} min: {np.min(next_s)} {type(next_s)} \t r: {r}, d: {d}")
 
