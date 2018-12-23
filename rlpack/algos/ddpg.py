@@ -10,21 +10,40 @@ from .base import Base
 class DDPG(Base):
     """Deep Deterministic Policy Gradient."""
 
-    def __init__(self, config):
-        self.n_env = config.n_env
-        self.policy_lr = config.policy_lr_schedule(0)
-        self.value_lr = config.value_lr_schedule(0)
-        self.action_low = -1.0
-        self.action_high = 1.0
+    def __init__(self,
+                 rnd=1,
+                 n_env=1,
+                 dim_obs=None,
+                 dim_act=None,
+                 discount=0.99,
+                 save_model_freq=1000,
+                 save_path="./log",
+                 update_target_freq=10000,
+                 policy_lr=2.5e-4,
+                 value_lr=3e-4,
+                 action_low=-1.0,
+                 action_high=1.0,
+                 ):
+        self.n_env = n_env
+        self.dim_obs = dim_obs
+        self.dim_act = dim_act
+        self.discount = discount
 
-        self.update_target_freq = 5
-        super().__init__(config)
+        self.policy_lr = policy_lr
+        self.value_lr = value_lr
+        self.action_low = action_low
+        self.action_high = action_high
+
+        self.update_target_freq = update_target_freq
+        self.save_model_freq = save_model_freq
+
+        super().__init__(save_path=save_path, rnd=rnd)
 
     def build_network(self):
         """Build networks for algorithm."""
         # Build placeholders.
-        self.observation_ph = tf.placeholder(tf.float32, [None, *self.dim_observation], "observation")
-        self.action_ph = tf.placeholder(tf.float32, (None, self.dim_action), "action")
+        self.observation_ph = tf.placeholder(tf.float32, [None, *self.dim_obs], "observation")
+        self.action_ph = tf.placeholder(tf.float32, (None, self.dim_act), "action")
 
         # Build Q-value net.
         with tf.variable_scope("qval_net"):
@@ -45,27 +64,28 @@ class DDPG(Base):
         with tf.variable_scope("act_net"):
             x = tf.layers.dense(self.observation_ph, 64, activation=tf.nn.relu, trainable=True)
             x = tf.layers.dense(x, 64, activation=tf.nn.relu, trainable=True)
-            self.action = tf.layers.dense(x, self.dim_action, activation=tf.nn.tanh, trainable=True)
+            self.action = tf.layers.dense(x, self.dim_act, activation=tf.nn.tanh, trainable=True)
 
         with tf.variable_scope("dummy_act_net"):
             x = tf.layers.dense(self.observation_ph, 64, activation=tf.nn.relu, trainable=False)
             x = tf.layers.dense(x, 64, activation=tf.nn.relu, trainable=False)
-            self.dummy_action = tf.layers.dense(x, self.dim_action, activation=tf.nn.tanh, trainable=False)
+            self.dummy_action = tf.layers.dense(x, self.dim_act, activation=tf.nn.tanh, trainable=False)
 
     def build_algorithm(self):
         """Build networks for algorithm."""
         self.optimizer = tf.train.AdamOptimizer(self.policy_lr)
         self.critic_optimizer = tf.train.AdamOptimizer(self.value_lr)
         self.target_qval_ph = tf.placeholder(tf.float32, (None,), "next_state_qval")
-        self.grad_q_act_ph = tf.placeholder(tf.float32, (None, self.dim_action), "grad_q_act")
+        self.grad_q_act_ph = tf.placeholder(tf.float32, (None, self.dim_act), "grad_q_act")
 
         # ---------- Build Policy Algorithm ----------
         # Compute gradient of qval with respect to action.
         self.grad_q_a = tf.gradients(self.qval, self.action_ph)
 
         # Compute update direction of policy parameter.
+        batch_size = tf.to_float(tf.shape(self.observation_ph)[0])
         actor_vars = tf.trainable_variables("act_net")
-        grad_surr = tf.gradients(self.action / self.batch_size, actor_vars, -self.grad_q_act_ph)
+        grad_surr = tf.gradients(self.action / batch_size, actor_vars, -self.grad_q_act_ph)
 
         # Update actor parameters.
         self.train_actor_op = self.optimizer.apply_gradients(zip(grad_surr, actor_vars))
@@ -102,7 +122,7 @@ class DDPG(Base):
 
             # Compute target value.
             next_a_batch = self.sess.run(self.dummy_action, feed_dict={self.observation_ph: next_s_batch[i, :]})
-            assert next_a_batch.shape == (batch_size, self.dim_action)
+            assert next_a_batch.shape == (batch_size, self.dim_act)
             next_a_batch = np.clip(next_a_batch, self.action_low, self.action_high)
             qval = self.sess.run(self.dummy_qval, feed_dict={self.observation_ph: next_s_batch[i, :], self.action_ph: next_a_batch})
             assert qval.shape == (batch_size,)
