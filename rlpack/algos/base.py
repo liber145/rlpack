@@ -12,10 +12,10 @@ class Base(ABC):
         # Environment parameters.
         # assert hasattr(config, "dim_observation")
         # assert hasattr(config, "dim_action")
+        # self.rnd = config.rnd if hasattr(config, "rnd") else 1
         # self.n_env = config.n_env if hasattr(config, "n_env") else 4
         # self.dim_observation = config.dim_observation
         # self.dim_action = config.dim_action
-        # self.rnd = config.rnd if hasattr(config, "rnd") else 1
 
         # # Training parameters.
         # self.discount = config.discount if hasattr(config, "discount") else 0.99

@@ -105,7 +105,7 @@ if __name__ == "__main__":
               save_path=config.save_path,
               save_model_freq=1000,
               update_target_freq=10000,
-              epsilon_schedule=lambda x: (1-x)*0.5,
+              epsilon_schedule=lambda x: (1-x)*1.0,
               lr=2.5e-4)
 
     learn(env, pol, config)
