@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import tensorflow as tf
-from collections import deque
 
 from ..common.utils import assert_shape
 from .base import Base
 
 
-class DQN(Base):
+class AveDQN(Base):
     """Deep Q Network."""
 
     def __init__(self,
@@ -18,10 +17,11 @@ class DQN(Base):
                  discount=0.99,
                  save_path="./log",
                  save_model_freq=1000,
-                 update_target_freq=10000,
                  log_freq=1000,
+                 update_target_freq=10000,
                  epsilon_schedule=lambda x: (1-x)*1,
-                 lr=2.5e-4):
+                 lr=2.5e-4,
+                 n_net=5):
 
         self.n_env = n_env
         self.dim_obs = dim_obs
@@ -33,14 +33,18 @@ class DQN(Base):
         self.epsilon_schedule = epsilon_schedule
         self.epsilon = self.epsilon_schedule(0)
         self.lr = lr
+        self.n_net = n_net
 
         super().__init__(save_path=save_path, rnd=rnd)
 
-        self.all_loss = deque(maxlen=20)
-        self.all_max_q = deque(maxlen=20)
-
-    def safemean(self, x):
-        return np.nan if len(x) == 0 else np.mean(x)
+    def _qnet(self, name: str, obs, trainable=False):
+        with tf.variable_scope(name):
+            x = tf.layers.conv1d(obs, 32, 8, 4, activation=tf.nn.relu, trainable=trainable)
+            x = tf.layers.conv1d(x, 64, 4, 2, activation=tf.nn.relu, trainable=trainable)
+            x = tf.contrib.layers.flatten(x)
+            x = tf.layers.dense(x, 256, activation=tf.nn.relu, trainable=trainable)
+            qvals = tf.layers.dense(x, self.dim_act, trainable=trainable)
+        return qvals
 
     def build_network(self):
         """Build networks for algorithm."""
@@ -52,33 +56,11 @@ class DQN(Base):
         self.next_observation = tf.placeholder(dtype=tf.uint8, shape=[None, *self.dim_obs], name="next_observation")
         self.next_observation = tf.to_float(self.next_observation) / 255.0
 
-        with tf.variable_scope("main/qnet"):
-            # x = tf.layers.conv2d(self.observation, 32, 8, 4, activation=tf.nn.relu)
-            # x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu)
-            # x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu)
-            # x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
-            # x = tf.layers.dense(x, 512, activation=tf.nn.relu)
-            # self.qvals = tf.layers.dense(x, self.dim_act)
+        self.qvals = self._qnet("main/qnet", self.observation, trainable=True)
 
-            x = tf.layers.conv1d(self.observation, 32, 8, 4, activation=tf.nn.relu)
-            x = tf.layers.conv1d(x, 64, 4, 2, activation=tf.nn.relu)
-            x = tf.contrib.layers.flatten(x)
-            x = tf.layers.dense(x, 256, activation=tf.nn.relu)
-            self.qvals = tf.layers.dense(x, self.dim_act)
-
-        with tf.variable_scope("target/qnet"):
-            # x = tf.layers.conv2d(self.next_observation, 32, 8, 4, activation=tf.nn.relu, trainable=False)
-            # x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu, trainable=False)
-            # x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu, trainable=False)
-            # x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
-            # x = tf.layers.dense(x, 512, activation=tf.nn.relu, trainable=False)
-            # self.target_qvals = tf.layers.dense(x, self.dim_act, trainable=False)
-
-            x = tf.layers.conv1d(self.next_observation, 32, 8, 4, activation=tf.nn.relu, trainable=False)
-            x = tf.layers.conv1d(x, 64, 4, 2, activation=tf.nn.relu, trainable=False)
-            x = tf.contrib.layers.flatten(x)
-            x = tf.layers.dense(x, 256, activation=tf.nn.relu, trainable=False)
-            self.target_qvals = tf.layers.dense(x, self.dim_act, trainable=False)
+        self.targ_q = []
+        for i in range(self.n_net):
+            self.targ_q.append(self._qnet(f"target_{i}/qnet", self.next_observation, trainable=True))
 
     def build_algorithm(self):
         """Build networks for algorithm."""
@@ -92,37 +74,59 @@ class DQN(Base):
         assert_shape(action_q, [None])
 
         # Compute back up.
-        assert_shape(tf.reduce_max(self.target_qvals, axis=1), [None])
-        q_backup = tf.stop_gradient(self.reward + self.discount * (1 - self.done) * tf.reduce_max(self.target_qvals, axis=1))
+        print(self.targ_q)
+        ave_q = tf.add_n(self.targ_q) / self.n_net
+        assert_shape(tf.reduce_max(ave_q, axis=1), [None])
+        q_backup = tf.stop_gradient(self.reward + self.discount * (1 - self.done) * tf.reduce_max(ave_q, axis=1))
 
         # Compute loss and optimize the object.
         self.loss = tf.reduce_mean(tf.squared_difference(q_backup, action_q))   # 损失值。
         self.train_op = self.optimizer.minimize(self.loss, var_list=trainable_variables)
 
         # Update target network.
-        def _update_target(new_net, old_net):
-            params1 = tf.trainable_variables(old_net)
-            params1 = sorted(params1, key=lambda v: v.name)
-            params2 = tf.global_variables(new_net)
-            params2 = sorted(params2, key=lambda v: v.name)
-            assert len(params1) == len(params2)
-            update_ops = []
-            for param1, param2 in zip(params1, params2):
-                update_ops.append(param2.assign(param1))
-            return update_ops
+        update_target_operation = []
+        for i in reversed(range(1, self.n_net)):
+            if len(update_target_operation) == 0:
+                print("i", i)
+                update_target_operation.append(self._update_target(f"target_{i}/qnet", f"target_{i-1}/qnet"))
+            else:
+                with tf.control_dependencies([update_target_operation[self.n_net-i-2]]):
+                    tmp = self._update_target(f"target_{i}/qnet", f"target_{i-1}/qnet")
+                    update_target_operation.append(tmp)
 
-        self.update_target_op = _update_target("target/qnet", "main/qnet")
+        with tf.control_dependencies([update_target_operation[-1]]):
+            tmp = self._update_target("target_0/qnet", "main/qnet")
+            update_target_operation.append(tmp)
+
+        self.update_target_op = update_target_operation
 
         self.max_qval = tf.reduce_max(self.qvals)
+
+    def _update_target(self, net1, net2):
+        """net1 = net2 
+
+        Arguments:
+            net1 {str} -- variable scope of net1.
+            net2 {str} -- variable scope of net2
+        """
+        params1 = tf.trainable_variables(net1)
+        params1 = sorted(params1, key=lambda k: k.name)
+        params2 = tf.trainable_variables(net2)
+        params2 = sorted(params2, key=lambda k: k.name)
+        assert len(params1) == len(params2)
+        print("params1:", params1)
+        print("params2:", params2)
+        input()
+        return tf.group([x1.assign(x2) for x1, x2 in zip(params1, params2)])
 
     def get_action(self, obs):
         """Get actions according to the given observation.
 
         Parameters:
-            - ob: An ndarray with shape (n, state_dimension).
+            - ob: An ndarray with shape(n, state_dimension).
 
         Returns:
-            - An ndarray for action with shape (n).
+            - An ndarray for action with shape(n).
         """
         # if obs.ndim == 1 or obs.ndim == 3:
         #     newobs = np.array(obs)[np.newaxis, :]
@@ -208,11 +212,5 @@ class DQN(Base):
         # Update target policy.
         if global_step % self.update_target_freq == 0:
             self.sess.run(self.update_target_op)
-
-        self.all_loss.append(loss)
-        self.all_max_q.append(max_q_val)
-
-        if global_step % self.log_freq == 0:
-            print(f"meanloss: {self.safemean(self.all_loss)}  meanmaxq: {self.safemean(self.all_max_q)}")
 
         return {"loss": loss, "max_q_value": max_q_val, "global_step": global_step}

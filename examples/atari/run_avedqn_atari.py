@@ -2,7 +2,7 @@ import os
 from collections import deque
 
 import numpy as np
-from rlpack.algos import DQN
+from rlpack.algos import AveDQN
 from rlpack.common import DiscreteActionMemory
 from rlpack.environment import AtariWrapper
 from tensorboardX import SummaryWriter
@@ -18,7 +18,7 @@ class Config(object):
     def __init__(self):
 
         self.n_env = 1
-        self.save_path = f"./log/dqn/exp_{args.env_name}"
+        self.save_path = f"./log/avedqn/exp_{args.env_name}"
 
         # Environment parameters.
         self.dim_observation = None
@@ -101,16 +101,17 @@ def learn(env, agent, config):
 if __name__ == "__main__":
     env = AtariWrapper(f"{args.env_name}", 1)
     config = process_config(env)
-    pol = DQN(n_env=config.n_env,
-              rnd=4,
-              dim_obs=config.dim_observation,
-              dim_act=config.dim_action,
-              discount=0.99,
-              save_path=config.save_path,
-              save_model_freq=1000,
-              log_freq=config.log_freq,
-              update_target_freq=10000,
-              epsilon_schedule=lambda x: (1-x)*0.2,
-              lr=2.5e-4)
+    pol = AveDQN(n_env=config.n_env,
+                 rnd=4,
+                 dim_obs=config.dim_observation,
+                 dim_act=config.dim_action,
+                 discount=0.99,
+                 save_path=config.save_path,
+                 save_model_freq=1000,
+                 log_freq=config.log_freq,
+                 update_target_freq=10000,
+                 epsilon_schedule=lambda x: (1-x)*0.2,
+                 lr=2.5e-4,
+                 n_net=5)
 
     learn(env, pol, config)

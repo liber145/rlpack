@@ -4,6 +4,7 @@ from .ddpg import DDPG
 from .dist_dqn import DistDQN
 from .double_dqn import DoubleDQN
 from .dqn import DQN
+from .ave_dqn import AveDQN
 from .duel_dqn import DuelDQN
 from .ppo import PPO
 from .trpo import TRPO
