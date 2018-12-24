@@ -36,27 +36,39 @@ class DQN(Base):
     def build_network(self):
         """Build networks for algorithm."""
         self.observation = tf.placeholder(shape=[None, *self.dim_obs], dtype=tf.uint8, name="observation")
-        self.observation = tf.to_float(self.observation) / 256.0
+        self.observation = tf.to_float(self.observation) / 255.0
         self.action = tf.placeholder(dtype=tf.int32, shape=[None], name="action")
         self.reward = tf.placeholder(dtype=tf.float32, shape=[None], name="reward")
         self.done = tf.placeholder(dtype=tf.float32, shape=[None], name="done")
         self.next_observation = tf.placeholder(dtype=tf.uint8, shape=[None, *self.dim_obs], name="next_observation")
-        self.next_observation = tf.to_float(self.next_observation) / 256.0
+        self.next_observation = tf.to_float(self.next_observation) / 255.0
 
         with tf.variable_scope("main/qnet"):
-            x = tf.layers.conv2d(self.observation, 32, 8, 4, activation=tf.nn.relu)
-            x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu)
-            x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu)
-            x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
-            x = tf.layers.dense(x, 512, activation=tf.nn.relu)
+            # x = tf.layers.conv2d(self.observation, 32, 8, 4, activation=tf.nn.relu)
+            # x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu)
+            # x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu)
+            # x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
+            # x = tf.layers.dense(x, 512, activation=tf.nn.relu)
+            # self.qvals = tf.layers.dense(x, self.dim_act)
+
+            x = tf.layers.conv1d(self.observation, 32, 8, 4, activation=tf.nn.relu)
+            x = tf.layers.conv1d(x, 64, 4, 2, activation=tf.nn.relu)
+            x = tf.contrib.layers.flatten(x)
+            x = tf.layers.dense(x, 256, activation=tf.nn.relu)
             self.qvals = tf.layers.dense(x, self.dim_act)
 
         with tf.variable_scope("target/qnet"):
-            x = tf.layers.conv2d(self.next_observation, 32, 8, 4, activation=tf.nn.relu, trainable=False)
-            x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu, trainable=False)
-            x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu, trainable=False)
-            x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
-            x = tf.layers.dense(x, 512, activation=tf.nn.relu, trainable=False)
+            # x = tf.layers.conv2d(self.next_observation, 32, 8, 4, activation=tf.nn.relu, trainable=False)
+            # x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu, trainable=False)
+            # x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu, trainable=False)
+            # x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
+            # x = tf.layers.dense(x, 512, activation=tf.nn.relu, trainable=False)
+            # self.target_qvals = tf.layers.dense(x, self.dim_act, trainable=False)
+
+            x = tf.layers.conv1d(self.next_observation, 32, 8, 4, activation=tf.nn.relu, trainable=False)
+            x = tf.layers.conv1d(x, 64, 4, 2, activation=tf.nn.relu, trainable=False)
+            x = tf.contrib.layers.flatten(x)
+            x = tf.layers.dense(x, 256, activation=tf.nn.relu, trainable=False)
             self.target_qvals = tf.layers.dense(x, self.dim_act, trainable=False)
 
     def build_algorithm(self):
@@ -71,6 +83,7 @@ class DQN(Base):
         assert_shape(action_q, [None])
 
         # Compute back up.
+        assert_shape(tf.reduce_max(self.target_qvals, axis=1), [None])
         q_backup = tf.stop_gradient(self.reward + self.discount * (1 - self.done) * tf.reduce_max(self.target_qvals, axis=1))
 
         # Compute loss and optimize the object.
@@ -102,18 +115,20 @@ class DQN(Base):
         Returns:
             - An ndarray for action with shape (n).
         """
-        if obs.ndim == 1 or obs.ndim == 3:
-            newobs = np.array(obs)[np.newaxis, :]
-        else:
-            assert obs.ndim == 2 or obs.ndim == 4
-            newobs = obs
+        # if obs.ndim == 1 or obs.ndim == 3:
+        #     newobs = np.array(obs)[np.newaxis, :]
+        # else:
+        #     assert obs.ndim == 2 or obs.ndim == 4
+        #     newobs = obs
 
-        qvals = self.sess.run(self.qvals, feed_dict={self.observation: newobs})
-        best_action = np.argmax(qvals, axis=1)
-        batch_size = newobs.shape[0]
+        q = self.sess.run(self.qvals, feed_dict={self.observation: obs})
+        max_a = np.argmax(q, axis=1)
+
+        # Epsilon greedy method.
+        batch_size = obs.shape[0]
         actions = np.random.randint(self.dim_act, size=batch_size)
         idx = np.random.uniform(size=batch_size) > self.epsilon
-        actions[idx] = best_action[idx]
+        actions[idx] = max_a[idx]
 
         if obs.ndim == 1:
             actions = actions[0]

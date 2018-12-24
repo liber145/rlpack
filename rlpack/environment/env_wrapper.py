@@ -5,7 +5,7 @@ from typing import Callable, List
 
 import numpy as np
 
-from .atari_wrappers import make_atari
+from .atari_wrappers import make_atari, make_ram_atari
 from .distributed_env_worker import DistributedEnvClient
 from .distributed_env_wrapper import DistributedEnvManager
 from .mujoco_wrappers import make_mujoco
@@ -94,7 +94,10 @@ class AtariWrapper(StackEnv):
         super().__init__(lambda x: self._make_env(env_id, x), n_env)
 
     def _make_env(self, env_id: str, rank: int = 0):
-        env = make_atari(env_id)
+        if "ram" in env_id:
+            env = make_ram_atari(env_id)
+        else:
+            env = make_atari(env_id)
         env.seed(rank + 1)
         return env
 
@@ -201,7 +204,10 @@ class AsyncAtariWrapper(object):
         self._dim_action = p.dim_action
 
     def _make_env(self, env_name, rank=0):
-        env = make_atari(env_name)
+        if "ram" in env_name:
+            env = make_ram_atari(env_name)
+        else:
+            env = make_atari(env_name)
         env.seed(1 + rank)
         return env
 

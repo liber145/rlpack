@@ -62,6 +62,10 @@ def learn(env, agent, config):
         memory.store_sards(obs, actions, rewards, dones, obs)
         obs = next_obs
 
+        for info in infos:
+            if "episode" in info:
+                tqdm.write(info)
+
     print("Finish warm start.")
     print("Start training.")
     # --------------- Interaction, Train and Log ------------------
@@ -98,7 +102,7 @@ if __name__ == "__main__":
     env = AtariWrapper(f"{args.env_name}", 1)
     config = process_config(env)
     pol = DQN(n_env=config.n_env,
-              rnd=1,
+              rnd=4,
               dim_obs=config.dim_observation,
               dim_act=config.dim_action,
               discount=0.99,
@@ -106,6 +110,6 @@ if __name__ == "__main__":
               save_model_freq=1000,
               update_target_freq=10000,
               epsilon_schedule=lambda x: (1-x)*1.0,
-              lr=2.5e-4)
+              lr=2.5e-2)
 
     learn(env, pol, config)
