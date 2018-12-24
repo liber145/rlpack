@@ -16,7 +16,6 @@ args = parser.parse_args()
 
 class Config(object):
     def __init__(self):
-        self.seed = 1
         self.save_path = f"./log/ppo/exp_async_{args.env_name}"
 
         # Environment.
@@ -27,22 +26,12 @@ class Config(object):
         # Training length.
         self.trajectory_length = 256
         self.n_trajectory = 10000   # for each env
-        self.warm_start_length = 2000
+        self.warm_start_length = 200
 
         # Cycle parameters.
         self.log_freq = 1
-        self.save_model_freq = 50
 
         # Algorithm parameters.
-        self.batch_size = 64
-        self.training_epoch = 5
-        self.discount = 0.99
-        self.gae = 0.95
-        self.vf_coef = 1.0
-        self.entropy_coef = 0.01
-        self.max_grad_norm = 0.5
-        self.lr_schedule = lambda x: (1 - x) * 2.5e-4
-        self.clip_schedule = lambda x: (1 - x) * 0.1
         self.memory_size = 10000
 
 
@@ -93,7 +82,7 @@ def learn(env, agent, config):
         # Get the last trajectory from memory and train the algorithm.
         update_ratio = i / config.n_trajectory
         data_batch = memory.get_last_n_samples(config.trajectory_length)
-        loginfo = agent.update(data_batch, update_ratio)
+        agent.update(data_batch, update_ratio)
 
         epinfobuf.extend(epinfos)
         summary_writer.add_scalar("eprewmean", safemean([epinfo["r"] for epinfo in epinfobuf]), global_step=i)
@@ -108,6 +97,22 @@ def learn(env, agent, config):
 if __name__ == "__main__":
     env = AsyncAtariWrapper(f"{args.env_name}", 2, 2, 50000)
     config = process_config(env)
-    pol = PPO(config)
+    pol = PPO(rnd=1,
+              n_env=config.n_env,
+              dim_obs=config.dim_observation,
+              dim_act=config.dim_action,
+              discount=0.99,
+              gae=0.95,
+              save_path=config.save_path,
+              save_model_freq=50,
+              epsilon_schedule=lambda x: (1-x)*1,
+              vf_coef=1.0,
+              entropy_coef=0.01,
+              max_grad_norm=0.5,
+              policy_lr_schedule=lambda x: (1 - x) * 2.5e-4,
+              clip_schedule=lambda x: (1 - x) * 0.1,
+              trajectory_length=config.trajectory_length,
+              train_epoch=5,
+              batch_size=64)
 
     learn(env, pol, config)

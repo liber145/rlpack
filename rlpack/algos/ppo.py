@@ -8,7 +8,25 @@ from .base import Base
 
 
 class PPO(Base):
-    def __init__(self, config):
+    def __init__(self,
+                 rnd=1,
+                 n_env=1,
+                 dim_obs=None,
+                 dim_act=None,
+                 discount=0.99,
+                 gae=0.95,
+                 save_path="./log",
+                 save_model_freq=1000,
+                 epsilon_schedule=lambda x: (1-x)*1,
+                 vf_coef=1.0,
+                 entropy_coef=0.01,
+                 max_grad_norm=0.5,
+                 policy_lr_schedule=lambda x: (1 - x) * 2.5e-4,
+                 clip_schedule=lambda x: (1 - x) * 0.1,
+                 trajectory_length=2048,
+                 train_epoch=5,
+                 batch_size=64
+                 ):
         """An implementation of PPO.
 
         Parameters:
@@ -17,14 +35,26 @@ class PPO(Base):
         Returns:
             None
         """
-        self.entropy_coefficient = config.entropy_coef
-        self.critic_coefficient = config.vf_coef
-        self.trajectory_length = config.trajectory_length
-        self.clip_schedule = config.clip_schedule
-        self.init_clip_epsilon = 0.1
-        self.init_lr = 2.5e-4
+        self.entropy_coefficient = entropy_coef
+        self.critic_coefficient = vf_coef
+        self.trajectory_length = trajectory_length
+        self.clip_schedule = clip_schedule
+        self.policy_lr_schedule = policy_lr_schedule
 
-        super().__init__(config)
+        self.dim_obs = dim_obs
+        self.dim_act = dim_act
+        self.discount = discount
+        self.gae = gae
+        self.save_model_freq = save_model_freq
+
+        self.max_grad_norm = max_grad_norm
+        self.n_env = n_env
+        self.trajectory_length = trajectory_length
+
+        self.train_epoch = train_epoch
+        self.batch_size = batch_size
+
+        super().__init__(save_path=save_path, rnd=rnd)
 
     def build_network(self):
         """Build networks for algorithm."""
@@ -32,12 +62,12 @@ class PPO(Base):
         self.clip_epsilon = tf.placeholder(tf.float32)
         self.moved_lr = tf.placeholder(tf.float32)
 
-        self.old_logit_action_probability = tf.placeholder(tf.float32, [None, self.dim_action])
+        self.old_logit_action_probability = tf.placeholder(tf.float32, [None, self.dim_act])
         self.action = tf.placeholder(tf.int32, [None], name="action")
         self.advantage = tf.placeholder(tf.float32, [None], name="advantage")
         self.target_state_value = tf.placeholder(tf.float32, [None], "target_state_value")
 
-        self.observation = tf.placeholder(shape=[None, *self.dim_observation], dtype=tf.uint8, name="observation")
+        self.observation = tf.placeholder(shape=[None, *self.dim_obs], dtype=tf.uint8, name="observation")
         self.observation = tf.to_float(self.observation) / 256.0
 
         x = tf.layers.conv2d(self.observation, 32, 8, 4, activation=tf.nn.relu)
@@ -45,7 +75,7 @@ class PPO(Base):
         x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu)
         x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
         x = tf.layers.dense(x, 512, activation=tf.nn.relu)
-        self.logit_action_probability = tf.layers.dense(x, self.dim_action, activation=None, kernel_initializer=tf.truncated_normal_initializer(0.0, 0.01))
+        self.logit_action_probability = tf.layers.dense(x, self.dim_act, activation=None, kernel_initializer=tf.truncated_normal_initializer(0.0, 0.01))
         self.state_value = tf.squeeze(tf.layers.dense(x, 1, activation=None, kernel_initializer=tf.truncated_normal_initializer()))
 
         # Get selected action index.
@@ -55,13 +85,13 @@ class PPO(Base):
         # Compute entropy of the action probability.
         log_prob_1 = tf.nn.log_softmax(self.logit_action_probability)
         log_prob_2 = tf.stop_gradient(tf.nn.log_softmax(self.old_logit_action_probability))
-        assert_shape(log_prob_1, [None, self.dim_action])
-        assert_shape(log_prob_2, [None, self.dim_action])
+        assert_shape(log_prob_1, [None, self.dim_act])
+        assert_shape(log_prob_2, [None, self.dim_act])
 
         prob_1 = tf.nn.softmax(log_prob_1)
         prob_2 = tf.stop_gradient(tf.nn.softmax(log_prob_2))
-        assert_shape(prob_1, [None, self.dim_action])
-        # assert_shape(prob_2, [None, self.dim_action])
+        assert_shape(prob_1, [None, self.dim_act])
+        # assert_shape(prob_2, [None, self.dim_act])
 
         self.entropy = - tf.reduce_sum(log_prob_1 * prob_1, axis=1)
         assert_shape(self.entropy, [None])
@@ -104,7 +134,7 @@ class PPO(Base):
         logit = self.sess.run(self.logit_action_probability, feed_dict={self.observation: newobs})
         logit = logit - np.max(logit, axis=1, keepdims=True)
         prob = np.exp(logit) / np.sum(np.exp(logit), axis=1, keepdims=True)
-        action = [np.random.choice(self.dim_action, p=prob[i, :]) for i in range(newobs.shape[0])]
+        action = [np.random.choice(self.dim_act, p=prob[i, :]) for i in range(newobs.shape[0])]
         assert len(action) == newobs.shape[0]
         return np.array(action)
 
@@ -125,7 +155,7 @@ class PPO(Base):
             - training infomation.
         """
         s_batch, a_batch, r_batch, d_batch = minibatch
-        assert s_batch.shape == (self.n_env, self.trajectory_length + 1, *self.dim_observation)
+        assert s_batch.shape == (self.n_env, self.trajectory_length + 1, *self.dim_obs)
 
         # Compute advantage batch.
         advantage_batch = np.empty([self.n_env, self.trajectory_length], dtype=np.float32)
@@ -147,7 +177,7 @@ class PPO(Base):
             target_value_batch[i, :] = state_value_batch[:-1] + advantage_batch[i, :]
 
         # Flat the batch values.
-        s_batch = s_batch[:, :-1, :, :, :].reshape(self.n_env * self.trajectory_length, *self.dim_observation)
+        s_batch = s_batch[:, :-1, :, :, :].reshape(self.n_env * self.trajectory_length, *self.dim_obs)
         a_batch = a_batch.reshape(self.n_env * self.trajectory_length)
         advantage_batch = advantage_batch.reshape(self.n_env * self.trajectory_length)
         target_value_batch = target_value_batch.reshape(self.n_env * self.trajectory_length)
@@ -158,7 +188,7 @@ class PPO(Base):
         old_logit_action_probability_batch = self.sess.run(self.logit_action_probability, feed_dict={self.observation: s_batch})
 
         # Train network.
-        for _ in range(self.training_epoch):
+        for _ in range(self.train_epoch):
             # Get training sample generator.
             batch_generator = self._generator([s_batch, a_batch, advantage_batch, old_logit_action_probability_batch, target_value_batch], batch_size=self.batch_size)
 
