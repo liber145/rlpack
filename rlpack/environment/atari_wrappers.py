@@ -154,6 +154,8 @@ class MaxAndSkipEnv(gym.Wrapper):
         info["real_reward"] = total_reward
         info["real_done"] = done
 
+        # print("max_frame:", max_frame.shape)
+
         return max_frame, total_reward, done, info
 
     def reset(self, **kwargs):
@@ -256,6 +258,33 @@ class NeverStop(gym.Wrapper):
         return self.env.action_space.sample()
 
 
+class RamStack(gym.Wrapper):
+    def __init__(self, env):
+        gym.Wrapper.__init__(self, env)
+
+        self._dim_act = self.env.dim_action
+        self._dim_obs = self.env.dim_observation
+
+    def reset(self):
+        ob = self.env.reset()
+        return ob.reshape(4, 128).swapaxes(0, 1)
+
+    def step(self, action):
+        ob, rew, done, info = self.env.step(action)
+        return ob.reshape(4, 128).swapaxes(0, 1), rew, done, info
+
+    def sample_action(self):
+        return self.env.sample_action()
+
+    @property
+    def dim_action(self):
+        return self._dim_act
+
+    @property
+    def dim_observation(self):
+        return (128, 4)
+
+
 class ScaledFloatFrame(gym.ObservationWrapper):
     def __init__(self, env):
         gym.ObservationWrapper.__init__(self, env)
@@ -309,14 +338,15 @@ def old_make_atari(env_id, timelimit=True):
     return env
 
 
-def wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=False, scale=False):
+def wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=False, scale=False, warp=True):
     """Configure environment for DeepMind-style Atari.
     """
     if episode_life:
         env = EpisodicLifeEnv(env)
     if 'FIRE' in env.unwrapped.get_action_meanings():
         env = FireResetEnv(env)
-    env = WarpFrame(env)
+    if warp:
+        env = WarpFrame(env)
     if scale:
         env = ScaledFloatFrame(env)
     if clip_rewards:
@@ -327,9 +357,20 @@ def wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=False, 
 
 
 def make_atari(env_name):
+    assert "NoFrameskip" in env_name and "ram" not in env_name
     env = old_make_atari(env_name)
     env = wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=True, scale=False)
     env = NeverStop(env)
+    return env
+
+
+def make_ram_atari(env_name):
+    assert "ramNoFrameskip" in env_name
+
+    env = old_make_atari(env_name)
+    env = wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=True, scale=False, warp=False)
+    env = NeverStop(env)
+    env = RamStack(env)
     return env
 
 
