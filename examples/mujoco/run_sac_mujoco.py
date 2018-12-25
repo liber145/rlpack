@@ -38,7 +38,6 @@ class Config(object):
         self.memory_size = int(1e6)
 
         # 周期参数
-        self.save_model_freq = 100
         self.log_freq = 1
 
         # 算法参数
@@ -109,5 +108,19 @@ if __name__ == "__main__":
     config = Config()
     env = MujocoWrapper(f"{args.env_name}", config.n_env)
     config = process_env(env)
-    agent = SAC(config)
+    agent = SAC(rnd=1,
+                dim_obs=config.dim_observation,
+                dim_act=config.dim_action,
+                discount=0.99,
+                save_path=config.save_path,
+                save_model_freq=100,
+                log_freq=1000,
+                policy_lr=1e-3,
+                value_lr=1e-3,
+                alpha=0.2,
+                action_high=1.0,
+                action_low=-1.0,
+                moving_udpate_target_ratio=0.995
+                )
+
     learn(env, agent, config)
