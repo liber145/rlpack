@@ -9,6 +9,7 @@ from .atari_wrappers import make_atari, make_ram_atari
 from .distributed_env_worker import DistributedEnvClient
 from .distributed_env_wrapper import DistributedEnvManager
 from .mujoco_wrappers import make_mujoco
+from .classical_control_wrapper import make_classic_control
 
 
 class StackEnv(object):
@@ -71,8 +72,8 @@ class MujocoWrapper(StackEnv):
     def __init__(self, env_id: str, n_env: int = 1):
         self._n_env = n_env
         super().__init__(lambda x: self._make_env(env_id, x), n_env)
-        self._dim_observation = self.envs[0].dim_observation
-        self._dim_action = self.envs[0].dim_action
+        # self._dim_observation = self.envs[0].dim_observation
+        # self._dim_action = self.envs[0].dim_action
 
     def _make_env(self, env_id: str, rank: int = 0):
         env = make_mujoco(env_id)
@@ -98,6 +99,17 @@ class AtariWrapper(StackEnv):
             env = make_ram_atari(env_id)
         else:
             env = make_atari(env_id)
+        env.seed(rank + 1)
+        return env
+
+
+class ClassicControlWrapper(StackEnv):
+    def __init__(self, env_name: str, n_env: int =1):
+        self._n_env = n_env
+        super().__init__(lambda x: self._make_env(env_name, x), n_env)
+
+    def _make_env(self, env_name: str, rank: int=0):
+        env = make_classic_control(env_name)
         env.seed(rank + 1)
         return env
 

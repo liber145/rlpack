@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
+from collections import deque
+
 import numpy as np
 import tensorflow as tf
-from collections import deque
+from tqdm import tqdm
 
 from ..common.utils import assert_shape
 from .base import Base
 
 
 class DQN(Base):
-    """Deep Q Network."""
-
     def __init__(self,
                  rnd=1,
                  n_env=1,
@@ -22,6 +22,21 @@ class DQN(Base):
                  log_freq=1000,
                  epsilon_schedule=lambda x: (1-x)*1,
                  lr=2.5e-4):
+        """Deep Q Network.
+
+        Keyword Arguments:
+            rnd {int} -- [description] (default: {1})
+            n_env {int} -- [description] (default: {1})
+            dim_obs {[type]} -- [description] (default: {None})
+            dim_act {[type]} -- [description] (default: {None})
+            discount {float} -- [description] (default: {0.99})
+            save_path {str} -- [description] (default: {"./log"})
+            save_model_freq {int} -- [description] (default: {1000})
+            update_target_freq {int} -- [description] (default: {10000})
+            log_freq {int} -- [description] (default: {1000})
+            epsilon_schedule {func} -- epsilon schedule. (default: {lambdax:(1-x)*1})
+            lr {[type]} -- [description] (default: {2.5e-4})
+        """
 
         self.n_env = n_env
         self.dim_obs = dim_obs
@@ -44,15 +59,16 @@ class DQN(Base):
 
     def build_network(self):
         """Build networks for algorithm."""
-        self.observation = tf.placeholder(shape=[None, *self.dim_obs], dtype=tf.uint8, name="observation")
-        self.observation = tf.to_float(self.observation) / 255.0
+        self.observation = tf.placeholder(shape=[None, *self.dim_obs], dtype=tf.float32, name="observation")
+        self.observation = tf.to_float(self.observation)
         self.action = tf.placeholder(dtype=tf.int32, shape=[None], name="action")
         self.reward = tf.placeholder(dtype=tf.float32, shape=[None], name="reward")
         self.done = tf.placeholder(dtype=tf.float32, shape=[None], name="done")
-        self.next_observation = tf.placeholder(dtype=tf.uint8, shape=[None, *self.dim_obs], name="next_observation")
-        self.next_observation = tf.to_float(self.next_observation) / 255.0
+        self.next_observation = tf.placeholder(dtype=tf.float32, shape=[None, *self.dim_obs], name="next_observation")
+        self.next_observation = tf.to_float(self.next_observation)
 
         with tf.variable_scope("main/qnet"):
+            # Atari
             # x = tf.layers.conv2d(self.observation, 32, 8, 4, activation=tf.nn.relu)
             # x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu)
             # x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu)
@@ -60,13 +76,19 @@ class DQN(Base):
             # x = tf.layers.dense(x, 512, activation=tf.nn.relu)
             # self.qvals = tf.layers.dense(x, self.dim_act)
 
-            x = tf.layers.conv1d(self.observation, 32, 8, 4, activation=tf.nn.relu)
-            x = tf.layers.conv1d(x, 64, 4, 2, activation=tf.nn.relu)
-            x = tf.contrib.layers.flatten(x)
-            x = tf.layers.dense(x, 256, activation=tf.nn.relu)
+            # Atari-ram
+            # x = tf.layers.conv1d(self.observation, 32, 8, 4, activation=tf.nn.relu)
+            # x = tf.layers.conv1d(x, 64, 4, 2, activation=tf.nn.relu)
+            # x = tf.contrib.layers.flatten(x)
+            # x = tf.layers.dense(x, 256, activation=tf.nn.relu)
+            # self.qvals = tf.layers.dense(x, self.dim_act)
+
+            x = tf.layers.dense(self.observation, 64, activation=tf.nn.relu)
+            x = tf.layers.dense(x, 64, activation=tf.nn.relu)
             self.qvals = tf.layers.dense(x, self.dim_act)
 
         with tf.variable_scope("target/qnet"):
+            # Atari
             # x = tf.layers.conv2d(self.next_observation, 32, 8, 4, activation=tf.nn.relu, trainable=False)
             # x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu, trainable=False)
             # x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu, trainable=False)
@@ -74,11 +96,16 @@ class DQN(Base):
             # x = tf.layers.dense(x, 512, activation=tf.nn.relu, trainable=False)
             # self.target_qvals = tf.layers.dense(x, self.dim_act, trainable=False)
 
-            x = tf.layers.conv1d(self.next_observation, 32, 8, 4, activation=tf.nn.relu, trainable=False)
-            x = tf.layers.conv1d(x, 64, 4, 2, activation=tf.nn.relu, trainable=False)
-            x = tf.contrib.layers.flatten(x)
-            x = tf.layers.dense(x, 256, activation=tf.nn.relu, trainable=False)
-            self.target_qvals = tf.layers.dense(x, self.dim_act, trainable=False)
+            # Atari-ram
+            # x = tf.layers.conv1d(self.next_observation, 32, 8, 4, activation=tf.nn.relu, trainable=False)
+            # x = tf.layers.conv1d(x, 64, 4, 2, activation=tf.nn.relu, trainable=False)
+            # x = tf.contrib.layers.flatten(x)
+            # x = tf.layers.dense(x, 256, activation=tf.nn.relu, trainable=False)
+            # self.target_qvals = tf.layers.dense(x, self.dim_act, trainable=False)
+
+            x = tf.layers.dense(self.next_observation, 64, activation=tf.nn.relu)
+            x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+            self.target_qvals = tf.layers.dense(x, self.dim_act)
 
     def build_algorithm(self):
         """Build networks for algorithm."""
@@ -130,6 +157,8 @@ class DQN(Base):
         #     assert obs.ndim == 2 or obs.ndim == 4
         #     newobs = obs
 
+        # print("obs:", obs.shape)
+
         q = self.sess.run(self.qvals, feed_dict={self.observation: obs})
         max_a = np.argmax(q, axis=1)
 
@@ -139,8 +168,11 @@ class DQN(Base):
         idx = np.random.uniform(size=batch_size) > self.epsilon
         actions[idx] = max_a[idx]
 
-        if obs.ndim == 1:
-            actions = actions[0]
+        # print("action:", actions.shape)
+        # input()
+
+        # if obs.ndim == 1:
+        #     actions = actions[0]
         return actions
 
     def update(self, minibatch, update_ratio: float):
@@ -166,26 +198,11 @@ class DQN(Base):
         s_batch, a_batch, r_batch, d_batch, next_s_batch = minibatch
 
         n_env, batch_size = s_batch.shape[:2]
-        s_batch = s_batch.reshape(n_env*batch_size, *self.dim_obs)
-        a_batch = a_batch.reshape(n_env*batch_size)
+        s_batch = s_batch.reshape(n_env * batch_size, *self.dim_obs)
+        a_batch = a_batch.reshape(n_env * batch_size)
         r_batch = r_batch.reshape(n_env * batch_size)
         d_batch = d_batch.reshape(n_env * batch_size)
         next_s_batch = next_s_batch.reshape(n_env * batch_size, *self.dim_obs)
-
-        # mb_s, mb_a, mb_target = [], [], []
-
-        # n_env = s_batch.shape[0]
-        # for i in range(n_env):
-        #     target_next_q_vals = self.sess.run(self.target_qvals, feed_dict={self.observation: next_s_batch[i, :]})
-        #     target_batch = r_batch[i, :] + (1 - d_batch[i, :]) * self.discount * target_next_q_vals.max(axis=1)
-        #     mb_target.append(target_batch)
-
-        #     mb_s.append(s_batch[i, :])
-        #     mb_a.append(a_batch[i, :])
-
-        # mb_s = np.concatenate(mb_s)
-        # mb_a = np.concatenate(mb_a)
-        # mb_target = np.concatenate(mb_target)
 
         _, loss, max_q_val = self.sess.run(
             [self.train_op,
@@ -213,6 +230,6 @@ class DQN(Base):
         self.all_max_q.append(max_q_val)
 
         if global_step % self.log_freq == 0:
-            print(f"meanloss: {self.safemean(self.all_loss)}  meanmaxq: {self.safemean(self.all_max_q)}")
+            tqdm.write(f"meanloss: {self.safemean(self.all_loss)}  meanmaxq: {self.safemean(self.all_max_q)} epsilon: {self.epsilon}")
 
         return {"loss": loss, "max_q_value": max_q_val, "global_step": global_step}

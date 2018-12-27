@@ -96,10 +96,12 @@ class Base(ABC):
 
     def save_model(self):
         """Save model to `save_path`."""
+        save_dir = os.path.join(self.save_path, "model")
+        os.makedirs(save_dir, exist_ok=True)
         global_step = self.sess.run(tf.train.get_global_step())
         self.saver.save(
             self.sess,
-            os.path.join(self.save_path, "model", "model"),
+            os.path.join(save_dir, "model"),
             global_step,
             write_meta_graph=True
         )

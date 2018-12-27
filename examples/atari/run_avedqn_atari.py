@@ -59,7 +59,7 @@ def learn(env, agent, config):
     for i in tqdm(range(config.warm_start_length)):
         actions = agent.get_action(obs)
         next_obs, rewards, dones, infos = env.step(actions)
-        memory.store_sards(obs, actions, rewards, dones, obs)
+        memory.store_sards(obs, actions, rewards, dones, next_obs)
         obs = next_obs
 
         for info in infos:
@@ -74,7 +74,7 @@ def learn(env, agent, config):
         actions = agent.get_action(obs)
         next_obs, rewards, dones, infos = env.step(actions)
 
-        memory.store_sards(obs, actions, rewards, dones, obs)
+        memory.store_sards(obs, actions, rewards, dones, next_obs)
 
         obs = next_obs
 
