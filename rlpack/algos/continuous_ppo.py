@@ -8,26 +8,55 @@ from .base import Base
 
 
 class ContinuousPPO(Base):
-    def __init__(self, config):
+    def __init__(self,
+                 rnd=1,
+                 n_env=1,
+                 dim_obs=None,
+                 dim_act=None,
+                 discount=0.99,
+                 gae=0.95,
+                 save_path="./log",
+                 save_model_freq=50,
+                 vf_coef=1.0,
+                 entropy_coef=0.01,
+                 max_grad_norm=40,
+                 policy_lr_schedule=lambda x: 3e-4,
+                 value_lr_schedule=lambda x: 3e-4,
+                 trajectory_length=2048,
+                 batch_size=64,
+                 training_epoch=10
+                 ):
 
-        self.n_env = config.n_env
-        self.trajectory_length = config.trajectory_length
+        self.n_env = n_env
+        self.dim_obs = dim_obs
+        self.dim_act = dim_act
+        self.discount = discount
+        self.gae = gae
 
-        self.entropy_coef = config.entropy_coef
-        self.critic_coef = config.vf_coef
+        self.batch_size = batch_size
+        self.save_model_freq = save_model_freq
+        self.trajectory_length = trajectory_length
 
-        super().__init__(config)
+        self.policy_lr_schedule = policy_lr_schedule
+        self.value_lr_schedule = value_lr_schedule
+
+        self.entropy_coef = entropy_coef
+        self.critic_coef = vf_coef
+        self.max_grad_norm = max_grad_norm
+        self.training_epoch = training_epoch
+
+        super().__init__(save_path=save_path, rnd=rnd)
 
     def build_network(self):
         """Build networks for algorithm."""
-        self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], name="observation")
+        self.observation = tf.placeholder(tf.float32, [None, *self.dim_obs], name="observation")
 
-        assert_shape(self.observation, [None, *self.dim_observation])
+        assert_shape(self.observation, [None, *self.dim_obs])
 
         with tf.variable_scope("policy_net"):
             x = tf.layers.dense(self.observation, 64, activation=tf.nn.tanh)
             x = tf.layers.dense(x, 64, activation=tf.nn.tanh)
-            self.mu = tf.layers.dense(x, self.dim_action, activation=tf.nn.tanh)
+            self.mu = tf.layers.dense(x, self.dim_act, activation=tf.nn.tanh)
             self.log_var = tf.get_variable("logvars", [self.mu.shape.as_list()[1]], tf.float32, tf.constant_initializer(0.0))
 
         with tf.variable_scope("value_net"):
@@ -44,11 +73,11 @@ class ContinuousPPO(Base):
         self.actor_optimizer = tf.train.AdamOptimizer(self.policy_lr)
         self.critic_optimizer = tf.train.AdamOptimizer(self.value_lr)
 
-        self.action = tf.placeholder(tf.float32, [None, self.dim_action], "action")
+        self.action = tf.placeholder(tf.float32, [None, self.dim_act], "action")
         self.span_reward = tf.placeholder(tf.float32, [None], "span_reward")
         self.advantage = tf.placeholder(tf.float32, [None], "advantage")
-        self.old_mu = tf.placeholder(tf.float32, [None, self.dim_action], "old_mu")
-        self.old_log_var = tf.placeholder(tf.float32, [self.dim_action], "old_var")
+        self.old_mu = tf.placeholder(tf.float32, [None, self.dim_act], "old_mu")
+        self.old_log_var = tf.placeholder(tf.float32, [self.dim_act], "old_var")
 
         logp = -0.5 * tf.reduce_sum(self.log_var * 2)
         logp += -0.5 * tf.reduce_sum(tf.square(self.action - self.mu) / tf.exp(self.log_var * 2), axis=1)  # 　- 0.5 * math.log(2 * math.pi)
@@ -71,9 +100,9 @@ class ContinuousPPO(Base):
         tr_old_new = tf.reduce_sum(tf.exp(self.old_log_var - self.log_var))
 
         self.kl = 0.5 * tf.reduce_mean(log_det_cov_new - log_det_cov_old + tr_old_new + tf.reduce_sum(
-            tf.square(self.mu - self.old_mu) / tf.exp(self.log_var), axis=1) - self.dim_action)
+            tf.square(self.mu - self.old_mu) / tf.exp(self.log_var), axis=1) - self.dim_act)
 
-        self.entropy = 0.5 * (self.dim_action + self.dim_action * tf.log(2 * np.pi) + tf.exp(tf.reduce_sum(self.log_var)))
+        self.entropy = 0.5 * (self.dim_act + self.dim_act * tf.log(2 * np.pi) + tf.exp(tf.reduce_sum(self.log_var)))
 
         # Build surrogate loss.
         ratio = tf.exp(logp - logp_old)
@@ -112,7 +141,7 @@ class ContinuousPPO(Base):
         # self.train_critic_op = self.critic_optimizer.minimize(self.critic_loss)
 
         # Build action sample.
-        self.sample_action = self.mu + tf.exp(self.log_var) * tf.random_normal(shape=[self.dim_action], dtype=tf.float32)
+        self.sample_action = self.mu + tf.exp(self.log_var) * tf.random_normal(shape=[self.dim_act], dtype=tf.float32)
 
     def get_action(self, obs):
         """Return actions according to the given observation.
@@ -149,7 +178,8 @@ class ContinuousPPO(Base):
             - training infomation.
         """
         s_batch, a_batch, r_batch, d_batch = minibatch
-        assert s_batch.shape == (self.n_env, self.trajectory_length + 1, *self.dim_observation)
+        print("shape:", s_batch.shape)
+        assert s_batch.shape == (self.n_env, self.trajectory_length + 1, *self.dim_obs)
 
         # Compute advantage batch.
         advantage_batch = np.empty([self.n_env, self.trajectory_length], dtype=np.float32)
@@ -171,8 +201,8 @@ class ContinuousPPO(Base):
             target_value_batch[i, :] = state_value_batch[:-1] + advantage_batch[i, :]
 
         # Flat the batch values.
-        s_batch = s_batch[:, :-1, ...].reshape(self.n_env * self.trajectory_length, *self.dim_observation)
-        a_batch = a_batch.reshape(self.n_env * self.trajectory_length, self.dim_action)
+        s_batch = s_batch[:, :-1, ...].reshape(self.n_env * self.trajectory_length, *self.dim_obs)
+        a_batch = a_batch.reshape(self.n_env * self.trajectory_length, self.dim_act)
         advantage_batch = advantage_batch.reshape(self.n_env * self.trajectory_length)
         target_value_batch = target_value_batch.reshape(self.n_env * self.trajectory_length)
 

@@ -44,16 +44,16 @@ class Config(object):
         self.log_freq = 1
 
         # 算法参数
-        self.batch_size = 64
-        self.discount = 0.99
-        self.gae = 0.95
-        self.policy_lr_schedule = lambda x: 3e-4
-        self.value_lr_schedule = lambda x: 3e-4
+        # self.batch_size = 64
+        # self.discount = 0.99
+        # self.gae = 0.95
+        # self.policy_lr_schedule = lambda x: 3e-4
+        # self.value_lr_schedule = lambda x: 3e-4
 
-        self.clip_schedule = lambda x: (1 - x) * 0.1
-        self.vf_coef = 1.0
-        self.entropy_coef = 0.01
-        self.max_grad_norm = 40
+        # self.clip_schedule = lambda x: (1 - x) * 0.1
+        # self.vf_coef = 1.0
+        # self.entropy_coef = 0.01
+        # self.max_grad_norm = 40
 
 
 def process_env(env):
@@ -117,5 +117,20 @@ if __name__ == "__main__":
     config = Config()
     env = MujocoWrapper(f"{args.env_name}", config.n_env)
     config = process_env(env)
-    agent = ContinuousPPO(config)
+    agent = ContinuousPPO(rnd=1,
+                          n_env=1,
+                          dim_obs=config.dim_observation,
+                          dim_act=config.dim_action,
+                          discount=0.99,
+                          gae=0.95,
+                          save_path=f"./log/ppo/exp_{args.env_name}",
+                          save_model_freq=50,
+                          vf_coef=1.0,
+                          entropy_coef=0.01,
+                          max_grad_norm=40,
+                          policy_lr_schedule=lambda x: 3e-4,
+                          value_lr_schedule=lambda x: 3e-4,
+                          trajectory_length=2048,
+                          batch_size=64,
+                          training_epoch=10)
     learn(env, agent, config)

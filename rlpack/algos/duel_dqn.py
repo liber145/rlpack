@@ -7,16 +7,36 @@ from .base import Base
 class DuelDQN(Base):
     """Dueling Archtecture, Double DQN"""
 
-    def __init__(self, config):
-        self.lr = config.value_lr_schedule(0)
-        self.epsilon_schedule = config.epsilon_schedule
+    def __init__(self,
+                 rnd=1,
+                 n_env=1,
+                 dim_obs=None,
+                 dim_act=None,
+                 discount=0.99,
+                 save_path="./log",
+                 save_model_freq=1000,
+                 update_target_freq=10000,
+                 log_freq=1000,
+                 epsilon_schedule=lambda x: (1-x)*1,
+                 lr=2.5e-4
+                 ):
+
+        self.n_env = n_env
+        self.dim_obs = dim_obs
+        self.dim_act = dim_act
+        self.discount = discount
+        self.save_model_freq = save_model_freq
+        self.log_freq = log_freq
+
+        self.lr = lr
+        self.epsilon_schedule = epsilon_schedule
         self.epsilon = self.epsilon_schedule(0)
-        self.update_target_freq = config.update_target_freq
-        super().__init__(config)
+        self.update_target_freq = update_target_freq
+        super().__init__(save_path=save_path, rnd=rnd)
 
     def build_network(self):
         """Build networks for algorithm."""
-        self.observation = tf.placeholder(shape=[None, *self.dim_observation], dtype=tf.uint8, name="observation")
+        self.observation = tf.placeholder(shape=[None, *self.dim_obs], dtype=tf.uint8, name="observation")
         self.observation = tf.to_float(self.observation) / 256.0
 
         with tf.variable_scope("net"):
@@ -26,7 +46,7 @@ class DuelDQN(Base):
             x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
             x = tf.layers.dense(x, 512, activation=tf.nn.relu)
             self.v = tf.layers.dense(x, 1)
-            self.adv = tf.layers.dense(x, self.dim_action)
+            self.adv = tf.layers.dense(x, self.dim_act)
 
         with tf.variable_scope("target_net"):
             x = tf.layers.conv2d(self.observation, 32, 8, 4, activation=tf.nn.relu, trainable=False)
@@ -35,7 +55,7 @@ class DuelDQN(Base):
             x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
             x = tf.layers.dense(x, 512, activation=tf.nn.relu, trainable=False)
             self.target_v = tf.layers.dense(x, 1, trainable=False)
-            self.target_adv = tf.layers.dense(x, self.dim_action, trainable=False)
+            self.target_adv = tf.layers.dense(x, self.dim_act, trainable=False)
 
     def build_algorithm(self):
         """Build networks for algorithm."""
@@ -50,7 +70,7 @@ class DuelDQN(Base):
 
         # 根据action提取Q中的值。
         batch_size = tf.shape(self.observation)[0]
-        gather_indices = tf.range(batch_size) * self.dim_action + self.action
+        gather_indices = tf.range(batch_size) * self.dim_act + self.action
         action_q = tf.gather(tf.reshape(self.qvals, [-1]), gather_indices)
 
         self.loss = tf.reduce_mean(tf.squared_difference(self.target, action_q))
@@ -93,7 +113,7 @@ class DuelDQN(Base):
         qvals = self.sess.run(self.qvals, feed_dict={self.observation: newobs})
         best_action = np.argmax(qvals, axis=1)
         batch_size = newobs.shape[0]
-        actions = np.random.randint(self.dim_action, size=batch_size)
+        actions = np.random.randint(self.dim_act, size=batch_size)
         idx = np.random.uniform(size=batch_size) > self.epsilon
         actions[idx] = best_action[idx]
 
@@ -155,7 +175,7 @@ class DuelDQN(Base):
         global_step, _ = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
         # 存储模型。
         if global_step % self.save_model_freq == 0:
-            self.save_model(self.save_path)
+            self.save_model()
 
         # 更新目标策略。
         if global_step % self.update_target_freq == 0:

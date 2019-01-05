@@ -9,23 +9,47 @@ from .base import Base
 class A2C(Base):
     """Advantage Actor Critic."""
 
-    def __init__(self, config):
-        self.tau = config.gae
+    def __init__(self,
+                 rnd=1,
+                 n_env=1,
+                 dim_obs=None,
+                 dim_act=None,
+                 discount=0.99,
+                 save_path="./log",
+                 save_model_freq=1000,
+                 log_freq=1000,
+                 trajectory_length=2048,
+                 gae=0.95,
+                 training_epoch=10,
+                 lr=3e-4,
+                 batch_size=64
+                 ):
 
-        self.training_epoch = config.training_epoch
+        self.n_env = n_env
+        self.dim_obs = dim_obs
+        self.dim_act = dim_act
+        self.discount = discount
+        self.gae = gae
+        self.lr = lr
 
-        super().__init__(config)
+        self.training_epoch = training_epoch
+        self.log_freq = log_freq
+        self.save_model_freq = save_model_freq
+        self.trajectory_length = trajectory_length
+        self.batch_size = batch_size
+
+        super().__init__(save_path=save_path, rnd=rnd)
 
     def build_network(self):
         """Build networks for algorithm."""
         # Build inputs.
-        self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], "observation")
+        self.observation = tf.placeholder(tf.float32, [None, *self.dim_obs], "observation")
 
         # Build Nets.
         with tf.variable_scope("policy_net"):
             x = tf.layers.dense(self.observation, 64, activation=tf.nn.tanh)
             x = tf.layers.dense(x, 64, activation=tf.nn.tanh)
-            self.mu = tf.layers.dense(x, self.dim_action, activation=tf.nn.tanh)
+            self.mu = tf.layers.dense(x, self.dim_act, activation=tf.nn.tanh)
             self.log_var = tf.get_variable("logvars", [self.mu.shape.as_list()[1]], tf.float32, tf.constant_initializer(0.0)) - 1
 
         with tf.variable_scope("value_net"):
@@ -38,12 +62,12 @@ class A2C(Base):
         self.actor_optimizer = tf.train.AdamOptimizer(self.lr)
         self.critic_optimizer = tf.train.AdamOptimizer(self.lr)
 
-        self.action = tf.placeholder(tf.float32, [None, self.dim_action], "action")
+        self.action = tf.placeholder(tf.float32, [None, self.dim_act], "action")
         self.span_reward = tf.placeholder(tf.float32, [None], "span_reward")
         self.advantage = tf.placeholder(tf.float32, [None], "advantage")
 
-        self.old_mu = tf.placeholder(tf.float32, (None, self.dim_action), "old_mu")
-        self.old_log_var = tf.placeholder(tf.float32, [self.dim_action], "old_log_var")
+        self.old_mu = tf.placeholder(tf.float32, (None, self.dim_act), "old_mu")
+        self.old_log_var = tf.placeholder(tf.float32, [self.dim_act], "old_log_var")
 
         logp = -0.5 * tf.reduce_sum(self.log_var)
         logp += -0.5 * tf.reduce_sum(tf.square(self.action - self.mu) / tf.exp(self.log_var), axis=1, keepdims=True)
@@ -63,7 +87,7 @@ class A2C(Base):
         self.train_critic_op = self.critic_optimizer.minimize(self.critic_loss, global_step=tf.train.get_global_step())
 
         # ---------- Build action. ----------
-        self.sampled_act = (self.mu + tf.exp(self.log_var / 2.0) * tf.random_normal(shape=[self.dim_action], dtype=tf.float32))
+        self.sampled_act = (self.mu + tf.exp(self.log_var / 2.0) * tf.random_normal(shape=[self.dim_act], dtype=tf.float32))
 
     def update(self, minibatch, update_ratio):
         """Update the algorithm by suing a batch of data.
@@ -82,7 +106,7 @@ class A2C(Base):
             - training infomation.
         """
         s_batch, a_batch, r_batch, d_batch = minibatch
-        assert s_batch.shape == (self.n_env, self.trajectory_length + 1, *self.dim_observation)
+        assert s_batch.shape == (self.n_env, self.trajectory_length + 1, *self.dim_obs)
 
         # Compute advantage batch.
         advantage_batch = np.empty([self.n_env, self.trajectory_length], dtype=np.float32)
@@ -97,15 +121,15 @@ class A2C(Base):
 
             last_advantage = 0
             for t in reversed(range(self.trajectory_length)):
-                advantage_batch[i, t] = delta_value_batch[t] + self.discount * self.tau * (1 - d_batch[i, t]) * last_advantage
+                advantage_batch[i, t] = delta_value_batch[t] + self.discount * self.gae * (1 - d_batch[i, t]) * last_advantage
                 last_advantage = advantage_batch[i, t]
 
             # Compute target value.
             target_value_batch[i, :] = state_value_batch[:-1] + advantage_batch[i, :]
 
         # Flat the batch values.
-        s_batch = s_batch[:, :-1, ...].reshape(self.n_env * self.trajectory_length, *self.dim_observation)
-        a_batch = a_batch.reshape(self.n_env * self.trajectory_length, self.dim_action)
+        s_batch = s_batch[:, :-1, ...].reshape(self.n_env * self.trajectory_length, *self.dim_obs)
+        a_batch = a_batch.reshape(self.n_env * self.trajectory_length, self.dim_act)
         advantage_batch = advantage_batch.reshape(self.n_env * self.trajectory_length)
         target_value_batch = target_value_batch.reshape(self.n_env * self.trajectory_length)
 

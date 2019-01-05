@@ -8,26 +8,47 @@ from .base import Base
 
 
 class TRPO(Base):
-    def __init__(self, config):
-        self.delta = config.delta
+    def __init__(self,
+                 rnd=1,
+                 n_env=1,
+                 dim_obs=None,
+                 dim_act=None,
+                 discount=0.99,
+                 save_path="./log",
+                 save_model_freq=1000,
+                 log_freq=1000,
+                 trajectory_length=2048,
+                 gae=0.95,
+                 delta=0.01,
+                 training_epoch=10,
+                 max_grad_norm=40,
+                 lr=3e-3):
 
-        self.trajectory_length = config.trajectory_length
+        self.n_env = n_env
+        self.dim_obs = dim_obs
+        self.dim_act = dim_act
+        self.discount = discount
+        self.delta = delta
+        self.gae = gae
 
-        self.n_env = config.n_env
+        self.trajectory_length = trajectory_length
+        self.training_epoch = training_epoch
+        self.max_grad_norm = max_grad_norm
+        self.lr = lr
 
-        self.gae = config.gae
-        self.training_epoch = config.training_epoch
-        self.max_grad_norm = config.max_grad_norm
-        super().__init__(config)
+        self.save_model_freq = save_model_freq
+        self.log_freq = log_freq
+
+        super().__init__(save_path=save_path, rnd=rnd)
 
     def build_network(self):
         """Build networks for algorithm."""
-        self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], "observation")
+        self.observation = tf.placeholder(tf.float32, [None, *self.dim_obs], "observation")
 
         with tf.variable_scope("policy_net"):
             x = tf.layers.dense(self.observation, 64, activation=tf.nn.tanh)
             x = tf.layers.dense(x, 64, activation=tf.nn.tanh)
-            self.mu = tf.layers.dense(x, self.dim_action, activation=tf.tanh)
+            self.mu = tf.layers.dense(x, self.dim_act, activation=tf.tanh)
             self.log_var = tf.get_variable("log_var", [self.mu.shape.as_list()[1]], tf.float32, tf.constant_initializer(0.0))
 
         with tf.variable_scope("value_net"):
@@ -37,10 +58,10 @@ class TRPO(Base):
 
     def build_algorithm(self):
         """Build networks for algorithm."""
-        self.critic_optimizer = tf.train.AdamOptimizer(3e-3)
-        self.action = tf.placeholder(tf.float32, [None, self.dim_action], "action")
-        self.old_mu = tf.placeholder(tf.float32, [None, self.dim_action], "old_mu")
-        self.old_log_var = tf.placeholder(tf.float32, [self.dim_action], "old_var")
+        self.critic_optimizer = tf.train.AdamOptimizer(self.lr)
+        self.action = tf.placeholder(tf.float32, [None, self.dim_act], "action")
+        self.old_mu = tf.placeholder(tf.float32, [None, self.dim_act], "old_mu")
+        self.old_log_var = tf.placeholder(tf.float32, [self.dim_act], "old_var")
         self.advantage = tf.placeholder(tf.float32, [None], "advanatage")
         self.span_reward = tf.placeholder(tf.float32, [None], "span_reward")
 
@@ -48,7 +69,7 @@ class TRPO(Base):
         logp += -0.5 * tf.reduce_sum(tf.square(self.action - self.mu) / tf.exp(self.log_var), axis=1)
 
         assert_shape(logp, [None])
-        assert_shape(tf.square(self.action - self.mu) / tf.exp(self.log_var), [None, self.dim_action])
+        assert_shape(tf.square(self.action - self.mu) / tf.exp(self.log_var), [None, self.dim_act])
 
         logp_old = -0.5 * tf.reduce_sum(self.old_log_var)
         logp_old += -0.5 * tf.reduce_sum(tf.square(self.action - self.old_mu) / tf.exp(self.old_log_var), axis=1)
@@ -66,7 +87,7 @@ class TRPO(Base):
         log_det_cov_new = tf.reduce_sum(self.log_var)
         tr_old_new = tf.reduce_sum(tf.exp(self.old_log_var - self.log_var))
 
-        self.kl = 0.5 * tf.reduce_mean(log_det_cov_new - log_det_cov_old + tr_old_new + tf.reduce_sum(tf.square(self.mu - self.old_mu) / tf.exp(self.log_var), axis=1) - self.dim_action)
+        self.kl = 0.5 * tf.reduce_mean(log_det_cov_new - log_det_cov_old + tr_old_new + tf.reduce_sum(tf.square(self.mu - self.old_mu) / tf.exp(self.log_var), axis=1) - self.dim_act)
 
         # Compute gradients of KL divergence.
         g_kl = self._flat_param_list(tf.gradients(self.kl, self.actor_vars))
@@ -85,7 +106,7 @@ class TRPO(Base):
 
         # Build sample action.
         self.n_output_action = tf.placeholder(tf.int32)
-        self.sample_action = self.mu + tf.exp(self.log_var / 2.0) * tf.random_normal(shape=[self.n_output_action, self.dim_action], dtype=tf.float32)
+        self.sample_action = self.mu + tf.exp(self.log_var / 2.0) * tf.random_normal(shape=[self.n_output_action, self.dim_act], dtype=tf.float32)
 
     def update(self, minibatch, update_ratio):
         """Update the algorithm by suing a batch of data.
@@ -104,7 +125,7 @@ class TRPO(Base):
             - training infomation.
         """
         s_batch, a_batch, r_batch, d_batch = minibatch
-        assert s_batch.shape == (self.n_env, self.trajectory_length + 1, *self.dim_observation)
+        assert s_batch.shape == (self.n_env, self.trajectory_length + 1, *self.dim_obs)
 
         advantage_batch = np.empty([self.n_env, self.trajectory_length], dtype=np.float32)
         target_value_batch = np.empty([self.n_env, self.trajectory_length], dtype=np.float32)
@@ -122,8 +143,8 @@ class TRPO(Base):
 
             target_value_batch[i, :] = state_value_batch[:-1] + advantage_batch[i, :]
 
-        s_batch = s_batch[:, :-1, ...].reshape(self.n_env * self.trajectory_length, *self.dim_observation)
-        a_batch = a_batch.reshape(self.n_env * self.trajectory_length, self.dim_action)
+        s_batch = s_batch[:, :-1, ...].reshape(self.n_env * self.trajectory_length, *self.dim_obs)
+        a_batch = a_batch.reshape(self.n_env * self.trajectory_length, self.dim_act)
         advantage_batch = advantage_batch.reshape(self.n_env * self.trajectory_length)
         target_value_batch = target_value_batch.reshape(self.n_env * self.trajectory_length)
 

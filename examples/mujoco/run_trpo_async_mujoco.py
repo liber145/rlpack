@@ -38,16 +38,14 @@ class Config(object):
         self.memory_size = 2149
 
         # 周期参数
-        self.save_model_freq = 50
         self.log_freq = 1
-        self.training_epoch = 10
 
         # 算法参数
-        self.batch_size = 64
-        self.discount = 0.99
-        self.gae = 0.95
-        self.delta = 0.01
-        self.max_grad_norm = 40
+        # self.batch_size = 64
+        # self.discount = 0.99
+        # self.gae = 0.95
+        # self.delta = 0.01
+        # self.max_grad_norm = 40
 
 
 def process_env(env):
@@ -113,5 +111,19 @@ def learn(env, agent, config):
 if __name__ == "__main__":
     env = AsyncMujocoWrapper(f"{args.env_name}", 1, 1, 50049)
     config = process_env(env)
-    agent = TRPO(config)
+    agent = TRPO(rnd=1,
+                 n_env=1,
+                 dim_obs=config.dim_observation,
+                 dim_act=config.dim_action,
+                 discount=0.99,
+                 save_path=f"./log/trpo/exp_async_{args.env_name}",
+                 save_model_freq=1000,
+                 log_freq=1000,
+                 trajectory_length=2048,
+                 gae=0.95,
+                 delta=0.01,
+                 training_epoch=10,
+                 max_grad_norm=40,
+                 lr=3e-3)
+
     learn(env, agent, config)

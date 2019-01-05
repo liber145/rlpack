@@ -77,15 +77,15 @@ class DQN(Base):
             # self.qvals = tf.layers.dense(x, self.dim_act)
 
             # Atari-ram
-            # x = tf.layers.conv1d(self.observation, 32, 8, 4, activation=tf.nn.relu)
-            # x = tf.layers.conv1d(x, 64, 4, 2, activation=tf.nn.relu)
-            # x = tf.contrib.layers.flatten(x)
-            # x = tf.layers.dense(x, 256, activation=tf.nn.relu)
-            # self.qvals = tf.layers.dense(x, self.dim_act)
-
-            x = tf.layers.dense(self.observation, 64, activation=tf.nn.relu)
-            x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+            x = tf.layers.conv1d(self.observation, 32, 8, 4, activation=tf.nn.relu)
+            x = tf.layers.conv1d(x, 64, 4, 2, activation=tf.nn.relu)
+            x = tf.contrib.layers.flatten(x)
+            x = tf.layers.dense(x, 256, activation=tf.nn.relu)
             self.qvals = tf.layers.dense(x, self.dim_act)
+
+            # x = tf.layers.dense(self.observation, 64, activation=tf.nn.relu)
+            # x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+            # self.qvals = tf.layers.dense(x, self.dim_act)
 
         with tf.variable_scope("target/qnet"):
             # Atari
@@ -97,15 +97,15 @@ class DQN(Base):
             # self.target_qvals = tf.layers.dense(x, self.dim_act, trainable=False)
 
             # Atari-ram
-            # x = tf.layers.conv1d(self.next_observation, 32, 8, 4, activation=tf.nn.relu, trainable=False)
-            # x = tf.layers.conv1d(x, 64, 4, 2, activation=tf.nn.relu, trainable=False)
-            # x = tf.contrib.layers.flatten(x)
-            # x = tf.layers.dense(x, 256, activation=tf.nn.relu, trainable=False)
-            # self.target_qvals = tf.layers.dense(x, self.dim_act, trainable=False)
+            x = tf.layers.conv1d(self.next_observation, 32, 8, 4, activation=tf.nn.relu, trainable=False)
+            x = tf.layers.conv1d(x, 64, 4, 2, activation=tf.nn.relu, trainable=False)
+            x = tf.contrib.layers.flatten(x)
+            x = tf.layers.dense(x, 256, activation=tf.nn.relu, trainable=False)
+            self.target_qvals = tf.layers.dense(x, self.dim_act, trainable=False)
 
-            x = tf.layers.dense(self.next_observation, 64, activation=tf.nn.relu)
-            x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-            self.target_qvals = tf.layers.dense(x, self.dim_act)
+            # x = tf.layers.dense(self.next_observation, 64, activation=tf.nn.relu)
+            # x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+            # self.target_qvals = tf.layers.dense(x, self.dim_act)
 
     def build_algorithm(self):
         """Build networks for algorithm."""

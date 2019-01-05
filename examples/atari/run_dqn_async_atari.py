@@ -10,7 +10,7 @@ from tqdm import tqdm
 import argparse
 
 parser = argparse.ArgumentParser(description='Process some integers.')
-parser.add_argument('--env_name',  type=str, default="BreakoutNoFrameskip-v4")
+parser.add_argument('--env_name',  type=str, default="Breakout-ramNoFrameskip-v4")
 args = parser.parse_args()
 
 
@@ -105,6 +105,16 @@ def learn(env, agent, config):
 if __name__ == "__main__":
     env = AsyncAtariWrapper(f"{args.env_name}", 4, 3, 50000)
     config = process_config(env)
-    pol = DQN(config)
+    pol = DQN(n_env=4,
+              rnd=4,
+              dim_obs=config.dim_observation,
+              dim_act=config.dim_action,
+              discount=0.99,
+              save_path=config.save_path,
+              save_model_freq=1000,
+              log_freq=config.log_freq,
+              update_target_freq=10000,
+              epsilon_schedule=lambda x: (1-x)*0.2,
+              lr=2.5e-4)
 
     learn(env, pol, config)

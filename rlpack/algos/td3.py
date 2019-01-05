@@ -7,7 +7,22 @@ from .base import Base
 
 
 class TD3(Base):
-    def __init__(self, config):
+    def __init__(self,
+                 rnd=1,
+                 n_env=1,
+                 dim_obs=None,
+                 dim_act=None,
+                 discount=0.99,
+                 save_path="./log",
+                 save_model_freq=50,
+                 log_freq=1,
+                 policy_lr=1e-3,
+                 value_lr=1e-3,
+                 policy_delay=2,
+                 target_update_rate=0.995,
+                 noise_std=0.2,
+                 explore_noise_std=0.1
+                 ):
         """Implementation of PPO.
 
         Parameters:
@@ -17,33 +32,43 @@ class TD3(Base):
             None
         """
 
-        self.policy_delay = 2
-        self.target_update_rate = 0.995
-        self.noise_std = 0.2
-        self.explore_noise_std = 0.1
+        self.n_env = n_env
+        self.dim_obs = dim_obs
+        self.dim_act = dim_act
+        self.discount = discount
 
-        super().__init__(config)
+        self.save_model_freq = save_model_freq
 
-        self.action_low = np.array([-1.0 for i in range(self.dim_action)])
-        self.action_high = np.array([1.0 for i in range(self.dim_action)])
+        self.policy_lr = policy_lr
+        self.value_lr = value_lr
+
+        self.policy_delay = policy_delay
+        self.target_update_rate = target_update_rate
+        self.noise_std = noise_std
+        self.explore_noise_std = explore_noise_std
+
+        super().__init__(save_path=save_path, rnd=rnd)
+
+        self.action_low = np.array([-1.0 for i in range(self.dim_act)])
+        self.action_high = np.array([1.0 for i in range(self.dim_act)])
 
         self.sess.run(self.init_target_policy_op)
         self.sess.run(self.init_target_value_op)
 
     def build_network(self):
         """Build networks for algorithm."""
-        self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], name="observation")
-        self.action = tf.placeholder(tf.float32, [None, self.dim_action], name="action")
+        self.observation = tf.placeholder(tf.float32, [None, *self.dim_obs], name="observation")
+        self.action = tf.placeholder(tf.float32, [None, self.dim_act], name="action")
 
         with tf.variable_scope("policy_net"):
             x = tf.layers.dense(self.observation, 400, activation=tf.nn.relu, trainable=True)
             x = tf.layers.dense(x, 300, activation=tf.nn.relu, trainable=True)
-            self.act = tf.layers.dense(x, self.dim_action, activation=tf.nn.tanh, trainable=True)
+            self.act = tf.layers.dense(x, self.dim_act, activation=tf.nn.tanh, trainable=True)
 
         with tf.variable_scope("target_policy_net"):
             x = tf.layers.dense(self.observation, 400, activation=tf.nn.relu, trainable=False)
             x = tf.layers.dense(x, 300, activation=tf.nn.relu, trainable=False)
-            self.target_act = tf.layers.dense(x, self.dim_action, activation=tf.nn.tanh, trainable=False)
+            self.target_act = tf.layers.dense(x, self.dim_act, activation=tf.nn.tanh, trainable=False)
 
         with tf.variable_scope("value_net"):
             x = tf.concat([self.observation, self.action], axis=1)
@@ -153,8 +178,8 @@ class TD3(Base):
             assert batch_size == 128   # TODO: remove
 
             # Compute target value.
-            next_a_batch = self.sess.run(self.target_act, feed_dict={self.observation: next_s_batch[i, :]}) + np.random.normal(scale=self.noise_std, size=(batch_size, self.dim_action))
-            assert next_a_batch.shape == (batch_size, self.dim_action)
+            next_a_batch = self.sess.run(self.target_act, feed_dict={self.observation: next_s_batch[i, :]}) + np.random.normal(scale=self.noise_std, size=(batch_size, self.dim_act))
+            assert next_a_batch.shape == (batch_size, self.dim_act)
             next_a_batch = np.clip(next_a_batch, self.action_low, self.action_high)
             q1, q2 = self.sess.run([self.target_qval_1, self.target_qval_2], feed_dict={self.observation: next_s_batch[i, :], self.action: next_a_batch})
             assert q1.shape == (batch_size,) and q2.shape == (batch_size,)
@@ -174,13 +199,13 @@ class TD3(Base):
             self.observation: mb_s,
             self.action: mb_a,
             self.target_qval: mb_target,
-            self.critic_lr: self.value_lr_schedule(update_ratio)})
+            self.critic_lr: self.value_lr})
 
         global_step, _ = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
 
         # Update actor net.
         if global_step % self.policy_delay == 0:
-            self.sess.run(self.train_actor_op, feed_dict={self.observation: mb_s, self.actor_lr: self.policy_lr_schedule(update_ratio)})
+            self.sess.run(self.train_actor_op, feed_dict={self.observation: mb_s, self.actor_lr: self.policy_lr})
             self.sess.run([self.update_target_value_op, self.update_target_policy_op])
 
         if global_step % self.save_model_freq == 0:

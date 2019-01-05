@@ -95,7 +95,7 @@ class AtariWrapper(StackEnv):
         super().__init__(lambda x: self._make_env(env_id, x), n_env)
 
     def _make_env(self, env_id: str, rank: int = 0):
-        if "ram" in env_id:
+        if "ramNoFrameskip" in env_id:
             env = make_ram_atari(env_id)
         else:
             env = make_atari(env_id)
@@ -216,7 +216,7 @@ class AsyncAtariWrapper(object):
         self._dim_action = p.dim_action
 
     def _make_env(self, env_name, rank=0):
-        if "ram" in env_name:
+        if "ramNoFrameskip" in env_name:
             env = make_ram_atari(env_name)
         else:
             env = make_atari(env_name)

@@ -357,7 +357,7 @@ def wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=False, 
 
 
 def make_atari(env_name):
-    assert "NoFrameskip" in env_name and "ram" not in env_name
+    assert "NoFrameskip" in env_name and "ramNoFrameskip" not in env_name
     env = old_make_atari(env_name)
     env = wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=True, scale=False)
     env = NeverStop(env)

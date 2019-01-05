@@ -41,7 +41,6 @@ class Config(object):
         self.log_freq = 1
 
         # 算法参数
-        self.batch_size = 64
         self.discount = 0.99
 
 
@@ -113,5 +112,17 @@ if __name__ == "__main__":
     print("name:", args.env_name)
     env = AsyncMujocoWrapper(f"{args.env_name}", 3, 2, 50013)
     config = process_env(env)
-    agent = SAC(config)
+    agent = SAC(rnd=1,
+                dim_obs=config.dim_observation,
+                dim_act=config.dim_action,
+                discount=0.99,
+                save_path="./log",
+                save_model_freq=1000,
+                log_freq=1000,
+                policy_lr=1e-3,
+                value_lr=1e-3,
+                alpha=0.2,
+                action_high=1.0,
+                action_low=-1.0,
+                moving_udpate_target_ratio=0.995)
     learn(env, agent, config)
