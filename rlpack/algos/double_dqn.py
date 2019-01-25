@@ -6,8 +6,6 @@ import tensorflow as tf
 
 from .base import Base
 
-from .base import Base
-
 
 class DoubleDQN(Base):
     def __init__(self,
@@ -145,8 +143,6 @@ class DoubleDQN(Base):
         qvals = self.sess.run(self.qvals, feed_dict={self.observation: newobs})
         exp_m = scipy.special.logsumexp(qvals / alpha, axis=1)
         exp_m = np.exp(qvals / alpha - exp_m)
-
-        global_step = self.sess.run(tf.train.get_global_step())
 
         actions = [np.random.choice(self.dim_act, p=exp_m[i]) for i in range(newobs.shape[0])]
 

@@ -6,7 +6,7 @@ from collections import deque
 
 
 import numpy as np
-from rlpack.algos import ContinuousPPO
+from rlpack.algos import ESPPO
 from rlpack.common import ContinuousActionMemory
 from rlpack.environment import MujocoWrapper
 from rlpack.environment.mujoco_wrappers import make_mujoco
@@ -25,7 +25,7 @@ class Config(object):
     def __init__(self):
         """All papameters here."""
         self.rnd = 1
-        self.save_path = f"./log/ppo/exp_{args.env_name}"
+        self.save_path = f"./log/esppo/exp_{args.env_name}"
 
         # 环境
         self.n_env = 1
@@ -117,20 +117,20 @@ if __name__ == "__main__":
     config = Config()
     env = MujocoWrapper(f"{args.env_name}", config.n_env)
     config = process_env(env)
-    agent = ContinuousPPO(rnd=1,
-                          n_env=1,
-                          dim_obs=config.dim_observation,
-                          dim_act=config.dim_action,
-                          discount=0.99,
-                          gae=0.95,
-                          save_path=f"./log/ppo/exp_{args.env_name}",
-                          save_model_freq=50,
-                          vf_coef=1.0,
-                          entropy_coef=0.01,
-                          max_grad_norm=40,
-                          policy_lr_schedule=lambda x: 3e-4,
-                          value_lr_schedule=lambda x: 3e-4,
-                          trajectory_length=2048,
-                          batch_size=64,
-                          training_epoch=10)
+    agent = ESPPO(rnd=1,
+                  n_env=1,
+                  dim_obs=config.dim_observation,
+                  dim_act=config.dim_action,
+                  discount=0.99,
+                  gae=0.95,
+                  save_path=f"./log/esppo/exp_{args.env_name}",
+                  save_model_freq=50,
+                  vf_coef=1.0,
+                  entropy_coef=0.01,
+                  max_grad_norm=40,
+                  policy_lr_schedule=lambda x: 3e-4,
+                  value_lr_schedule=lambda x: 3e-4,
+                  trajectory_length=2048,
+                  batch_size=64,
+                  training_epoch=10)
     learn(env, agent, config)
