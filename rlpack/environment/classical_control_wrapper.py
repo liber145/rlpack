@@ -22,13 +22,15 @@ class ClassicControl(object):
         self._traj_len += 1
         self._traj_rew += r
 
+        rew = -1.0 if d is True else 0.1
+
         if d is True:
             info["episode"] = {"r": self._traj_rew, "l": self._traj_len}
             s = self.env.reset()
             self._traj_len = 0
             self._traj_rew = 0
 
-        return s, r, d, info
+        return s, rew, d, info
 
     def sample_action(self):
         return np.random.randint(self.dim_action)
@@ -51,7 +53,7 @@ def make_classic_control(env_name):
 
 
 if __name__ == "__main__":
-    env = ClassicControl("Acrobot-v1")
+    env = ClassicControl("CartPole-v0")
     s = env.reset()
 
     all_r = 0

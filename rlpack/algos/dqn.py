@@ -20,7 +20,7 @@ class DQN(Base):
                  save_model_freq=1000,
                  update_target_freq=10000,
                  log_freq=1000,
-                 epsilon_schedule=lambda x: (1-x)*1,
+                 epsilon_schedule=lambda x: min(1.0, x / 1e6),
                  lr=2.5e-4):
         """Deep Q Network.
 
@@ -37,7 +37,6 @@ class DQN(Base):
             epsilon_schedule {func} -- epsilon schedule. (default: {lambdax:(1-x)*1})
             lr {[type]} -- [description] (default: {2.5e-4})
         """
-
         self.n_env = n_env
         self.dim_obs = dim_obs
         self.dim_act = dim_act
@@ -59,13 +58,18 @@ class DQN(Base):
 
     def build_network(self):
         """Build networks for algorithm."""
-        self.observation = tf.placeholder(shape=[None, *self.dim_obs], dtype=tf.float32, name="observation")
-        self.observation = tf.to_float(self.observation)
+        self.observation = tf.placeholder(shape=[None, *self.dim_obs], dtype=tf.uint8, name="observation")
+        self.observation = tf.to_float(self.observation) / 255.0
+
+        # self.observation = tf.placeholder(shape=[None, *self.dim_obs], dtype=tf.float32, name="observation")
+
         self.action = tf.placeholder(dtype=tf.int32, shape=[None], name="action")
         self.reward = tf.placeholder(dtype=tf.float32, shape=[None], name="reward")
         self.done = tf.placeholder(dtype=tf.float32, shape=[None], name="done")
-        self.next_observation = tf.placeholder(dtype=tf.float32, shape=[None, *self.dim_obs], name="next_observation")
-        self.next_observation = tf.to_float(self.next_observation)
+
+        self.next_observation = tf.placeholder(dtype=tf.uint8, shape=[None, *self.dim_obs], name="next_observation")
+        self.next_observation = tf.to_float(self.next_observation) / 255.0
+        # self.next_observation = tf.placeholder(dtype=tf.float32, shape=[None, *self.dim_obs], name="next_observation")
 
         with tf.variable_scope("main/qnet"):
             # Atari
@@ -80,8 +84,14 @@ class DQN(Base):
             x = tf.layers.conv1d(self.observation, 32, 8, 4, activation=tf.nn.relu)
             x = tf.layers.conv1d(x, 64, 4, 2, activation=tf.nn.relu)
             x = tf.contrib.layers.flatten(x)
-            x = tf.layers.dense(x, 256, activation=tf.nn.relu)
+            x = tf.layers.dense(x, 64, activation=tf.nn.relu)
             self.qvals = tf.layers.dense(x, self.dim_act)
+
+            # Classic control
+            # x = tf.layers.dense(self.observation, 64, activation=tf.nn.relu)
+            # x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+            # x = tf.layers.dense(x, 32, activation=tf.nn.relu)
+            # self.qvals = tf.layers.dense(x, self.dim_act)
 
             # x = tf.layers.dense(self.observation, 64, activation=tf.nn.relu)
             # x = tf.layers.dense(x, 64, activation=tf.nn.relu)
@@ -100,8 +110,14 @@ class DQN(Base):
             x = tf.layers.conv1d(self.next_observation, 32, 8, 4, activation=tf.nn.relu, trainable=False)
             x = tf.layers.conv1d(x, 64, 4, 2, activation=tf.nn.relu, trainable=False)
             x = tf.contrib.layers.flatten(x)
-            x = tf.layers.dense(x, 256, activation=tf.nn.relu, trainable=False)
+            x = tf.layers.dense(x, 64, activation=tf.nn.relu, trainable=False)
             self.target_qvals = tf.layers.dense(x, self.dim_act, trainable=False)
+
+            # Classic control
+            # x = tf.layers.dense(self.next_observation, 64, activation=tf.nn.relu, trainable=False)
+            # x = tf.layers.dense(x, 64, activation=tf.nn.relu, trainable=False)
+            # x = tf.layers.dense(x, 32, activation=tf.nn.relu, trainable=False)
+            # self.target_qvals = tf.layers.dense(x, self.dim_act, trainable=False)
 
             # x = tf.layers.dense(self.next_observation, 64, activation=tf.nn.relu)
             # x = tf.layers.dense(x, 64, activation=tf.nn.relu)
@@ -111,6 +127,9 @@ class DQN(Base):
         """Build networks for algorithm."""
         self.optimizer = tf.train.AdamOptimizer(self.lr, epsilon=1.5e-8)
         trainable_variables = tf.trainable_variables("main/qnet")
+
+        print("trainable variables:", trainable_variables)
+        input()
 
         # Compute the state value.
         batch_size = tf.shape(self.observation)[0]
@@ -127,7 +146,7 @@ class DQN(Base):
         self.train_op = self.optimizer.minimize(self.loss, var_list=trainable_variables)
 
         # Update target network.
-        def _update_target(new_net, old_net):
+        def _update_target(old_net, new_net):
             params1 = tf.trainable_variables(old_net)
             params1 = sorted(params1, key=lambda v: v.name)
             params2 = tf.global_variables(new_net)
@@ -138,7 +157,7 @@ class DQN(Base):
                 update_ops.append(param2.assign(param1))
             return update_ops
 
-        self.update_target_op = _update_target("target/qnet", "main/qnet")
+        self.update_target_op = _update_target("main/qnet", "target/qnet")
 
         self.max_qval = tf.reduce_max(self.qvals)
 
@@ -165,17 +184,12 @@ class DQN(Base):
         # Epsilon greedy method.
         batch_size = obs.shape[0]
         actions = np.random.randint(self.dim_act, size=batch_size)
-        idx = np.random.uniform(size=batch_size) > self.epsilon
+        idx = np.random.uniform(size=batch_size) < self.epsilon
         actions[idx] = max_a[idx]
 
-        # print("action:", actions.shape)
-        # input()
-
-        # if obs.ndim == 1:
-        #     actions = actions[0]
         return actions
 
-    def update(self, minibatch, update_ratio: float):
+    def update(self, minibatch, update_step: int):
         """Update the algorithm by suing a batch of data.
 
         Parameters:
@@ -187,13 +201,13 @@ class DQN(Base):
                 - done shape: (n_env, batch_size)
                 - next_state shape: (n_env, batch_size, state_dimension)
 
-            - update_ratio: a float scalar in (0, 1).
+            - update_step: a int scalar.
 
         Returns:
             - training infomation.
         """
 
-        self.epsilon = self.epsilon_schedule(update_ratio)
+        self.epsilon = self.epsilon_schedule(update_step)
 
         s_batch, a_batch, r_batch, d_batch, next_s_batch = minibatch
 
@@ -203,6 +217,9 @@ class DQN(Base):
         r_batch = r_batch.reshape(n_env * batch_size)
         d_batch = d_batch.reshape(n_env * batch_size)
         next_s_batch = next_s_batch.reshape(n_env * batch_size, *self.dim_obs)
+
+        # print("state", "shape:", s_batch.shape, "dtype:", s_batch.dtype, "max:", np.max(s_batch), "min:", np.min(s_batch))
+        # input()
 
         _, loss, max_q_val = self.sess.run(
             [self.train_op,

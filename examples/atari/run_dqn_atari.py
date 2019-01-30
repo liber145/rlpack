@@ -10,7 +10,7 @@ from tqdm import tqdm
 import argparse
 
 parser = argparse.ArgumentParser(description='Process some integers.')
-parser.add_argument('--env_name',  type=str, default="BreakoutNoFrameskip-v4")
+parser.add_argument('--env_name',  type=str, default="Pong-ramNoFrameskip-v4")
 args = parser.parse_args()
 
 
@@ -25,7 +25,7 @@ class Config(object):
         self.dim_action = None   # For continuous action.
 
         # Traning length.
-        self.update_step = int(1e6)   # for each env
+        self.update_step = int(10e6)   # for each env
         self.warm_start_length = 2000
 
         # Cycle parameters.
@@ -84,9 +84,8 @@ def learn(env, agent, config):
                 epinfos.append(maybeepinfo)
 
         # Get the last trajectory from memory and train the algorithm.
-        update_ratio = i / config.update_step
         data_batch = memory.sample_transition(config.batch_size)
-        loginfo = agent.update(data_batch, update_ratio)
+        loginfo = agent.update(data_batch, i)
 
         epinfobuf.extend(epinfos)
         summary_writer.add_scalar("eprewmean", safemean([epinfo["r"] for epinfo in epinfobuf]), global_step=i)
@@ -102,7 +101,7 @@ if __name__ == "__main__":
     env = AtariWrapper(f"{args.env_name}", 1)
     config = process_config(env)
     pol = DQN(n_env=config.n_env,
-              rnd=4,
+              rnd=0,
               dim_obs=config.dim_observation,
               dim_act=config.dim_action,
               discount=0.99,
@@ -110,7 +109,7 @@ if __name__ == "__main__":
               save_model_freq=1000,
               log_freq=config.log_freq,
               update_target_freq=10000,
-              epsilon_schedule=lambda x: (1-x)*0.2,
-              lr=2.5e-4)
+              epsilon_schedule=lambda x: min(1.0, x / 1e6),
+              lr=1e-4)
 
     learn(env, pol, config)
