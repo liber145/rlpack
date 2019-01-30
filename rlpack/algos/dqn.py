@@ -96,7 +96,7 @@ class DQN(Base):
             actions = actions[0]
         return actions
 
-    def update(self, minibatch, update_ratio: float):
+    def update(self, minibatch, update_step: int):
         """Update the algorithm by suing a batch of data.
 
         Parameters:
@@ -108,15 +108,21 @@ class DQN(Base):
                 - done shape: (n_env, batch_size)
                 - next_state shape: (n_env, batch_size, state_dimension)
 
-            - update_ratio: a float scalar in (0, 1).
+            - update_step: a int scalar for update step.
 
         Returns:
             - training infomation.
         """
 
-        self.epsilon = self.epsilon_schedule(update_ratio)
+        self.epsilon = self.epsilon_schedule(update_step)
 
         s_batch, a_batch, r_batch, d_batch, next_s_batch = minibatch
+
+        # print("epsilon:", self.epsilon)
+        # print("state:", s_batch.shape, "type:", type(s_batch), "dtype:", s_batch.dtype, "max:", np.max(s_batch), "min:", np.min(s_batch))
+        # print("next state:", next_s_batch.shape, "type:", type(next_s_batch), "dtype:", next_s_batch.dtype, "max:", np.max(next_s_batch), "min:", np.min(next_s_batch))
+
+        # input()
 
         mb_s, mb_a, mb_target = [], [], []
 
@@ -148,6 +154,7 @@ class DQN(Base):
         # Store model.
         if global_step % self.save_model_freq == 0:
             self.save_model()
+            print("global_step:", global_step, "epsilon:", self.epsilon)
 
         # Update target policy.
         if global_step % self.update_target_freq == 0:

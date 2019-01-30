@@ -9,8 +9,12 @@ from tensorboardX import SummaryWriter
 from tqdm import tqdm
 import argparse
 
+used_gpu = '0'
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = used_gpu
+
 parser = argparse.ArgumentParser(description='Process some integers.')
-parser.add_argument('--env_name',  type=str, default="BreakoutNoFrameskip-v4")
+parser.add_argument('--env_name',  type=str, default="PongNoFrameskip-v4")
 args = parser.parse_args()
 
 
@@ -32,15 +36,15 @@ class Config(object):
         # Cycle parameters.
         self.save_model_freq = 1000
         self.log_freq = 100
-        self.update_target_freq = 100
+        self.update_target_freq = 10000
 
         # Algorithm parameters.
         self.batch_size = 64
         self.discount = 0.99
         self.max_grad_norm = 0.5
         self.value_lr_schedule = lambda x: 2.5e-4
-        self.epsilon_schedule = lambda x: (1-x) * 0.5
-        self.memory_size = 10000
+        self.epsilon_schedule = lambda x: max(0.1, 1 - min(x, 1e5) / 1e5)
+        self.memory_size = 100000
 
 
 def process_config(env):
@@ -86,9 +90,8 @@ def learn(env, agent, config):
                 epinfos.append(maybeepinfo)
 
         # Get the last trajectory from memory and train the algorithm.
-        update_ratio = i / config.update_step
         data_batch = memory.sample_transition(config.batch_size)
-        loginfo = agent.update(data_batch, update_ratio)
+        loginfo = agent.update(data_batch, i)
 
         epinfobuf.extend(epinfos)
         summary_writer.add_scalar("eprewmean", safemean([epinfo["r"] for epinfo in epinfobuf]), global_step=i)
