@@ -33,7 +33,7 @@ class Config(object):
 
         # Algorithm parameters.
         self.batch_size = 64
-        self.memory_size = 100000
+        self.memory_size = int(1e5)
 
 
 def process_config(env):
@@ -55,6 +55,9 @@ def learn(env, agent, config):
 
     # ------------ Warm start --------------
     obs = env.reset()
+    print("obs shape:", obs.shape, "type:", type(obs), "dtype:", obs.dtype)
+    input()
+
     print(f"observation: max={np.max(obs)} min={np.min(obs)}")
     for i in tqdm(range(config.warm_start_length)):
         actions = agent.get_action(obs)
@@ -88,13 +91,13 @@ def learn(env, agent, config):
         loginfo = agent.update(data_batch, i)
 
         epinfobuf.extend(epinfos)
-        summary_writer.add_scalar("eprewmean", safemean([epinfo["r"] for epinfo in epinfobuf]), global_step=i)
-        summary_writer.add_scalar("eplenmean", safemean([epinfo['l'] for epinfo in epinfobuf]), global_step=i)
 
         if i > 0 and i % config.log_freq == 0:
             rewmean = safemean([epinfo["r"] for epinfo in epinfobuf])
             lenmean = safemean([epinfo['l'] for epinfo in epinfobuf])
             tqdm.write(f"eprewmean: {rewmean}  eplenmean: {lenmean} ")
+            summary_writer.add_scalar("eprewmean", safemean([epinfo["r"] for epinfo in epinfobuf]), global_step=i)
+            summary_writer.add_scalar("eplenmean", safemean([epinfo['l'] for epinfo in epinfobuf]), global_step=i)
 
 
 if __name__ == "__main__":
@@ -109,7 +112,7 @@ if __name__ == "__main__":
               save_model_freq=1000,
               log_freq=config.log_freq,
               update_target_freq=10000,
-              epsilon_schedule=lambda x: min(1.0, x / 1e6),
+              epsilon_schedule=lambda x: min(1.0, x / 5e6),
               lr=1e-4)
 
     learn(env, pol, config)

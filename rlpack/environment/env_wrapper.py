@@ -5,7 +5,7 @@ from typing import Callable, List
 
 import numpy as np
 
-from .atari_wrappers import make_atari, make_ram_atari
+from .atari_wrappers import make_atari, make_ram_atari, make_ram_atari2
 from .distributed_env_worker import DistributedEnvClient
 from .distributed_env_wrapper import DistributedEnvManager
 from .mujoco_wrappers import make_mujoco
@@ -96,7 +96,7 @@ class AtariWrapper(StackEnv):
 
     def _make_env(self, env_id: str, rank: int = 0):
         if "ramNoFrameskip" in env_id:
-            env = make_ram_atari(env_id)
+            env = make_ram_atari2(env_id)
         else:
             env = make_atari(env_id)
         env.seed(rank + 1)
@@ -104,11 +104,11 @@ class AtariWrapper(StackEnv):
 
 
 class ClassicControlWrapper(StackEnv):
-    def __init__(self, env_name: str, n_env: int =1):
+    def __init__(self, env_name: str, n_env: int = 1):
         self._n_env = n_env
         super().__init__(lambda x: self._make_env(env_name, x), n_env)
 
-    def _make_env(self, env_name: str, rank: int=0):
+    def _make_env(self, env_name: str, rank: int = 0):
         env = make_classic_control(env_name)
         env.seed(rank + 1)
         return env

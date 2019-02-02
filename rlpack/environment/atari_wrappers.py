@@ -267,6 +267,8 @@ class RamStack(gym.Wrapper):
 
     def reset(self):
         ob = self.env.reset()
+        print("ob shape:", ob.shape, "dtype:", ob.dtype, "type:", type(ob))
+        input()
         return ob.reshape(4, 128).swapaxes(0, 1)
 
     def step(self, action):
@@ -283,6 +285,33 @@ class RamStack(gym.Wrapper):
     @property
     def dim_observation(self):
         return (128, 4)
+
+
+class RamStack2(gym.Wrapper):
+    def __init__(self, env):
+        gym.Wrapper.__init__(self, env)
+
+        self._dim_act = self.env.dim_action
+        self._dim_obs = self.env.dim_observation
+
+    def reset(self):
+        ob = self.env.reset()
+        return ob
+
+    def step(self, action):
+        ob, rew, done, info = self.env.step(action)
+        return ob, rew, done, info
+
+    def sample_action(self):
+        return self.env.sample_action()
+
+    @property
+    def dim_action(self):
+        return self._dim_act
+
+    @property
+    def dim_observation(self):
+        return (512,)
 
 
 class ScaledFloatFrame(gym.ObservationWrapper):
@@ -371,6 +400,16 @@ def make_ram_atari(env_name):
     env = wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=True, scale=False, warp=False)
     env = NeverStop(env)
     env = RamStack(env)
+    return env
+
+
+def make_ram_atari2(env_name):
+    assert "ramNoFrameskip" in env_name
+
+    env = old_make_atari(env_name)
+    env = wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=True, scale=False, warp=False)
+    env = NeverStop(env)
+    env = RamStack2(env)
     return env
 
 
