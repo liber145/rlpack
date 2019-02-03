@@ -10,9 +10,12 @@ from tqdm import tqdm
 import argparse
 
 parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('--gpu', type=str, default='3')
 parser.add_argument('--env_name',  type=str, default="Pong-ramNoFrameskip-v4")
 args = parser.parse_args()
 
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
 class Config(object):
     def __init__(self):
