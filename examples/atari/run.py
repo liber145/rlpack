@@ -1,5 +1,5 @@
-import libtmux 
-import time 
+import libtmux
+import time
 
 server = libtmux.Server()
 session = server.new_session(session_name="atari")
@@ -17,10 +17,9 @@ for i in range(len(env_names)):
     window = session.new_window()
     pane = window.panes[0]
     pane.send_keys(cdwp)
-    time.sleep(0.1)
+    time.sleep(0.3)
     pane.send_keys(activate_env)
-    time.sleep(0.1)
+    time.sleep(0.3)
     pane.send_keys(export_path)
-    time.sleep(0.1)
+    time.sleep(0.3)
     pane.send_keys(f"python examples/atari/run_dqn_atari.py --env_name {envname}-ramNoFrameskip-v4 --gpu {gpu_id}")
-

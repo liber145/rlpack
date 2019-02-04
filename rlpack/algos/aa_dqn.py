@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import tensorflow as tf
+from tqdm import tqdm
 
 from ..common.utils import assert_shape
 from ..common.network import mlp, cnn1d, cnn2d
@@ -174,14 +175,14 @@ class AADQN(Base):
         # Epsilon greedy method.
         batch_size = obs.shape[0]
         actions = np.random.randint(self.dim_act, size=batch_size)
-        idx = np.random.uniform(size=batch_size) > self.epsilon
+        idx = np.random.uniform(size=batch_size) < self.epsilon
         actions[idx] = max_a[idx]
 
-        if obs.ndim == 1:
-            actions = actions[0]
+        # if obs.ndim == 1:
+        #     actions = actions[0]
         return actions
 
-    def update(self, minibatch, update_ratio: float):
+    def update(self, minibatch, update_step: int):
         """Update the algorithm by suing a batch of data.
 
         Parameters:
@@ -199,7 +200,7 @@ class AADQN(Base):
             - training infomation.
         """
 
-        self.epsilon = self.epsilon_schedule(update_ratio)
+        self.epsilon = self.epsilon_schedule(update_step)
 
         s_batch, a_batch, r_batch, d_batch, next_s_batch = minibatch
 
@@ -249,6 +250,6 @@ class AADQN(Base):
             self.sess.run(self.update_target_op)
 
         if global_step % self.log_freq == 0:
-            print("weights:", weights, "loss:", loss)
+            tqdm.write(f"weights: {weights}, loss: {loss}, epsilon: {self.epsilon}")
 
         return {"loss": loss, "max_q_value": max_q_val, "global_step": global_step}
