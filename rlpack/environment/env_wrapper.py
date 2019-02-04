@@ -96,7 +96,7 @@ class AtariWrapper(StackEnv):
 
     def _make_env(self, env_id: str, rank: int = 0):
         if "ramNoFrameskip" in env_id:
-            env = make_ram_atari2(env_id)
+            env = make_ram_atari(env_id)
         else:
             env = make_atari(env_id)
         env.seed(rank + 1)

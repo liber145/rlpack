@@ -37,13 +37,18 @@ class NChain(object):
             r = 0.01
             self.state = max(0, self.state-1)
         elif real_act == 1:
-            r = 1
+            r = 0
             self.state = min(self.N-1, self.state+1)
         else:
             assert False
+
+        if self.state == self.N-1:
+            r = 1
+
         s = np.zeros(self.N)
         s[self.state] = 1
-        return s
+
+        return s, r, False, None
 
     @property
     def dim_act(self):
@@ -68,11 +73,84 @@ class GridWorld(object):
 
     def step(self, a):
         """
-
+        a = 0: up
+        a = 1: left 
+        a = 2: down
+        a = 3: right
+        Given the action, move towards that direction with probability 0.7, 
+        towards other direction with probability 0.1 repectively.
+        A reward of 1 is given at position (20, 20).
         """
         assert a in {0, 1, 2, 3}
         if a == 0:
-        pass
+            rand_key = np.random.rand()
+            if rand_key < 1 - self.slip_p * 3:
+                real_act = 0
+            elif rand_key < 1 - self.slip_p * 2:
+                real_act = 1
+            elif rand_key < 1 - self.slip_p * 1:
+                real_act = 2
+            else:
+                real_act = 3
+        elif a == 1:
+            rand_key = np.random.rand()
+            if rand_key < 1 - self.slip_p * 3:
+                real_act = 1
+            elif rand_key < 1 - self.slip_p * 2:
+                real_act = 0
+            elif rand_key < 1 - self.slip_p * 1:
+                real_act = 2
+            else:
+                real_act = 3
+        elif a == 2:
+            rand_key = np.random.rand()
+            if rand_key < 1 - self.slip_p * 3:
+                real_act = 2
+            elif rand_key < 1 - self.slip_p * 2:
+                real_act = 0
+            elif rand_key < 1 - self.slip_p * 1:
+                real_act = 1
+            else:
+                real_act = 3
+        else:
+            rand_key = np.random.rand()
+            if rand_key < 1 - self.slip_p * 3:
+                real_act = 3
+            elif rand_key < 1 - self.slip_p * 2:
+                real_act = 0
+            elif rand_key < 1 - self.slip_p * 1:
+                real_act = 1
+            else:
+                real_act = 2
+
+        if real_act == 0:
+            self.state = (max(0, self.state[0] - 1), self.state[1])
+        elif real_act == 1:
+            self.state = (self.state[0], max(0, self.state[1] - 1))
+        elif real_act == 2:
+            self.state = (min(self.N - 1, self.state[0] + 1), self.state[1])
+        elif real_act == 3:
+            self.state = (self.state[0], min(self.N - 1, self.state[1] + 1))
+
+        s = np.zeros((self.N, self.N), dtype=np.float32)
+        s[self.state[0], self.state[1]] = 1
+
+        if self.state == (self.N-1, self.N-1):
+            r = 1
+            d = True
+        else:
+            r = 0
+            d = False
+
+        return s, r, d, None
+
+    @property
+    def dim_obs(self):
+        return (self.N, self.N)
+
+    @property
+    def dim_act(self):
+        return 4
 
 
 def make_toy(env_name):

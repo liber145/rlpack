@@ -3,6 +3,7 @@ import numpy as np
 import tensorflow as tf
 
 from ..common.utils import assert_shape
+from ..common.network import mlp, cnn1d, cnn2d
 from .base import Base
 
 
@@ -37,13 +38,14 @@ class AveDQN(Base):
 
         super().__init__(save_path=save_path, rnd=rnd)
 
-    def _qnet(self, name: str, obs, trainable=False):
+    def _qnet(self, name: str, obs):
         with tf.variable_scope(name):
-            x = tf.layers.conv1d(obs, 32, 8, 4, activation=tf.nn.relu, trainable=trainable)
-            x = tf.layers.conv1d(x, 64, 4, 2, activation=tf.nn.relu, trainable=trainable)
-            x = tf.contrib.layers.flatten(x)
-            x = tf.layers.dense(x, 256, activation=tf.nn.relu, trainable=trainable)
-            qvals = tf.layers.dense(x, self.dim_act, trainable=trainable)
+            # x = tf.layers.conv1d(obs, 32, 8, 4, activation=tf.nn.relu, trainable=trainable)
+            # x = tf.layers.conv1d(x, 64, 4, 2, activation=tf.nn.relu, trainable=trainable)
+            # x = tf.contrib.layers.flatten(x)
+            # x = tf.layers.dense(x, 256, activation=tf.nn.relu, trainable=trainable)
+            # qvals = tf.layers.dense(x, self.dim_act, trainable=trainable)
+            qvals = cnn1d(obs, cnn1d_hidden_sizes=[(32, 8, 4), (64, 4, 2)], mlp_hidden_sizes=[256, self.dim_act])
         return qvals
 
     def build_network(self):
@@ -56,11 +58,11 @@ class AveDQN(Base):
         self.next_observation = tf.placeholder(dtype=tf.uint8, shape=[None, *self.dim_obs], name="next_observation")
         self.next_observation = tf.to_float(self.next_observation) / 255.0
 
-        self.qvals = self._qnet("main/qnet", self.observation, trainable=True)
+        self.qvals = self._qnet("main/qnet", self.observation)
 
         self.targ_q = []
         for i in range(self.n_net):
-            self.targ_q.append(self._qnet(f"target_{i}/qnet", self.next_observation, trainable=True))
+            self.targ_q.append(self._qnet(f"target_{i}/qnet", self.next_observation))
 
     def build_algorithm(self):
         """Build networks for algorithm."""

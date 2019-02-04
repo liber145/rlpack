@@ -88,8 +88,8 @@ class DQN(Base):
             # x = tf.contrib.layers.flatten(x)
             # x = tf.layers.dense(x, 64, activation=tf.nn.relu)
             # self.qvals = tf.layers.dense(x, self.dim_act)
-            # self.qvals = cnn1d(self.observation, cnn1d_hidden_sizes=[(32, 8, 4), (64, 4, 2)], mlp_hidden_sizes=[64, self.dim_act])
-            self.qvals = mlp(self.observation, hidden_sizes=[256, 64, 64, self.dim_act])
+            self.qvals = cnn1d(self.observation, cnn1d_hidden_sizes=[(32, 8, 4), (64, 4, 2)], mlp_hidden_sizes=[64, self.dim_act])
+            # self.qvals = mlp(self.observation, hidden_sizes=[256, 64, 64, self.dim_act])
 
             # Classic control
             # x = tf.layers.dense(self.observation, 64, activation=tf.nn.relu)
@@ -113,8 +113,8 @@ class DQN(Base):
             # x = tf.contrib.layers.flatten(x)
             # x = tf.layers.dense(x, 64, activation=tf.nn.relu, trainable=False)
             # self.target_qvals = tf.layers.dense(x, self.dim_act, trainable=False)
-            # self.target_qvals = cnn1d(self.next_observation, cnn1d_hidden_sizes=[(32, 8, 4), (64, 4, 2)], mlp_hidden_sizes=[64, self.dim_act])
-            self.target_qvals = mlp(self.next_observation, hidden_sizes=[256, 64, 64, self.dim_act])
+            self.target_qvals = cnn1d(self.next_observation, cnn1d_hidden_sizes=[(32, 8, 4), (64, 4, 2)], mlp_hidden_sizes=[64, self.dim_act])
+            # self.target_qvals = mlp(self.next_observation, hidden_sizes=[256, 64, 64, self.dim_act])
 
             # Classic control
             # x = tf.layers.dense(self.next_observation, 64, activation=tf.nn.relu, trainable=False)

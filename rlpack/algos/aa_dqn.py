@@ -3,6 +3,7 @@ import numpy as np
 import tensorflow as tf
 
 from ..common.utils import assert_shape
+from ..common.network import mlp, cnn1d, cnn2d
 from .base import Base
 
 
@@ -46,11 +47,12 @@ class AADQN(Base):
 
     def _qnet(self, name: str, obs, trainable=False):
         with tf.variable_scope(name):
-            x = tf.layers.conv1d(obs, 32, 8, 4, activation=tf.nn.relu, trainable=trainable)
-            x = tf.layers.conv1d(x, 64, 4, 2, activation=tf.nn.relu, trainable=trainable)
-            x = tf.contrib.layers.flatten(x)
-            x = tf.layers.dense(x, 256, activation=tf.nn.relu, trainable=trainable)
-            qvals = tf.layers.dense(x, self.dim_act, trainable=trainable)
+            # x = tf.layers.conv1d(obs, 32, 8, 4, activation=tf.nn.relu, trainable=trainable)
+            # x = tf.layers.conv1d(x, 64, 4, 2, activation=tf.nn.relu, trainable=trainable)
+            # x = tf.contrib.layers.flatten(x)
+            # x = tf.layers.dense(x, 256, activation=tf.nn.relu, trainable=trainable)
+            # qvals = tf.layers.dense(x, self.dim_act, trainable=trainable)
+            qvals = cnn1d(obs, cnn1d_hidden_sizes=[(32, 8, 4), (64, 4, 2)], mlp_hidden_sizes=[256, self.dim_act])
         return qvals
 
     def build_network(self):
@@ -202,8 +204,8 @@ class AADQN(Base):
         s_batch, a_batch, r_batch, d_batch, next_s_batch = minibatch
 
         n_env, batch_size = s_batch.shape[:2]
-        s_batch = s_batch.reshape(n_env*batch_size, *self.dim_obs)
-        a_batch = a_batch.reshape(n_env*batch_size)
+        s_batch = s_batch.reshape(n_env * batch_size, *self.dim_obs)
+        a_batch = a_batch.reshape(n_env * batch_size)
         r_batch = r_batch.reshape(n_env * batch_size)
         d_batch = d_batch.reshape(n_env * batch_size)
         next_s_batch = next_s_batch.reshape(n_env * batch_size, *self.dim_obs)
