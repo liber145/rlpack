@@ -10,7 +10,7 @@ from tqdm import tqdm
 import argparse
 
 parser = argparse.ArgumentParser(description='Process some integers.')
-parser.add_argument('--env_name',  type=str, default="BreakoutNoFrameskip-v4")
+parser.add_argument('--env_name',  type=str, default="Alien-ramNoFrameskip-v4")
 args = parser.parse_args()
 
 
@@ -18,7 +18,7 @@ class Config(object):
     def __init__(self):
 
         self.n_env = 1
-        self.save_path = f"./log/aadqn/exp_{args.env_name}"
+        self.save_path = f"./log/aadqn/exp5_{args.env_name}"
 
         # Environment parameters.
         self.dim_observation = None
@@ -109,10 +109,10 @@ if __name__ == "__main__":
                 save_path=config.save_path,
                 save_model_freq=1000,
                 log_freq=config.log_freq,
-                update_target_freq=100,
+                update_target_freq=10000,
                 epsilon_schedule=lambda x: min(1.0, x / 5e6),
                 lr=1e-4,
                 n_net=5,
-                ridge_coef=1e-2)
+                ridge_coef=1e-3)
 
     learn(env, pol, config)

@@ -21,12 +21,12 @@ class AADQN(Base):
                  save_model_freq=1000,
                  log_freq=1000,
                  update_target_freq=10000,
-                 epsilon_schedule=lambda x: (1-x)*1,
+                 epsilon_schedule=lambda x: min(x/5e6, 1.0),
                  lr=2.5e-4,
                  n_net=5,
                  ridge_coef=0.0,
-                 weight_low=-1.0,
-                 weight_high=2.0
+                 weight_low=-3.0,
+                 weight_high=5.0
                  ):
 
         self.n_env = n_env
@@ -84,7 +84,7 @@ class AADQN(Base):
         assert_shape(td_mat, [self.n_net, None])
 
         print("ridge coef:", self.ridge_coef)
-        input()
+        # input()
         mat = tf.matmul(td_mat, td_mat, transpose_b=True) + self.ridge_coef * tf.eye(self.n_net)
         inv_mat = tf.matrix_inverse(mat)
         ones = tf.ones((self.n_net, 1))
