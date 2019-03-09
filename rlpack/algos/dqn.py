@@ -204,7 +204,7 @@ class DQN(Base):
                 - done shape: (n_env, batch_size)
                 - next_state shape: (n_env, batch_size, state_dimension)
 
-            - update_step: a int scalar.
+            - update_step: a int scalar for update step.
 
         Returns:
             - training infomation.
@@ -241,6 +241,7 @@ class DQN(Base):
         # Store model.
         if global_step % self.save_model_freq == 0:
             self.save_model()
+            print("global_step:", global_step, "epsilon:", self.epsilon)
 
         # Update target policy.
         if global_step % self.update_target_freq == 0:
