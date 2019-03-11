@@ -1,5 +1,13 @@
-import math
+"""
+Proximal Policy Optimization.
+目标loss由三部分组成：1. clipped policy loss；2. value loss；3. entropy。
+policy loss需要计算当前policy和old policy在当前state上的ratio。
+需要注意的是，state分布依赖于old policy。因此，计算中的old policy是一样的。
+"""
 
+
+import math
+from collections import deque
 import numpy as np
 import tensorflow as tf
 
@@ -9,92 +17,97 @@ from .base import Base
 
 class PPO(Base):
     def __init__(self,
-                 rnd=1,
-                 n_env=1,
                  dim_obs=None,
                  dim_act=None,
+                 rnd=1,
                  discount=0.99,
                  gae=0.95,
-                 save_path="./log",
-                 save_model_freq=1000,
-                 epsilon_schedule=lambda x: (1-x)*1,
                  vf_coef=1.0,
                  entropy_coef=0.01,
-                 max_grad_norm=0.5,
-                 policy_lr_schedule=lambda x: (1 - x) * 2.5e-4,
-                 clip_schedule=lambda x: (1 - x) * 0.1,
-                 trajectory_length=2048,
+                 max_grad_norm=40,
                  train_epoch=5,
-                 batch_size=64
+                 batch_size=64,
+                 lr_schedule=lambda x: 2.5e-4,
+                 clip_schedule=lambda x: 0.1,
+                 save_path="./log",
+                 save_model_freq=1000,
+                 log_freq=1000
                  ):
-        """An implementation of PPO.
+        """PPO settings.
 
-        Parameters:
-            config: a dictionary for training config.
-
-        Returns:
-            None
+        Keyword Arguments:
+            dim_obs {np.ndarray} -- observation shape (default: {None})
+            dim_act {np.ndarray} -- action shape (default: {None})
+            rnd {int} -- random seed (default: {1})
+            discount {float} -- discount factor (default: {0.99})
+            gae {float} -- generalized advantage estimation (default: {0.95})
+            vf_coef {float} -- value fuction coefficient (default: {1.0})
+            entropy_coef {float} -- entropy coefficient (default: {0.01})
+            max_grad_norm {float} -- max gradient norm (default: {0.5})
+            train_epoch {int} -- train epoch (default: {5})
+            batch_size {int} -- batch size (default: {64})
+            lr_schedule {lambda} -- learning rate schedule (default: {lambdax:2.5e-4})
+            clip_schedule {lamdba} -- epsilon clip schedule (default: {lambdax:0.1})
+            save_path {str} -- save path (default: {"./log"})
+            save_model_freq {int} -- save model frequency (default: {1000})
         """
-        self.entropy_coefficient = entropy_coef
-        self.critic_coefficient = vf_coef
-        self.trajectory_length = trajectory_length
-        self.clip_schedule = clip_schedule
-        self.policy_lr_schedule = policy_lr_schedule
 
-        self.dim_obs = dim_obs
-        self.dim_act = dim_act
-        self.discount = discount
-        self.gae = gae
-        self.save_model_freq = save_model_freq
+        self._dim_obs = dim_obs
+        self._dim_act = dim_act
 
-        self.max_grad_norm = max_grad_norm
-        self.n_env = n_env
-        self.trajectory_length = trajectory_length
+        self._discount = discount
+        self._gae = gae
+        self._entropy_coef = entropy_coef
+        self._vf_coef = vf_coef
+        self._lr_schedule = lr_schedule
+        self._clip_schedule = clip_schedule
 
-        self.train_epoch = train_epoch
-        self.batch_size = batch_size
+        self._max_grad_norm = max_grad_norm
+        self._train_epoch = train_epoch
+        self._batch_size = batch_size
 
-        super().__init__(save_path=save_path, rnd=rnd)
+        self._save_path = save_path
+        self._save_model_freq = save_model_freq
+        self._log_freq = log_freq
 
-    def build_network(self):
-        """Build networks for algorithm."""
+        super().__init__(save_path=self._save_path, rnd=self.rnd)
 
-        self.clip_epsilon = tf.placeholder(tf.float32)
-        self.moved_lr = tf.placeholder(tf.float32)
+    def _build_network(self):
+        self._observation = tf.placeholder(tf.float32, [None, *self._dim_obs], name="observation")
 
-        self.old_logit_action_probability = tf.placeholder(tf.float32, [None, self.dim_act])
-        self.action = tf.placeholder(tf.int32, [None], name="action")
-        self.advantage = tf.placeholder(tf.float32, [None], name="advantage")
-        self.target_state_value = tf.placeholder(tf.float32, [None], "target_state_value")
-
-        self.observation = tf.placeholder(shape=[None, *self.dim_obs], dtype=tf.uint8, name="observation")
-        self.observation = tf.to_float(self.observation) / 256.0
-
-        x = tf.layers.conv2d(self.observation, 32, 8, 4, activation=tf.nn.relu)
+        x = tf.layers.conv2d(self._observation, 32, 8, 4, activation=tf.nn.relu)
         x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu)
         x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu)
         x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
         x = tf.layers.dense(x, 512, activation=tf.nn.relu)
-        self.logit_action_probability = tf.layers.dense(x, self.dim_act, activation=None, kernel_initializer=tf.truncated_normal_initializer(0.0, 0.01))
-        self.state_value = tf.squeeze(tf.layers.dense(x, 1, activation=None, kernel_initializer=tf.truncated_normal_initializer()))
+        self._logit_p_act = tf.layers.dense(x, self._dim_act, activation=None, kernel_initializer=tf.truncated_normal_initializer(0.0, 0.01))
+        self._state_value = tf.squeeze(tf.layers.dense(x, 1, activation=None, kernel_initializer=tf.truncated_normal_initializer()))
+
+    def _build_algorithm(self):
+        self._clip_ratio = tf.placeholder(tf.float32)
+        self._lr = tf.placeholder(tf.float32)
+        self._optimizer = tf.train.AdamOptimizer(self._lr, epsilon=1e-5)
+
+        self._old_logit_p_act = tf.placeholder(tf.float32, [None, self._dim_act])
+        self._action = tf.placeholder(tf.int32, [None], name="action")
+        self._advantage = tf.placeholder(tf.float32, [None], name="advantage")
+        self._target_state_value = tf.placeholder(tf.float32, [None], "target_state_value")
 
         # Get selected action index.
-        batch_size = tf.shape(self.observation)[0]
-        selected_action_index = tf.stack([tf.range(batch_size), self.action], axis=1)
+        batch_size = tf.shape(self._observation)[0]
+        selected_action_index = tf.stack([tf.range(batch_size), self._action], axis=1)
 
         # Compute entropy of the action probability.
-        log_prob_1 = tf.nn.log_softmax(self.logit_action_probability)
-        log_prob_2 = tf.stop_gradient(tf.nn.log_softmax(self.old_logit_action_probability))
-        assert_shape(log_prob_1, [None, self.dim_act])
-        assert_shape(log_prob_2, [None, self.dim_act])
+        log_prob_1 = tf.nn.log_softmax(self._logit_p_act)
+        log_prob_2 = tf.stop_gradient(tf.nn.log_softmax(self._old_logit_p_act))
+        assert_shape(log_prob_1, [None, self._dim_act])
+        assert_shape(log_prob_2, [None, self._dim_act])
 
-        prob_1 = tf.nn.softmax(log_prob_1)
-        prob_2 = tf.stop_gradient(tf.nn.softmax(log_prob_2))
-        assert_shape(prob_1, [None, self.dim_act])
-        # assert_shape(prob_2, [None, self.dim_act])
+        prob_1 = tf.nn.softmax(self._logit_p_act)
+        assert_shape(prob_1, [None, self._dim_act])
 
-        self.entropy = - tf.reduce_sum(log_prob_1 * prob_1, axis=1)
-        assert_shape(self.entropy, [None])
+        entropy = - tf.reduce_sum(log_prob_1 * prob_1, axis=1)   # entropy = - \sum_i p_i \log(p_i)
+        assert_shape(entropy, [None])
 
         # Compute ratio of the action probability.
         logit_act1 = tf.gather_nd(log_prob_1, selected_action_index)
@@ -102,134 +115,108 @@ class PPO(Base):
         assert_shape(logit_act1, [None])
         assert_shape(logit_act2, [None])
 
-        self.ratio = tf.exp(logit_act1 - logit_act2)
+        ratio = tf.exp(logit_act1 - logit_act2)
 
-    def build_algorithm(self):
-        """Build networks for algorithm."""
-        self.optimizer = tf.train.AdamOptimizer(self.moved_lr, epsilon=1e-5)
-
-        # Compute policy loss.
-        surrogate_1 = self.ratio * self.advantage
-        surrogate_2 = tf.clip_by_value(self.ratio, 1.0 - self.clip_epsilon, 1.0 + self.clip_epsilon) * self.advantage
-        self.policy_loss = -tf.reduce_mean(tf.minimum(surrogate_1, surrogate_2))
+        # Get surrogate object.
+        surrogate_1 = ratio * self._advantage
+        surrogate_2 = tf.clip_by_value(ratio, 1.0 - self._clip_ratio, 1.0 + self._clip_ratio) * self._advantage
+        assert_shape(ratio, [None])
+        assert_shape(surrogate_1, [None])
+        assert_shape(surrogate_2, [None])
+        self._surrogate = -tf.reduce_mean(tf.minimum(surrogate_1, surrogate_2))
 
         # Compute critic loss.
-        self.critic_loss = tf.reduce_mean(tf.squared_difference(self.state_value, self.target_state_value))
+        vf = tf.reduce_mean(tf.squared_difference(self._state_value, self._target_state_value))
 
         # Compute gradients.
-        self.total_loss = self.policy_loss + self.critic_coefficient * self.critic_loss - self.entropy_coefficient * self.entropy
-        grads = tf.gradients(self.total_loss, tf.trainable_variables())
+        total_loss = self._surrogate + self._vf_coef * vf - self._entropy_coef * entropy
+        grads = tf.gradients(total_loss, tf.trainable_variables())
+
+        grad_norm = tf.global_norm(grads)
 
         # Clip gradients.
-        clipped_grads, _ = tf.clip_by_global_norm(grads, self.max_grad_norm)
-        self.total_train_op = self.optimizer.apply_gradients(zip(clipped_grads, tf.trainable_variables()))
+        clipped_grads, _ = tf.clip_by_global_norm(grads, self._max_grad_norm)
+        self._train_op = self._optimizer.apply_gradients(zip(clipped_grads, tf.trainable_variables()), global_step=tf.train.get_global_step())
 
-    def get_action(self, obs):
-        if obs.ndim == 1 or obs.ndim == 3:
-            newobs = np.array(obs)[np.newaxis, :]
-        else:
-            assert obs.ndim == 2 or obs.ndim == 4
-            newobs = obs
+        self._log_op = {"entropy": entropy, "ratio": ratio, "loss": total_loss, "value_loss": vf, "grad_norm": grad_norm}
 
-        logit = self.sess.run(self.logit_action_probability, feed_dict={self.observation: newobs})
+    def get_action(self, obs)->np.ndarray:
+        assert obs.shape[1:] == self._dim_obs
+        n_inference = obs.shape[0]
+        logit = self.sess.run(self._logit_p_act, feed_dict={self._observation: obs})
         logit = logit - np.max(logit, axis=1, keepdims=True)
         prob = np.exp(logit) / np.sum(np.exp(logit), axis=1, keepdims=True)
-        action = [np.random.choice(self.dim_act, p=prob[i, :]) for i in range(newobs.shape[0])]
-        assert len(action) == newobs.shape[0]
+        action = [np.random.choice(self._dim_act, p=prob[i, :]) for i in range(n_inference)]
         return np.array(action)
 
-    def update(self, minibatch, update_ratio):
-        """Update the algorithm by suing a batch of data.
+    def update(self, databatch):
 
-        Parameters:
-            - minibatch: A list of ndarray containing a minibatch of state, action, reward, done, next_state.
-                - state shape: (n_env, batch_size+1, state_dimension)
-                - action shape: (n_env, batch_size)
-                - reward shape: (n_env, batch_size)
-                - done shape: (n_env, batch_size)
-                - next_state shape: (n_env, batch_size, state_dimension)
-
-            - update_ratio: float scalar in (0, 1).
-
-        Returns:
-            - training infomation.
-        """
-        s_batch, a_batch, r_batch, d_batch = minibatch
-        assert s_batch.shape == (self.n_env, self.trajectory_length + 1, *self.dim_obs)
-
-        # Compute advantage batch.
-        advantage_batch = np.empty([self.n_env, self.trajectory_length], dtype=np.float32)
-        target_value_batch = np.empty([self.n_env, self.trajectory_length], dtype=np.float32)
-
-        for i in range(self.n_env):
-            state_value_batch = self.sess.run(self.state_value, feed_dict={self.observation: s_batch[i, ...]})
-
-            delta_value_batch = r_batch[i, :] + self.discount * (1 - d_batch[i, :]) * state_value_batch[1:] - state_value_batch[:-1]
-            assert state_value_batch.shape == (self.trajectory_length + 1,)
-            assert delta_value_batch.shape == (self.trajectory_length,)
-
-            last_advantage = 0
-            for t in reversed(range(self.trajectory_length)):
-                advantage_batch[i, t] = delta_value_batch[t] + self.discount * self.gae * (1 - d_batch[i, t]) * last_advantage
-                last_advantage = advantage_batch[i, t]
-
-            # Compute target value.
-            target_value_batch[i, :] = state_value_batch[:-1] + advantage_batch[i, :]
-
-        # Flat the batch values.
-        s_batch = s_batch[:, :-1, :, :, :].reshape(self.n_env * self.trajectory_length, *self.dim_obs)
-        a_batch = a_batch.reshape(self.n_env * self.trajectory_length)
-        advantage_batch = advantage_batch.reshape(self.n_env * self.trajectory_length)
-        target_value_batch = target_value_batch.reshape(self.n_env * self.trajectory_length)
+        s_batch, a_batch, tsv_batch, adv_batch = self._parse_databatch(databatch)
 
         # Normalize Advantage.
-        advantage_batch = (advantage_batch - advantage_batch.mean()) / (advantage_batch.std() + 1e-5)
-
-        old_logit_action_probability_batch = self.sess.run(self.logit_action_probability, feed_dict={self.observation: s_batch})
+        adv_batch = (adv_batch - adv_batch.mean()) / (adv_batch.std() + 1e-8)
+        old_logit_p_act = self.sess.run(self._logit_p_act, feed_dict={self._observation: s_batch})
 
         # Train network.
-        for _ in range(self.train_epoch):
-            # Get training sample generator.
-            batch_generator = self._generator([s_batch, a_batch, advantage_batch, old_logit_action_probability_batch, target_value_batch], batch_size=self.batch_size)
+        for _ in range(self._train_epoch):
 
-            while True:
-                try:
-                    mini_s_batch, mini_a_batch, mini_advantage_batch, mini_old_logit_action_probability_batch, mini_target_state_value_batch = next(
-                        batch_generator)
+            n_sample = s_batch.shape[0]
+            index = np.arange(n_sample)
+            np.random.shuffle(index)
 
-                    # Train actor.
-                    c_loss, entro, p_ratio, _ = self.sess.run([self.critic_loss,
-                                                               self.entropy,
-                                                               self.ratio,
-                                                               self.total_train_op],
-                                                              feed_dict={
-                        self.observation: mini_s_batch,
-                        self.old_logit_action_probability: mini_old_logit_action_probability_batch,
-                        self.action: mini_a_batch,
-                        self.advantage: mini_advantage_batch,
-                        self.target_state_value: mini_target_state_value_batch,
-                        self.moved_lr: self.policy_lr_schedule(update_ratio),
-                        self.clip_epsilon: self.clip_schedule(update_ratio)})
+            for i in range(math.ceil(n_sample / self._batch_size)):
+                span_index = slice(i*self._batch_size, min((i+1)*self._batch_size, n_sample))
+                span_index = index[span_index]
 
-                except StopIteration:
-                    del batch_generator
-                    break
+                self.sess.run(self._train_op,
+                              feed_dict={self._observation: s_batch[span_index, ...],
+                                         self._action: a_batch[span_index],
+                                         self._target_state_value: tsv_batch[span_index],
+                                         self._advantage: adv_batch[span_index],
+                                         self._old_logit_p_act: old_logit_p_act[span_index]})
 
-        # Save model.
-        global_step, _ = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
-        if global_step % self.save_model_freq == 0:
+        global_step, log = self.sess.run([tf.train.get_global_step(), self._log_op])
+
+        if global_step % self._save_model_freq == 0:
             self.save_model()
 
-        return {"critic_loss": c_loss, "entropy": entro, "training_step": global_step, "sample_ratio": p_ratio[0]}
+        if global_step % self._log_freq == 0:
+            self.sw.add_scalars("ppo", log)
 
-    def _generator(self, data_batch, batch_size=32):
-        n_sample = data_batch[0].shape[0]
-        assert n_sample == self.n_env * self.trajectory_length
+    def _parse_databatch(self, databatch):
+        s_list = deque()
+        a_list = deque()
+        tsv_list = deque()
+        adv_list = deque()
+        for trajectory in databatch:
+            s_batch, a_batch, tsv_batch, adv_batch = self._parse_trajectory(trajectory)
+            s_list.append(s_batch)
+            a_list.append(a_batch)
+            tsv_list.append(tsv_batch)
+            adv_list.append(adv_batch)
+        return np.concatenate(s_list), np.concatenate(a_list), np.concatenate(tsv_list), np.concatenate(adv_list)
 
-        index = np.arange(n_sample)
-        np.random.shuffle(index)
+    def _parse_trajectory(self, trajectory):
+        """trajectory由一系列(s,a,r)构成。最后一组操作之后游戏结束。
+        """
+        n = len(trajectory)
+        s_batch = np.zeros((n, *self._dim_obs))
+        a_batch = np.zeros(n, dtype=np.int32)
+        target_sv_batch = np.zeros(n, dtype=np.float32)
+        adv_batch = np.zeros(n, dtype=np.float32)
 
-        for i in range(math.ceil(n_sample / batch_size)):
-            span_index = slice(i * batch_size, min((i + 1) * batch_size, n_sample))
-            span_index = index[span_index]
-            yield [x[span_index] if x.ndim == 1 else x[span_index, :] for x in data_batch]
+        for i, (s, a, r) in enumerate(reversed(trajectory)):   # 注意这里是倒序操作。
+            state_value = self.sess.run(self._state_value, feed_dict={self._observation: s[np.newaxis, :]})[0]
+            if i == 0:
+                adv_batch[i] = r - state_value
+                target_sv_batch[i] = r
+                last_state_value = state_value
+            delta_value = r + self._discount * last_state_value - state_value
+            adv_batch[i] = delta_value + self._discount * self._gae * adv_batch[i-1]
+            target_sv_batch[i] = state_value + adv_batch[i]
+            last_state_value = state_value
+
+            s_batch[i, ...] = s
+            a_batch[i] = a
+
+        return s_batch, a_batch, target_sv_batch, adv_batch
