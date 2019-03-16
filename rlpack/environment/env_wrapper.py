@@ -5,7 +5,7 @@ from typing import Callable, List
 
 import numpy as np
 
-from .atari_wrappers import make_atari, make_ram_atari, make_ram_atari2
+from .atari_wrappers import make_atari
 from .distributed_env_worker import DistributedEnvClient
 from .distributed_env_wrapper import DistributedEnvManager
 from .mujoco_wrappers import make_mujoco

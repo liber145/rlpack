@@ -22,21 +22,21 @@ class Base(ABC):
         self.sw = SummaryWriter(log_dir=self.save_path)
 
         # ------------------------ Build network ------------------------
-        self.build_network()
+        self._build_network()
 
         # ------------------------ Build algorithm ------------------------
-        self.build_algorithm()
+        self._build_algorithm()
 
         # ------------------------ Initialize model store and reload. ------------------------
         self._prepare()
 
     @abstractmethod
-    def build_network(self):
+    def _build_network(self):
         """Build tensorflow operations for algorithms."""
         pass
 
     @abstractmethod
-    def build_algorithm(self):
+    def _build_algorithm(self):
         """Build algorithms using prebuilt networks."""
         pass
 

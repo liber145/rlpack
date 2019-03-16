@@ -5,7 +5,7 @@ import numpy as np
 from tqdm import tqdm
 from tensorboardX import SummaryWriter
 
-from rlpack.algos import DQN
+from rlpack.algos import AveDQN
 
 
 parser = argparse.ArgumentParser(description="Parse environment name.")
@@ -48,15 +48,15 @@ class Memory(object):
 
 def run_main():
     env = gym.make(args.env)
-    agent = DQN(dim_obs=env.observation_space.shape,
-                dim_act=env.action_space.n,
-                update_target_freq=100,
-                log_freq=10,
-                save_path="./log/dqn_cc",
-                lr=1e-4,
-                train_epoch=1)
+    agent = AveDQN(dim_obs=env.observation_space.shape,
+                   dim_act=env.action_space.n,
+                   update_target_freq=100,
+                   log_freq=10,
+                   save_path="./log/avedqn_cc",
+                   lr=1e-4,
+                   train_epoch=1)
     mem = Memory(capacity=int(1e5), dim_obs=env.observation_space.shape, dim_act=env.action_space.n)
-    sw = SummaryWriter(log_dir="./log/dqn_cc")
+    sw = SummaryWriter(log_dir="./log/avedqn_cc")
     totrew, totlen = 0, 0
 
     s = env.reset()
@@ -73,7 +73,7 @@ def run_main():
 
         if d is True:
             s = env.reset()
-            sw.add_scalars("dqn", {"totrew": totrew, "totlen": totlen}, i)
+            sw.add_scalars("avedqn", {"totrew": totrew, "totlen": totlen}, i)
             tqdm.write(f"{i}th. totrew={totrew}, totlen={totlen}")
             totrew, totlen = 0, 0
 
