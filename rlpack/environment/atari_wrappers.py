@@ -248,6 +248,29 @@ class TimeLimit(gym.Wrapper):
         return self.env.reset(**kwargs)
 
 
+class RamStack(gym.Wrapper):
+    def __init__(self, env):
+        gym.Wrapper.__init__(self, env)
+        # self._dim_act = self.env.dim_action
+        # self._dim_obs = self.env.dim_observation
+
+    def reset(self):
+        ob = self.env.reset()
+        return np.array(ob).reshape(4, 128).swapaxes(0, 1)
+
+    def step(self, action):
+        ob, rew, done, info = self.env.step(action)
+        return np.array(ob).reshape(4, 128).swapaxes(0, 1), rew, done, info
+
+    # @property
+    # def dim_action(self):
+    #     return self._dim_act
+
+    # @property
+    # def dim_observation(self):
+    #     return (128, 4)
+
+
 def make_atari(env_id, max_episode_steps=None):
     env = gym.make(env_id)
     assert 'NoFrameskip' in env.spec.id
@@ -258,14 +281,15 @@ def make_atari(env_id, max_episode_steps=None):
     return env
 
 
-def wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=False, scale=False):
+def wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=False, scale=False, warp=True):
     """Configure environment for DeepMind-style Atari.
     """
     if episode_life:
         env = EpisodicLifeEnv(env)
     if 'FIRE' in env.unwrapped.get_action_meanings():
         env = FireResetEnv(env)
-    env = WarpFrame(env)
+    if warp:
+        env = WarpFrame(env)
     if scale:
         env = ScaledFloatFrame(env)
     if clip_rewards:
@@ -273,3 +297,25 @@ def wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=False, 
     if frame_stack:
         env = FrameStack(env, 4)
     return env
+
+
+def make_ramatari(env_id, max_episode_step=None):
+    env = make_atari(env_id)
+    assert "ramNoFrameskip" in env.spec.id
+    env = wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=True, scale=False, warp=False)
+    env = RamStack(env)
+    return env
+
+
+if __name__ == "__main__":
+    env = make_ramatari("Pong-ramNoFrameskip-v4", max_episode_step=1000)
+    env.reset()
+    print(env.action_space.n)
+    print(env.observation_space.shape)
+    input()
+    for _ in range(1000):
+        a = np.random.choice(2)
+        ns, r, d, _ = env.step(a)
+        print("next state shape:", np.array(ns).shape)
+        print(np.max(ns), np.min(ns))
+        print("r:", r, "d:", d)
