@@ -24,6 +24,7 @@ class TRPO(Base):
                  max_grad_norm=40,
                  lr=3e-3):
 
+        self.n_env = n_env
         self.dim_obs = dim_obs
         self.dim_act = dim_act
         self.discount = discount
