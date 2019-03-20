@@ -62,7 +62,7 @@ def obs_fn():
     return obs
 
 
-def conv1d(obs):
+def value_fn(obs):
     x = tf.layers.conv1d(obs, filters=32, kernel_size=8, strides=4, activation=tf.nn.relu)
     x = tf.layers.conv1d(x, filters=64, kernel_size=4, strides=2, activation=tf.nn.relu)
     x = tf.layers.conv1d(x, filters=64, kernel_size=3, strides=1, activation=tf.nn.relu)
@@ -74,7 +74,7 @@ def conv1d(obs):
 
 def run_main():
     agent = DQN(obs_fn=obs_fn,
-                value_fn=conv1d,
+                value_fn=value_fn,
                 dim_act=env.action_space.n,
                 update_target_freq=100,
                 log_freq=10,
@@ -97,7 +97,8 @@ def run_main():
         totlen += 1
         rewcnt.update([a])
 
-        agent.update(mem.sample(args.batchsize))
+        if i % 4 == 0:
+            agent.update(mem.sample(args.batchsize))
 
         if d is True:
             s = env.reset()
@@ -114,10 +115,9 @@ def rewttt(rewcnt, dim_act):
 
 
 def run_game():
-    env = gym.make(args.env)
     s = env.reset()
     totrew = 0
-    for i in range(100):
+    for _ in range(100):
         a = np.random.randint(2)
         ns, r, d, _ = env.step(a)
         ns = s
@@ -129,4 +129,4 @@ def run_game():
 
 
 if __name__ == "__main__":
-    run_main()
+    run_game()
