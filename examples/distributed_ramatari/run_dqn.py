@@ -19,7 +19,7 @@ nb_actions = 6
 
 
 class Memory(object):
-    def __init__(self, capacity: int, dim_obs, dim_act, statetype=np.float32):
+    def __init__(self, capacity: int, dim_obs, dim_act, statetype=np.uint8):
         self._state = np.zeros((capacity, *dim_obs), dtype=statetype)
         self._action = np.zeros(capacity, dtype=np.int32)
         self._reward = np.zeros(capacity, dtype=np.float32)
@@ -37,6 +37,33 @@ class Memory(object):
         self._done[ind] = done
         self._next_state[ind, ...] = next_state
         self._size += 1
+
+    def store_sard(self, s_list, a_list, r_list, d_list):
+
+        for s_batch, a_batch, r_batch, d_batch in zip(s_list, a_list, r_list, d_list):
+            ind = self._size % self._capacity
+            t = len(d_batch)
+            if ind + t <= self._capacity:
+                self._state[ind: ind+t, ...] = np.asarray(s_batch)[:-1, ...]
+                self._action[ind: ind+t] = np.asarray(a_batch)
+                self._reward[ind: ind+t] = np.asarray(r_batch)
+                self._done[ind: ind+t] = np.asarray(d_batch)
+                self._next_state[ind: ind+t, ...] = np.asarray(s_batch)[1:, ...]
+            else:
+                d = self._capacity - ind
+                self._state[ind:, ...] = np.asarray(s_batch[:d])
+                self._action[ind:] = np.asarray(a_batch[:d])
+                self._reward[ind:] = np.asarray(r_batch[:d])
+                self._done[ind:] = np.asarray(d_batch[:d])
+                self._next_state[ind:, ...] = np.asarray(s_batch[1:d+1])
+
+                n = t - d
+                self._state[:n, ...] = np.asarray(s_batch[d:])
+                self._action[:n] = np.asarray(a_batch[d:])
+                self._reward[:n] = np.asarray(r_batch[d:])
+                self._done[:n] = np.asarray(d_batch[d:])
+                self._next_state[:n, ...] = np.asarray(s_batch[d+1:])
+            self._size += t
 
     def sample(self, n: int):
         n_sample = self._size if self._size < self._capacity else self._capacity
@@ -73,13 +100,16 @@ def main():
     agent = DQN(obs_fn=obs_fn,
                 value_fn=value_fn,
                 dim_act=nb_actions,
-                update_target_freq=100,
+                update_target_freq=10000,
                 log_freq=10,
-                save_path=f"./log/dqn_ramatari/",
+                save_path=f"./log/dqn_dist_ramatari/Pong",
                 lr=2.5e-4,
                 epsilon_schedule=lambda x: max(0.1, (1e6-x) / 1e6),
                 train_epoch=1)
+    mem = Memory(capacity=int(1e6), dim_obs=(128, 4), dim_act=nb_actions)
+    sw = SummaryWriter(log_dir=f"./log/dqn_dist_ramatari/Pong")
 
+    t = 0
     while True:
         for i in tqdm(range(1000)):
             env_ids, states, rewards, dones = agent_wrapper.get_srd_batch(
@@ -88,8 +118,22 @@ def main():
             actions = agent.get_action(np.asarray(states))
             agent_wrapper.put_a_batch(env_ids, actions)
 
-        s_batch, a_batch, r_batch, d_batch = agent_wrapper.get_episodes()
+        s_list, a_list, r_list, d_list = agent_wrapper.get_episodes()
+        mem.store_sard(s_list, a_list, r_list, d_list)
 
-        # add to memory
+        meanrew = np.mean([np.sum(x) for x in r_list])
+        print(f"{t}th reward:", meanrew)
+        t += 1
+        sw.add_scalars("dqn", {"totrew": meanrew}, global_step=i)
+
+        print("s:", [len(x) for x in s_list])
+        print("a:", [len(x) for x in a_list])
+        print("r:", [len(x) for x in r_list])
+        print("d:", [len(x) for x in d_list])
+
+        for i in tqdm(range(10)):
+            agent.update(mem.sample(256))
+
+
 if __name__ == "__main__":
     main()

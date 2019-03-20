@@ -26,7 +26,7 @@ env = make_ramatari(args.env)
 
 
 class Memory(object):
-    def __init__(self, capacity: int, dim_obs, dim_act, statetype=np.float32):
+    def __init__(self, capacity: int, dim_obs, dim_act, statetype=np.uint8):
         self._state = np.zeros((capacity, *dim_obs), dtype=statetype)
         self._action = np.zeros(capacity, dtype=np.int32)
         self._reward = np.zeros(capacity, dtype=np.float32)
@@ -98,6 +98,10 @@ def run_main():
         rewcnt.update([a])
 
         if i % 4 == 0:
+            ts, ta, tr, td, tns = mem.sample(64)
+            print(ts.shape)
+            print(type(ts[0, 0, 0]))
+
             agent.update(mem.sample(args.batchsize))
 
         if d is True:
