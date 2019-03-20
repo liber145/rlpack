@@ -10,7 +10,8 @@ class AveDQN(Base):
     """Deep Q Network."""
 
     def __init__(self,
-                 dim_obs=None,
+                 obs_fn=None,
+                 value_fn=None,
                  dim_act=None,
                  rnd=1,
                  discount=0.99,
@@ -23,7 +24,8 @@ class AveDQN(Base):
                  train_epoch=1,
                  n_net=5):
 
-        self._dim_obs = dim_obs
+        self._obs_fn = obs_fn
+        self._value_fn = value_fn
         self._dim_act = dim_act
         self._discount = discount
         self._save_model_freq = save_model_freq
@@ -40,28 +42,31 @@ class AveDQN(Base):
         """Build networks for algorithm."""
         # self._observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.uint8, name="observation")
         # self._observation = tf.to_float(self._observation) / 255.0
-        self._observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name="observation")
+        # self._observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name="observation")
+        self._observation = self._obs_fn()
         self._action = tf.placeholder(dtype=tf.int32, shape=[None], name="action")
         self._reward = tf.placeholder(dtype=tf.float32, shape=[None], name="reward")
         self._done = tf.placeholder(dtype=tf.float32, shape=[None], name="done")
         # self._next_observation = tf.placeholder(dtype=tf.uint8, shape=[None, *self._dim_obs], name="next_observation")
         # self._next_observation = tf.to_float(self._next_observation) / 255.0
-        self._next_observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name="next_observation")
+        # self._next_observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name="next_observation")
+        self._next_observation = self._obs_fn()
 
         with tf.variable_scope("main/qnet"):
-            self._qvals = self._dense(self._observation)
+            # self._qvals = self._dense(self._observation)
+            self._qvals = self._value_fn(self._observation)
 
         self._target_qvals = []
         for i in range(self._n_net):
             with tf.variable_scope(f"target_{i}/qnet"):
-                self._target_qvals.append(self._dense(self._next_observation))
+                self._target_qvals.append(self._value_fn(self._next_observation))
 
-    def _dense(self, t):
-        x = tf.layers.dense(t, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-        x = tf.layers.dense(x, self._dim_act)
-        return x
+    # def _dense(self, t):
+    #     x = tf.layers.dense(t, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, self._dim_act)
+    #     return x
 
     def _build_algorithm(self):
         """Build networks for algorithm."""
@@ -75,7 +80,6 @@ class AveDQN(Base):
         assert_shape(action_q, [None])
 
         # Compute back up.
-        print(self._target_qvals)
         ave_q = tf.add_n(self._target_qvals) / self._n_net
         assert_shape(tf.reduce_max(ave_q, axis=1), [None])
         q_backup = tf.stop_gradient(self._reward + self._discount * (1 - self._done) * tf.reduce_max(ave_q, axis=1))

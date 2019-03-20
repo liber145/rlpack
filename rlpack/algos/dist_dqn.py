@@ -8,7 +8,8 @@ from .base import Base
 
 class DistDQN(Base):
     def __init__(self,
-                 dim_obs=None,
+                 obs_fn=None,
+                 policy_fn=None,
                  dim_act=None,
                  rnd=1,
                  discount=0.99,
@@ -30,7 +31,8 @@ class DistDQN(Base):
         self._delta = (self._vmax - self._vmin) / (self._n_histogram - 1)
         self._split_points = np.linspace(self._vmin, self._vmax, self._n_histogram)
 
-        self._dim_obs = dim_obs
+        self._obs_fn = obs_fn
+        self._policy_fn = policy_fn
         self._dim_act = dim_act
         self._discount = discount
 
@@ -48,31 +50,35 @@ class DistDQN(Base):
         """Build networks for algorithm."""
         # self._observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.uint8, name="observation")
         # self._observation = tf.to_float(self._observation) / 256.0
-        self._observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name="observation")
+        # self._observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name="observation")
+        self._observation = self._obs_fn()
         self.action = tf.placeholder(tf.int32, [None], name="action")
         self.target = tf.placeholder(tf.float32, [None], name="target")
         self._new_p_act = tf.placeholder(tf.float32, [None, self._n_histogram], name="next_input")
-        self._next_observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name="next_observation")
+        # self._next_observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name="next_observation")
+        self._next_observation = self._obs_fn()
 
         with tf.variable_scope("main"):
-            self._logits = self._dense(self._observation)
+            # self._logits = self._dense(self._observation)
+            self._logits = self._policy_fn(self._observation)
 
         with tf.variable_scope("target"):
-            self._target_logits = tf.stop_gradient(self._dense(self._next_observation))
+            # self._target_logits = tf.stop_gradient(self._dense(self._next_observation))
+            self._target_logits = tf.stop_gradient(self._policy_fn(self._next_observation))
 
-    def _conv(self, t):
-        x = tf.layers.conv2d(t, 32, 8, 4, activation=tf.nn.relu)
-        x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu)
-        x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu)
-        x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
-        x = tf.layers.dense(x, 512, activation=tf.nn.relu)
-        return tf.layers.dense(x, self._dim_act * self._n_histogram)
+    # def _conv(self, t):
+    #     x = tf.layers.conv2d(t, 32, 8, 4, activation=tf.nn.relu)
+    #     x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu)
+    #     x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu)
+    #     x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
+    #     x = tf.layers.dense(x, 512, activation=tf.nn.relu)
+    #     return tf.layers.dense(x, self._dim_act * self._n_histogram)
 
-    def _dense(self, t):
-        x = tf.layers.dense(t, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-        return tf.layers.dense(x, self._dim_act * self._n_histogram)
+    # def _dense(self, t):
+    #     x = tf.layers.dense(t, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+    #     return tf.layers.dense(x, self._dim_act * self._n_histogram)
 
     def _build_algorithm(self):
         """Build networks for algorithm."""

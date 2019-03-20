@@ -17,7 +17,9 @@ from .base import Base
 
 class PPO(Base):
     def __init__(self,
-                 dim_obs=None,
+                 obs_fn=None,
+                 policy_fn=None,
+                 value_fn=None,
                  dim_act=None,
                  rnd=1,
                  discount=0.99,
@@ -52,7 +54,9 @@ class PPO(Base):
             save_model_freq {int} -- save model frequency (default: {1000})
         """
 
-        self._dim_obs = dim_obs
+        self._obs_fn = obs_fn
+        self._policy_fn = policy_fn
+        self._value_fn = value_fn
         self._dim_act = dim_act
 
         self._discount = discount
@@ -75,27 +79,31 @@ class PPO(Base):
     def _build_network(self):
         # self._observation = tf.placeholder(tf.uint8, [None, *self._dim_obs], name="observation")
         # self._observation = tf.to_float(self._observation) / 255.0
-        self._observation = tf.placeholder(tf.float32, [None, *self._dim_obs], name="observation")
+        # self._observation = tf.placeholder(tf.float32, [None, *self._dim_obs], name="observation")
+        self._observation = self._obs_fn()
 
-        x = self._dense(self._observation)
-        self._logit_p_act = tf.layers.dense(x, self._dim_act, kernel_initializer=tf.truncated_normal_initializer(0.0, 0.01))
-        self._state_value = tf.squeeze(tf.layers.dense(x, 1, kernel_initializer=tf.truncated_normal_initializer()))
+        # x = self._dense(self._observation)
+        # self._logit_p_act = tf.layers.dense(x, self._dim_act, kernel_initializer=tf.truncated_normal_initializer(0.0, 0.01))
+        # self._state_value = tf.squeeze(tf.layers.dense(x, 1, kernel_initializer=tf.truncated_normal_initializer()))
+
+        self._logit_p_act = self._policy_fn(self._observation)
+        self._state_value = self._value_fn(self._observation)
 
         # self._logit_p_act = tf.layers.dense(x, self._dim_act, activation=None, kernel_initializer=tf.truncated_normal_initializer(0.0, 0.01))
         # self._state_value = tf.squeeze(tf.layers.dense(x, 1, activation=None, kernel_initializer=tf.truncated_normal_initializer()))
 
-    def _conv(self, x):
-        x = tf.layers.conv2d(x, 32, 8, 4, activation=tf.nn.relu)
-        x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu)
-        x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu)
-        x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
-        x = tf.layers.dense(x, 512, activation=tf.nn.relu)
+    # def _conv(self, x):
+    #     x = tf.layers.conv2d(x, 32, 8, 4, activation=tf.nn.relu)
+    #     x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu)
+    #     x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu)
+    #     x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
+    #     x = tf.layers.dense(x, 512, activation=tf.nn.relu)
 
-    def _dense(self, x):
-        x = tf.layers.dense(x, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-        return x
+    # def _dense(self, x):
+    #     x = tf.layers.dense(x, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+    #     return x
 
     def _build_algorithm(self):
         self._clip_ratio = tf.placeholder(tf.float32)
@@ -154,7 +162,6 @@ class PPO(Base):
         self._log_op = {"entropy": entropy, "mean_ratio": tf.reduce_mean(ratio), "total_loss": total_loss, "value_loss": vf, "policy_loss": surrogate, "grad_norm": grad_norm}
 
     def get_action(self, obs)->np.ndarray:
-        assert obs.shape[1:] == self._dim_obs
         n_inference = obs.shape[0]
         logit = self.sess.run(self._logit_p_act, feed_dict={self._observation: obs})
         logit = logit - np.max(logit, axis=1, keepdims=True)

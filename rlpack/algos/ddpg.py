@@ -11,7 +11,9 @@ class DDPG(Base):
     """Deep Deterministic Policy Gradient."""
 
     def __init__(self,
-                 dim_obs=None,
+                 obs_fn=None,
+                 policy_fn=None,
+                 value_fn=None,
                  dim_act=None,
                  rnd=1,
                  discount=0.99,
@@ -25,7 +27,9 @@ class DDPG(Base):
                  log_freq=10,
                  train_epoch=1,
                  ):
-        self._dim_obs = dim_obs
+        self._obs_fn = obs_fn
+        self._policy_fn = policy_fn
+        self._value_fn = value_fn
         self._dim_act = dim_act
 
         self._discount = discount
@@ -46,23 +50,30 @@ class DDPG(Base):
     def _build_network(self):
         """Build networks for algorithm."""
         # Build placeholders.
-        self._observation = tf.placeholder(tf.float32, [None, *self._dim_obs], name="observation")
+        # self._observation = tf.placeholder(tf.float32, [None, *self._dim_obs], name="observation")
+        self._observation = self._obs_fn()
         self._action = tf.placeholder(tf.int32, (None,), name="action")
         self._reward = tf.placeholder(tf.float32, [None], name="reward")
         self._done = tf.placeholder(tf.float32, [None], name="done")
-        self._next_observation = tf.placeholder(tf.float32, [None, *self._dim_obs], name="next_observation")
+        # self._next_observation = tf.placeholder(tf.float32, [None, *self._dim_obs], name="next_observation")
+        self._next_observation = self._obs_fn()
 
         with tf.variable_scope("main/policy"):
-            self._p_act = self._policy_net(self._observation)
+            # self._p_act = self._policy_net(self._observation)
+
+            self._p_act = self._policy_fn(self._observation)
 
         with tf.variable_scope("main/value"):
-            self._qvals = self._value_net(self._observation)
+            # self._qvals = self._value_net(self._observation)
+            self._qvals = self._value_fn(self._observation)
 
         with tf.variable_scope("target/policy"):
-            self._target_p_act = self._policy_net(self._next_observation)
+            # self._target_p_act = self._policy_net(self._next_observation)
+            self._target_p_act = self._policy_fn(self._observation)
 
         with tf.variable_scope("target/value"):
-            self._target_qvals = self._value_net(self._next_observation)
+            # self._target_qvals = self._value_net(self._next_observation)
+            self._target_qvals = self._value_fn(self._observation)
 
         # with tf.variable_scope("main"):
         #     self._p_act, self._qvals = self._dense(self._observation)
@@ -70,23 +81,23 @@ class DDPG(Base):
         # with tf.variable_scope("target"):
         #     self._target_p_act, self._target_qvals = self._dense(self._next_observation)
 
-    def _value_net(self, obs):
-        x = tf.layers.dense(obs, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-        return tf.layers.dense(x, self._dim_act)
+    # def _value_net(self, obs):
+    #     x = tf.layers.dense(obs, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+    #     return tf.layers.dense(x, self._dim_act)
 
-    def _dense(self, obs):
-        x = tf.layers.dense(obs, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-        return tf.layers.dense(x, self._dim_act, activation=tf.nn.softmax), tf.layers.dense(x, self._dim_act)
+    # def _dense(self, obs):
+    #     x = tf.layers.dense(obs, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+    #     return tf.layers.dense(x, self._dim_act, activation=tf.nn.softmax), tf.layers.dense(x, self._dim_act)
 
-    def _policy_net(self, obs):
-        x = tf.layers.dense(obs, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-        return tf.layers.dense(x, self._dim_act, activation=tf.nn.softmax)
+    # def _policy_net(self, obs):
+    #     x = tf.layers.dense(obs, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+    #     return tf.layers.dense(x, self._dim_act, activation=tf.nn.softmax)
 
     def _build_algorithm(self):
         """Build networks for algorithm."""

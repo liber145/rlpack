@@ -10,7 +10,8 @@ from .base import Base
 
 class DQN(Base):
     def __init__(self,
-                 dim_obs=None,
+                 obs_fn=None,
+                 value_fn=None,
                  dim_act=None,
                  rnd=1,
                  discount=0.99,
@@ -19,14 +20,14 @@ class DQN(Base):
                  lr=2.5e-4,
                  train_epoch=5,
                  save_path="./log",
-                 save_model_freq=1000,
+                 save_model_freq=10000,
                  log_freq=1000
                  ):
-        """Deep Q Network.
-
-        Keyword Arguments:
-            rnd {int} -- [description] (default: {1})
-            n_env {int} -- [description] (default: {1})
+        """Deep Q Networ_value_fnk.
+_value_fn
+        Keyword Argument_value_fns:
+            rnd {int} --_value_fn [description] (default: {1})
+            n_env {int} _value_fn-- [description] (default: {1})
             dim_obs {[type]} -- [description] (default: {None})
             dim_act {[type]} -- [description] (default: {None})
             discount {float} -- [description] (default: {0.99})
@@ -38,8 +39,11 @@ class DQN(Base):
             lr {[type]} -- [description] (default: {2.5e-4})
         """
 
-        self._dim_obs = dim_obs
+        # self._dim_obs = dim_obs
+
+        self._obs_fn = obs_fn
         self._dim_act = dim_act
+        self._value_fn = value_fn
 
         self._discount = discount
         self._update_target_freq = update_target_freq
@@ -56,36 +60,38 @@ class DQN(Base):
         """Build networks for algorithm."""
         # self._observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.uint8, name="observation")
         # self._observation = tf.to_float(self._observation) / 255.0
-        self._observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name="observation")
-
+        # self._observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name="observation")
+        self._observation = self._obs_fn()
         self._action = tf.placeholder(dtype=tf.int32, shape=[None], name="action")
         self._reward = tf.placeholder(dtype=tf.float32, shape=[None], name="reward")
         self._done = tf.placeholder(dtype=tf.float32, shape=[None], name="done")
-
         # self._next_observation = tf.placeholder(dtype=tf.uint8, shape=[None, *self._dim_obs], name="next_observation")
         # self._next_observation = tf.to_float(self._next_observation) / 255.0
-        self._next_observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name="next_observation")
+        # self._next_observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name="next_observation")
+        self._next_observation = self._obs_fn()
 
         with tf.variable_scope("main/qnet"):
-            self._qvals = self._dense(self._observation)
+            # self._qvals = self._dense(self._observation)
+            self._qvals = self._value_fn(self._observation)
 
         with tf.variable_scope("target/qnet"):
-            self._target_qvals = self._dense(self._next_observation)
+            # self._target_qvals = self._dense(self._next_observation)
+            self._target_qvals = self._value_fn(self._next_observation)
 
-    def _cnn1d(self, x, cnn1d_hidden_sizes=[(32, 8, 4), (64, 4, 2)], mlp_hidden_sizes=[64, 4]):
-        for n_filter, stride, pad in cnn1d_hidden_sizes:
-            x = tf.layers.conv1d(x, n_filter, stride, pad, activation=tf.nn.relu)
-        x = tf.contrib.layers.flatten(x)
-        for hsize in mlp_hidden_sizes[:-1]:
-            x = tf.layers.dense(x, hsize, activation=tf.nn.relu)
-        return tf.squeeze(tf.layers.dense(x, mlp_hidden_sizes[-1]))
+    # def _cnn1d(self, x, cnn1d_hidden_sizes=[(32, 8, 4), (64, 4, 2)], mlp_hidden_sizes=[64, 4]):
+    #     for n_filter, stride, pad in cnn1d_hidden_sizes:
+    #         x = tf.layers.conv1d(x, n_filter, stride, pad, activation=tf.nn.relu)
+    #     x = tf.contrib.layers.flatten(x)
+    #     for hsize in mlp_hidden_sizes[:-1]:
+    #         x = tf.layers.dense(x, hsize, activation=tf.nn.relu)
+    #     return tf.squeeze(tf.layers.dense(x, mlp_hidden_sizes[-1]))
 
-    def _dense(self, x):
-        x = tf.layers.dense(x, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-        x = tf.layers.dense(x, self._dim_act)
-        return x
+    # def _dense(self, x):
+    #     x = tf.layers.dense(x, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, self._dim_act)
+    #     return x
 
     def _build_algorithm(self):
         """Build networks for algorithm."""
@@ -93,7 +99,7 @@ class DQN(Base):
         trainable_variables = tf.trainable_variables("main/qnet")
 
         # Compute the state value.
-        batch_size = tf.shape(self._observation)[0]
+        batch_size = tf.shape(self._done)[0]
         action_index = tf.stack([tf.range(batch_size), self._action], axis=1)
         action_q = tf.gather_nd(self._qvals, action_index)
 
@@ -122,16 +128,21 @@ class DQN(Base):
     def get_action(self, obs):
         """
         Arguments:
-            obs {np.ndarray} -- A list of observation.
+            obs -- 两种类型：1. 由np.ndarray构成的tuple类型；2. np.ndarray类型。
 
         Returns:
-            list -- A list of actions. 
+            list -- A list of actions.
         """
+
+        if type(obs) is list or type(obs) is tuple:
+            batch_size = obs[0].shape[0]
+        else:
+            batch_size = obs.shape[0]
+
         q = self.sess.run(self._qvals, feed_dict={self._observation: obs})
         max_a = np.argmax(q, axis=1)
         # Epsilon greedy method.
         global_step = self.sess.run(tf.train.get_global_step())
-        batch_size = obs.shape[0]
         actions = np.random.randint(self._dim_act, size=batch_size)
         idx = np.random.uniform(size=batch_size) > self._epsilon_schedule(global_step)
         actions[idx] = max_a[idx]

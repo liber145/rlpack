@@ -12,7 +12,8 @@ class AADQN(Base):
     """Deep Q Network."""
 
     def __init__(self,
-                 dim_obs=None,
+                 obs_fn=None,
+                 value_fn=None,
                  dim_act=None,
                  rnd=1,
                  discount=0.99,
@@ -21,7 +22,7 @@ class AADQN(Base):
                  weight_low=-3.0,
                  weight_high=5.0,
                  lr=2.5e-4,
-                 epsilon_schedule=lambda x: max(0.1, (1e4-x) / 1e4),
+                 epsilon_schedule=lambda x: max(0.1, (1e6-x) / 1e6),
                  update_target_freq=10000,
                  train_epoch=1,
                  save_path="./log",
@@ -29,7 +30,8 @@ class AADQN(Base):
                  log_freq=1000,
                  ):
 
-        self._dim_obs = dim_obs
+        self._obs_fn = obs_fn
+        self._value_fn = value_fn
         self._dim_act = dim_act
 
         self._discount = discount
@@ -52,32 +54,43 @@ class AADQN(Base):
         """Build networks for algorithm."""
         # self._observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.uint8, name="observation")
         # self._observation = tf.to_float(self._observation) / 255.0
-        self._observation = tf.placeholder(dtype=tf.float32, shape=[None, *self._dim_obs], name="observation")
+        # self._observation = tf.placeholder(dtype=tf.float32, shape=[None, *self._dim_obs], name="observation")
+        self._observation = self._obs_fn()
         self._action = tf.placeholder(dtype=tf.int32, shape=[None], name="action")
         self._reward = tf.placeholder(dtype=tf.float32, shape=[None], name="reward")
         self._done = tf.placeholder(dtype=tf.float32, shape=[None], name="done")
         # self._next_observation = tf.placeholder(dtype=tf.uint8, shape=[None, *self._dim_obs], name="next_observation")
         # self._next_observation = tf.to_float(self._next_observation) / 255.0
-        self._next_observation = tf.placeholder(dtype=tf.float32, shape=[None, *self._dim_obs], name="next_observation")
+        # self._next_observation = tf.placeholder(dtype=tf.float32, shape=[None, *self._dim_obs], name="next_observation")
+        self._next_observation = self._obs_fn()
 
         with tf.variable_scope("main/qnet"):
-            self._qvals = self._dense(self._observation)
+            self._qvals = self._value_fn(self._observation)
 
         self._target_qvals = []
         for i in range(self._n_net):
             with tf.variable_scope(f"target_{i}/qnet"):
-                self._target_qvals.append(self._dense(self._next_observation))
+                self._target_qvals.append(self._value_fn(self._next_observation))
 
-    def _dense(self, x):
-        x = tf.layers.dense(x, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-        x = tf.layers.dense(x, self._dim_act)
-        return x
+    # def _dense(self, x):
+    #     x = tf.layers.dense(x, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, self._dim_act)
+    #     return x
+
+    # def _conv1d(self, obs):
+    #     x = tf.layers.conv1d(obs, filters=32, kernel_size=8, strides=4, activation=tf.nn.relu)
+    #     x = tf.layers.conv1d(x, filters=64, kernel_size=4, strides=2, activation=tf.nn.relu)
+    #     x = tf.layers.conv1d(x, filters=64, kernel_size=3, strides=1, activation=tf.nn.relu)
+    #     x = tf.layers.flatten(x)
+    #     x = tf.layers.dense(x, units=256, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, units=self._dim_act)
+    #     return x
 
     def _build_algorithm(self):
         """Build networks for algorithm."""
-        self.optimizer = tf.train.AdamOptimizer(self._lr, epsilon=1.5e-8)
+        self.optimizer = tf.train.AdamOptimizer(self._lr, epsilon=1e-8)
         trainable_variables = tf.trainable_variables("main/qnet")
 
         # Compute the state value.
@@ -159,6 +172,11 @@ class AADQN(Base):
         Returns:
             list -- A list of actions. 
         """
+        if type(obs) is list or type(obs) is tuple:
+            batch_size = obs[0].shape[0]
+        else:
+            batch_size = obs.shape[0]
+
         q = self.sess.run(self._qvals, feed_dict={self._observation: obs})
         max_a = np.argmax(q, axis=1)
 
@@ -184,9 +202,9 @@ class AADQN(Base):
                 self._next_observation: next_s_batch
             })
 
-            print(">>>> weight:", weight)
-            print(">>>> mat:", mat)
-            print(">>>> inv_mat:", inv_mat)
+            # print(">>>> weight:", weight)
+            # print(">>>> mat:", mat)
+            # print(">>>> inv_mat:", inv_mat)
             # input()
 
         global_step, _ = self.sess.run([tf.train.get_global_step(), self.increment_global_step])

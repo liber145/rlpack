@@ -25,8 +25,8 @@ class A2C(Base):
                  batch_size=64
                  ):
 
-        self.dim_obs = dim_obs
-        self.dim_act = dim_act
+        self._dim_obs = dim_obs
+        self._dim_act = dim_act
         self.discount = discount
         self.gae = gae
         self.lr = lr
@@ -42,13 +42,13 @@ class A2C(Base):
     def build_network(self):
         """Build networks for algorithm."""
         # Build inputs.
-        self.observation = tf.placeholder(tf.float32, [None, *self.dim_obs], "observation")
+        self.observation = tf.placeholder(tf.float32, [None, *self._dim_obs], "observation")
 
         # Build Nets.
         with tf.variable_scope("policy_net"):
             x = tf.layers.dense(self.observation, 64, activation=tf.nn.tanh)
             x = tf.layers.dense(x, 64, activation=tf.nn.tanh)
-            self.mu = tf.layers.dense(x, self.dim_act, activation=tf.nn.tanh)
+            self.mu = tf.layers.dense(x, self._dim_act, activation=tf.nn.tanh)
             self.log_var = tf.get_variable("logvars", [self.mu.shape.as_list()[1]], tf.float32, tf.constant_initializer(0.0)) - 1
 
         with tf.variable_scope("value_net"):
@@ -61,12 +61,12 @@ class A2C(Base):
         self.actor_optimizer = tf.train.AdamOptimizer(self.lr)
         self.critic_optimizer = tf.train.AdamOptimizer(self.lr)
 
-        self.action = tf.placeholder(tf.float32, [None, self.dim_act], "action")
+        self.action = tf.placeholder(tf.float32, [None, self._dim_act], "action")
         self.span_reward = tf.placeholder(tf.float32, [None], "span_reward")
         self.advantage = tf.placeholder(tf.float32, [None], "advantage")
 
-        self.old_mu = tf.placeholder(tf.float32, (None, self.dim_act), "old_mu")
-        self.old_log_var = tf.placeholder(tf.float32, [self.dim_act], "old_log_var")
+        self.old_mu = tf.placeholder(tf.float32, (None, self._dim_act), "old_mu")
+        self.old_log_var = tf.placeholder(tf.float32, [self._dim_act], "old_log_var")
 
         logp = -0.5 * tf.reduce_sum(self.log_var)
         logp += -0.5 * tf.reduce_sum(tf.square(self.action - self.mu) / tf.exp(self.log_var), axis=1, keepdims=True)
@@ -86,7 +86,7 @@ class A2C(Base):
         self.train_critic_op = self.critic_optimizer.minimize(self.critic_loss, global_step=tf.train.get_global_step())
 
         # ---------- Build action. ----------
-        self.sampled_act = (self.mu + tf.exp(self.log_var / 2.0) * tf.random_normal(shape=[self.dim_act], dtype=tf.float32))
+        self.sampled_act = (self.mu + tf.exp(self.log_var / 2.0) * tf.random_normal(shape=[self._dim_act], dtype=tf.float32))
 
     def update(self, minibatch, update_ratio):
         """Update the algorithm by suing a batch of data.
@@ -105,7 +105,7 @@ class A2C(Base):
             - training infomation.
         """
         s_batch, a_batch, r_batch, d_batch = minibatch
-        assert s_batch.shape == (self.n_env, self.trajectory_length + 1, *self.dim_obs)
+        assert s_batch.shape == (self.n_env, self.trajectory_length + 1, *self._dim_obs)
 
         # Compute advantage batch.
         advantage_batch = np.empty([self.n_env, self.trajectory_length], dtype=np.float32)
@@ -127,8 +127,8 @@ class A2C(Base):
             target_value_batch[i, :] = state_value_batch[:-1] + advantage_batch[i, :]
 
         # Flat the batch values.
-        s_batch = s_batch[:, :-1, ...].reshape(self.n_env * self.trajectory_length, *self.dim_obs)
-        a_batch = a_batch.reshape(self.n_env * self.trajectory_length, self.dim_act)
+        s_batch = s_batch[:, :-1, ...].reshape(self.n_env * self.trajectory_length, *self._dim_obs)
+        a_batch = a_batch.reshape(self.n_env * self.trajectory_length, self._dim_act)
         advantage_batch = advantage_batch.reshape(self.n_env * self.trajectory_length)
         target_value_batch = target_value_batch.reshape(self.n_env * self.trajectory_length)
 

@@ -1,10 +1,11 @@
 import argparse
-from collections import deque
+from collections import deque, Counter
 import gym
 import numpy as np
 import os
 from tqdm import tqdm
 from tensorboardX import SummaryWriter
+import tensorflow as tf
 
 from rlpack.algos import AADQN
 from rlpack.environment import make_ramatari
@@ -12,13 +13,16 @@ from rlpack.environment import make_ramatari
 
 parser = argparse.ArgumentParser(description="Parse environment name.")
 parser.add_argument("--gpu", type=str, default="0")
-parser.add_argument("--env", type=str, default="CartPole-v1")
-parser.add_argument("--niter", type=int, default=int(2e4))
-parser.add_argument("--batchsize", type=int, default=128)
+parser.add_argument("--env", type=str, default="Pong-ramNoFrameskip-v4")
+parser.add_argument("--niter", type=int, default=int(10e6))
+parser.add_argument("--batchsize", type=int, default=32)
 args = parser.parse_args()
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
+
+
+env = make_ramatari(args.env)
 
 
 class Memory(object):
@@ -52,20 +56,37 @@ class Memory(object):
         return state_batch, action_batch, reward_batch, done_batch, next_state_batch
 
 
+def obs_fn():
+    obs = tf.placeholder(shape=[None, 128, 4], dtype=tf.uint8, name="observation")
+    obs = tf.to_float(obs) / 255.0
+    return obs
+
+
+def conv1d(obs):
+    x = tf.layers.conv1d(obs, filters=32, kernel_size=8, strides=4, activation=tf.nn.relu)
+    x = tf.layers.conv1d(x, filters=64, kernel_size=4, strides=2, activation=tf.nn.relu)
+    x = tf.layers.conv1d(x, filters=64, kernel_size=3, strides=1, activation=tf.nn.relu)
+    x = tf.layers.flatten(x)
+    x = tf.layers.dense(x, units=256, activation=tf.nn.relu)
+    x = tf.layers.dense(x, units=env.action_space.n)
+    return x
+
+
 def run_main():
-    env = gym.make(args.env)
-    agent = AADQN(dim_obs=env.observation_space.shape,
+    agent = AADQN(obs_fn=obs_fn,
+                  value_fn=conv1d,
                   dim_act=env.action_space.n,
                   update_target_freq=100,
                   log_freq=10,
-                  weight_low=0,
+                  weight_low=-1,
                   weight_high=1,
-                  save_path=f"./log/aadqn_cc/{args.env}",
-                  lr=1e-4
+                  save_path=f"./log/aadqn_ramatari/{args.env}",
+                  lr=2.5e-4,
+                  epsilon_schedule=lambda x: max(0.1, (1e6-x) / 1e6),
                   )
-    mem = Memory(capacity=int(1e5), dim_obs=env.observation_space.shape, dim_act=env.action_space.n)
-    sw = SummaryWriter(log_dir=f"./log/aadqn_cc/{args.env}")
-    totrew, totlen = 0, 0
+    mem = Memory(capacity=int(1e6), dim_obs=(128, 4), dim_act=env.action_space.n)
+    sw = SummaryWriter(log_dir=f"./log/aadqn_ramatari/{args.env}")
+    totrew, totlen, rewcnt = 0, 0, Counter()
 
     s = env.reset()
     for i in tqdm(range(args.niter)):
@@ -76,14 +97,23 @@ def run_main():
 
         totrew += r
         totlen += 1
+        rewcnt.update([a])
 
-        agent.update(mem.sample(args.batchsize))
+        if i % 4 == 0:
+            agent.update(mem.sample(args.batchsize))
 
         if d is True:
             s = env.reset()
             sw.add_scalars("aadqn", {"totrew": totrew, "totlen": totlen}, i)
-            tqdm.write(f"{i}th. totrew={totrew}, totlen={totlen}")
-            totrew, totlen = 0, 0
+            tqdm.write(f"{i}th. totrew={totrew}, totlen={totlen}, rewcnt={rewttt(rewcnt, env.action_space.n)}")
+            totrew, totlen, rewcnt = 0, 0, Counter()
+
+
+def rewttt(rewcnt, dim_act):
+    t = ""
+    for i in range(dim_act):
+        t += f"{i}:{rewcnt[i]} "
+    return t
 
 
 if __name__ == "__main__":

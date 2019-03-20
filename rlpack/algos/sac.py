@@ -13,7 +13,10 @@ from .base import Base
 class SAC(Base):
     def __init__(self,
                  rnd=1,
-                 dim_obs=None,
+                 obs_fn=None,
+                 policy_fn=None,
+                 qval_fn=None,
+                 sval_fn=None,
                  dim_act=None,
                  discount=0.99,
                  save_path="./log",
@@ -26,7 +29,10 @@ class SAC(Base):
                  update_target_ratio=0.995
                  ):
         self.alpha = alpha
-        self._dim_obs = dim_obs
+        self._obs_fn = obs_fn
+        self._policy_fn = policy_fn
+        self._qval_fn = qval_fn
+        self._sval_fn = sval_fn
         self._dim_act = dim_act
         self._policy_lr = policy_lr
         self._value_lr = value_lr
@@ -53,37 +59,47 @@ class SAC(Base):
         return x + tf.stop_gradient(clip_up * (u - x) + clip_low * (l - x))
 
     def _build_network(self):
-        self._observation = tf.placeholder(tf.float32, [None, *self._dim_obs], name="observation")
+        # self._observation = tf.placeholder(tf.float32, [None, *self._dim_obs], name="observation")
+        self._observation = self._obs_fn()
         self._action = tf.placeholder(tf.int32, [None], name="action")
         self._reward = tf.placeholder(tf.float32, [None], name="reward")
         self._done = tf.placeholder(tf.float32, [None], name="done")
-        self._next_observation = tf.placeholder(tf.float32, [None, *self._dim_obs], name="next_observation")
+        # self._next_observation = tf.placeholder(tf.float32, [None, *self._dim_obs], name="next_observation")
+        self._next_observation = self._obs_fn()
 
         with tf.variable_scope("main/policy"):
-            x = self._dense(self._observation)
-            self._p_act = tf.layers.dense(x, self._dim_act, activation=tf.nn.softmax)
+            # x = self._dense(self._observation)
+            # self._p_act = tf.layers.dense(x, self._dim_act, activation=tf.nn.softmax)
+
+            self._p_act = self._policy_fn(self._observation)
 
         with tf.variable_scope("main/action_value_1"):
-            x = self._dense(self._observation)
-            self.q1 = tf.layers.dense(x, self._dim_act)
+            # x = self._dense(self._observation)
+            # self.q1 = tf.layers.dense(x, self._dim_act)
+
+            self.q1 = self._qval_fn(self._observation)
 
         with tf.variable_scope("main/action_value_2"):
-            x = self._dense(self._observation)
-            self.q2 = tf.layers.dense(x, self._dim_act)
+            # x = self._dense(self._observation)
+            # self.q2 = tf.layers.dense(x, self._dim_act)
+
+            self.q2 = self._qval_fn(self._observation)
 
         with tf.variable_scope("main/state_value"):
-            x = self._dense(self._observation)
-            self.v = tf.squeeze(tf.layers.dense(x, 1))
+            # x = self._dense(self._observation)
+            # self.v = tf.squeeze(tf.layers.dense(x, 1))
+            self.v = self._sval_fn(self._observation)
 
         with tf.variable_scope("target/state_value"):
-            x = self._dense(self._next_observation)
-            self.v_targ = tf.squeeze(tf.layers.dense(x, 1))
+            # x = self._dense(self._next_observation)
+            # self.v_targ = tf.squeeze(tf.layers.dense(x, 1))
+            self.v_targ = self._sval_fn(self._next_observation)
 
-    def _dense(self, obs):
-        x = tf.layers.dense(obs, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-        return x
+    # def _dense(self, obs):
+    #     x = tf.layers.dense(obs, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+    #     return x
 
     def _build_algorithm(self):
         policy_optimizer = tf.train.AdamOptimizer(learning_rate=self._policy_lr)

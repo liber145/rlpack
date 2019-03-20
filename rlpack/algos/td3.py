@@ -10,7 +10,9 @@ class TD3(Base):
     def __init__(self,
                  rnd=1,
                  n_env=1,
-                 dim_obs=None,
+                 obs_fn=None,
+                 policy_fn=None,
+                 value_fn=None,
                  dim_act=None,
                  discount=0.99,
                  save_path="./log",
@@ -33,7 +35,9 @@ class TD3(Base):
             None
         """
 
-        self._dim_obs = dim_obs
+        self._obs_fn = obs_fn
+        self._policy_fn = policy_fn
+        self._value_fn = value_fn
         self._dim_act = dim_act
         self._discount = discount
 
@@ -56,11 +60,13 @@ class TD3(Base):
 
     def _build_network(self):
         """Build networks for algorithm."""
-        self._observation = tf.placeholder(tf.float32, [None, *self._dim_obs], name="observation")
+        # self._observation = tf.placeholder(tf.float32, [None, *self._dim_obs], name="observation")
+        self._observation = self._obs_fn()
         self._action = tf.placeholder(tf.int32, [None], name="action")
         self._reward = tf.placeholder(tf.float32, [None], name="reward")
         self._done = tf.placeholder(tf.float32, [None], name="done")
-        self._next_observation = tf.placeholder(tf.float32, [None, *self._dim_obs], name="next_observation")
+        # self._next_observation = tf.placeholder(tf.float32, [None, *self._dim_obs], name="next_observation")
+        self._next_observation = self._obs_fn()
 
         # with tf.variable_scope("policy_net"):
         #     x = tf.layers.dense(self._observation, 400, activation=tf.nn.relu, trainable=True)
@@ -101,34 +107,43 @@ class TD3(Base):
         #     self._target_qval_2 = tf.squeeze(tf.layers.dense(x, 1, activation=None, trainable=False))
 
         with tf.variable_scope("main/policy"):
-            x = self._dense(self._observation)
-            self._p_act = tf.layers.dense(x, self._dim_act, activation=tf.nn.softmax)
+            # x = self._dense(self._observation)
+            # self._p_act = tf.layers.dense(x, self._dim_act, activation=tf.nn.softmax)
+
+            self._p_act = self._policy_fn(self._observation)
 
         with tf.variable_scope("main/value_1"):
-            x = self._dense(self._observation)
-            self._qval_1 = tf.layers.dense(x, self._dim_act)
+            # x = self._dense(self._observation)
+            # self._qval_1 = tf.layers.dense(x, self._dim_act)
+
+            self._qval_1 = self._value_fn(self._observation)
 
         with tf.variable_scope("main/value_2"):
-            x = self._dense(self._observation)
-            self._qval_2 = tf.layers.dense(x, self._dim_act)
+            # x = self._dense(self._observation)
+            # self._qval_2 = tf.layers.dense(x, self._dim_act)
+
+            self._qval_2 = self._value_fn(self._observation)
 
         with tf.variable_scope("target/policy"):
-            x = self._dense(self._observation)
-            self._target_p_act = tf.layers.dense(x, self._dim_act, activation=tf.nn.softmax)
+            # x = self._dense(self._observation)
+            # self._target_p_act = tf.layers.dense(x, self._dim_act, activation=tf.nn.softmax)
+            self._target_p_act = self._policy_fn(self._next_observation)
 
         with tf.variable_scope("target/value_1"):
-            x = self._dense(self._observation)
-            self._target_qval_1 = tf.layers.dense(x, self._dim_act)
+            # x = self._dense(self._observation)
+            # self._target_qval_1 = tf.layers.dense(x, self._dim_act)
+            self._target_qval_1 = self._value_fn(self._next_observation)
 
         with tf.variable_scope("target/value_2"):
-            x = self._dense(self._observation)
-            self._target_qval_2 = tf.layers.dense(x, self._dim_act)
+            # x = self._dense(self._observation)
+            # self._target_qval_2 = tf.layers.dense(x, self._dim_act)
+            self._target_qval_2 = self._value_fn(self._next_observation)
 
-    def _dense(self, obs):
-        x = tf.layers.dense(obs, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-        return x
+    # def _dense(self, obs):
+    #     x = tf.layers.dense(obs, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+    #     return x
 
     # Update target network.
     def _update_target(self, net1, net2, rho=0):

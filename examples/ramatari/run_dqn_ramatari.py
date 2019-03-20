@@ -2,18 +2,27 @@ import argparse
 from collections import deque, Counter
 import gym
 import numpy as np
+import os
 from tqdm import tqdm
 from tensorboardX import SummaryWriter
 import tensorflow as tf
 
 from rlpack.algos import DQN
+from rlpack.environment import make_ramatari
 
 
 parser = argparse.ArgumentParser(description="Parse environment name.")
-parser.add_argument("--env", type=str, default="CartPole-v1")
-parser.add_argument("--niter", type=int, default=int(2e4))
-parser.add_argument("--batchsize", type=int, default=128)
+parser.add_argument("--gpu", type=str, default="0")
+parser.add_argument("--env", type=str, default="Pong-ramNoFrameskip-v4")
+parser.add_argument("--niter", type=int, default=int(10e6))
+parser.add_argument("--batchsize", type=int, default=32)
 args = parser.parse_args()
+
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
+
+
+env = make_ramatari(args.env)
 
 
 class Memory(object):
@@ -44,42 +53,42 @@ class Memory(object):
         reward_batch = self._reward[inds]
         done_batch = self._done[inds]
         next_state_batch = self._next_state[inds, ...]
-        extra = np.zeros(128, dtype=np.float32)
-        return (state_batch, extra), action_batch, reward_batch, done_batch, (next_state_batch, extra)
+        return state_batch, action_batch, reward_batch, done_batch, next_state_batch
 
 
 def obs_fn():
-    obs = tf.placeholder(shape=[None, 4], dtype=tf.float32, name="observation")
-    extra = tf.placeholder(tf.float32, [None], "extra")
-    return (obs, extra)
+    obs = tf.placeholder(shape=[None, 128, 4], dtype=tf.uint8, name="observation")
+    obs = tf.to_float(obs) / 255.0
+    return obs
 
 
-def value_fn(inputs):
-    obs = inputs[0]
-    x = tf.layers.dense(obs, 128, activation=tf.nn.relu)
-    x = tf.layers.dense(x, 128, activation=tf.nn.relu)
-    x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-    x = tf.layers.dense(x, 2)
+def conv1d(obs):
+    x = tf.layers.conv1d(obs, filters=32, kernel_size=8, strides=4, activation=tf.nn.relu)
+    x = tf.layers.conv1d(x, filters=64, kernel_size=4, strides=2, activation=tf.nn.relu)
+    x = tf.layers.conv1d(x, filters=64, kernel_size=3, strides=1, activation=tf.nn.relu)
+    x = tf.layers.flatten(x)
+    x = tf.layers.dense(x, units=256, activation=tf.nn.relu)
+    x = tf.layers.dense(x, units=env.action_space.n)
     return x
 
 
 def run_main():
-    env = gym.make(args.env)
     agent = DQN(obs_fn=obs_fn,
-                value_fn=value_fn,
+                value_fn=conv1d,
                 dim_act=env.action_space.n,
                 update_target_freq=100,
                 log_freq=10,
-                save_path="./log/dqn_cc",
-                lr=1e-4,
+                save_path=f"./log/dqn_ramatari/{args.env}",
+                lr=2.5e-4,
+                epsilon_schedule=lambda x: max(0.1, (1e6-x) / 1e6),
                 train_epoch=1)
-    mem = Memory(capacity=int(1e5), dim_obs=env.observation_space.shape, dim_act=env.action_space.n)
-    sw = SummaryWriter(log_dir="./log/dqn_cc")
+    mem = Memory(capacity=int(1e6), dim_obs=(128, 4), dim_act=env.action_space.n)
+    sw = SummaryWriter(log_dir=f"./log/dqn_ramatari/{args.env}")
     totrew, totlen, rewcnt = 0, 0, Counter()
 
     s = env.reset()
     for i in tqdm(range(args.niter)):
-        a = agent.get_action((s[np.newaxis, :], np.zeros(1)))[0]
+        a = agent.get_action(s[np.newaxis, :])[0]
         ns, r, d, _ = env.step(a)
         mem.store_sards(s, a, r, d, ns)
         s = ns
@@ -93,7 +102,6 @@ def run_main():
         if d is True:
             s = env.reset()
             sw.add_scalars("dqn", {"totrew": totrew, "totlen": totlen}, i)
-
             tqdm.write(f"{i}th. totrew={totrew}, totlen={totlen}, rewcnt={rewttt(rewcnt, env.action_space.n)}")
             totrew, totlen, rewcnt = 0, 0, Counter()
 
@@ -114,6 +122,8 @@ def run_game():
         ns, r, d, _ = env.step(a)
         ns = s
         totrew += r
+        print("ns type:", type(ns[0, 0]))
+        input()
         if d is True:
             s = env.reset()
 

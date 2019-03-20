@@ -15,7 +15,8 @@ from .base import Base
 
 class PG(Base):
     def __init__(self,
-                 dim_obs=None,
+                 obs_fn=None,
+                 policy_fn=None,
                  dim_act=None,
                  rnd=1,
                  discount=0.99,
@@ -27,7 +28,8 @@ class PG(Base):
                  log_freq=10,
                  ):
 
-        self._dim_obs = dim_obs
+        self._obs_fn = obs_fn
+        self._policy_fn = policy_fn
         self._dim_act = dim_act
         self._discount = discount
         self._train_epoch = train_epoch
@@ -40,18 +42,20 @@ class PG(Base):
         super().__init__(save_path=save_path, rnd=rnd)
 
     def _build_network(self):
-        self._observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name="observation")
+        # self._observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name="observation")
+        self._observation = self._obs_fn()
         self._action = tf.placeholder(shape=[None], dtype=tf.int32, name="action")
         self._return = tf.placeholder(shape=[None], dtype=tf.float32, name="return")
 
         with tf.variable_scope("main"):
-            self._p_act = self._dense(self._observation)
+            # self._p_act = self._dense(self._observation)
+            self._p_act = self._policy_fn(self._observation)
 
-    def _dense(self, obs):
-        x = tf.layers.dense(obs, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-        return tf.layers.dense(x, self._dim_act, activation=tf.nn.softmax)
+    # def _dense(self, obs):
+    #     x = tf.layers.dense(obs, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+    #     return tf.layers.dense(x, self._dim_act, activation=tf.nn.softmax)
 
     def _build_algorithm(self):
         optimizer = tf.train.AdamOptimizer(1e-4)
@@ -97,13 +101,11 @@ class PG(Base):
         """trajectory由一系列(s,a,r)构成。最后一组操作之后游戏结束。
         """
         n = len(trajectory)
-        s_batch = np.zeros((n, *self._dim_obs), dtype=np.float32)
-        a_batch = np.zeros(n, dtype=np.int32)
+        s_batch = np.array([t[0] for t in trajectory], dtype=np.float32)
+        a_batch = np.array([t[1] for t in trajectory], dtype=np.int32)
         allr_batch = np.zeros(n, dtype=np.float32)
         tsum = 0
         for i, (s, a, r) in enumerate(reversed(trajectory)):
             tsum = self._discount * tsum + r
             allr_batch[i] = tsum
-            s_batch[i, ...] = s
-            a_batch[i] = a
         return s_batch, a_batch, allr_batch

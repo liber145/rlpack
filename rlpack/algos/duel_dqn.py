@@ -8,7 +8,8 @@ class DuelDQN(Base):
     """Dueling Archtecture, Double DQN"""
 
     def __init__(self,
-                 dim_obs=None,
+                 obs_fn=None,
+                 value_fn=None,
                  dim_act=None,
                  rnd=1,
                  discount=0.99,
@@ -21,7 +22,8 @@ class DuelDQN(Base):
                  train_epoch=1,
                  ):
 
-        self._dim_obs = dim_obs
+        self._obs_fn = obs_fn
+        self._value_fn = value_fn
         self._dim_act = dim_act
         self._discount = discount
         self._epsilon_schedule = epsilon_schedule
@@ -38,40 +40,49 @@ class DuelDQN(Base):
         """Build networks for algorithm."""
         # self._observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.uint8, name="observation")
         # self._observation = tf.to_float(self._observation) / 256.0
-        self._observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name="observation")
+        # self._observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name="observation")
+        self._observation = self._obs_fn()
         self._action = tf.placeholder(shape=[None], dtype=tf.int32, name="action")
         self._reward = tf.placeholder(shape=[None], dtype=tf.float32, name="reward")
         self._done = tf.placeholder(shape=[None], dtype=tf.float32, name="done")
-        self._next_observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name="next_observation")
+        # self._next_observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name="next_observation")
+        self._next_observation = self._obs_fn()
 
         with tf.variable_scope("main"):
-            x = self._dense(self._observation)
-            self._v = tf.layers.dense(x, 1)
-            self._adv = tf.layers.dense(x, self._dim_act)
+            # x = self._dense(self._observation)
+            # self._v = tf.layers.dense(x, 1)
+            # self._adv = tf.layers.dense(x, self._dim_act)
+            self._v, self._adv = self._value_fn(self._observation)
 
         with tf.variable_scope("main", reuse=True):
-            x = self._dense(self._next_observation)
-            self._act_v = tf.stop_gradient(tf.layers.dense(x, 1))
-            self._act_adv = tf.stop_gradient(tf.layers.dense(x, self._dim_act))
+            # x = self._dense(self._next_observation)
+            # self._act_v = tf.stop_gradient(tf.layers.dense(x, 1))
+            # self._act_adv = tf.stop_gradient(tf.layers.dense(x, self._dim_act))
+            self._act_v, self._act_adv = self._value_fn(self._next_observation)
+            self._act_v = tf.stop_gradient(self._act_adv)
+            self._act_adv = tf.stop_gradient(self._act_adv)
 
         with tf.variable_scope("target"):
-            x = self._dense(self._next_observation)
-            self._target_v = tf.stop_gradient(tf.layers.dense(x, 1))
-            self._target_adv = tf.stop_gradient(tf.layers.dense(x, self._dim_act))
+            # x = self._dense(self._next_observation)
+            # self._target_v = tf.stop_gradient(tf.layers.dense(x, 1))
+            # self._target_adv = tf.stop_gradient(tf.layers.dense(x, self._dim_act))
+            self._target_v, self._target_adv = self._value_fn(self._next_observation)
+            self._target_v = tf.stop_gradient(self._target_v)
+            self._target_adv = tf.stop_gradient(self._target_adv)
 
-    def _conv(self, x):
-        x = tf.layers.conv2d(x, 32, 8, 4, activation=tf.nn.relu)
-        x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu)
-        x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu)
-        x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
-        x = tf.layers.dense(x, 512, activation=tf.nn.relu)
-        return x
+    # def _conv(self, x):
+    #     x = tf.layers.conv2d(x, 32, 8, 4, activation=tf.nn.relu)
+    #     x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu)
+    #     x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu)
+    #     x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
+    #     x = tf.layers.dense(x, 512, activation=tf.nn.relu)
+    #     return x
 
-    def _dense(self, x):
-        x = tf.layers.dense(x, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-        return x
+    # def _dense(self, x):
+    #     x = tf.layers.dense(x, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+    #     return x
 
     def _build_algorithm(self):
         """Build networks for algorithm."""

@@ -11,7 +11,9 @@ class A2C(Base):
     """Advantage Actor Critic."""
 
     def __init__(self,
-                 dim_obs=None,
+                 obs_fn=None,
+                 policy_fn=None,
+                 value_fn=None,
                  dim_act=None,
                  rnd=1,
                  discount=0.99,
@@ -27,7 +29,9 @@ class A2C(Base):
                  batch_size=64
                  ):
 
-        self._dim_obs = dim_obs
+        self._obs_fn = obs_fn
+        self._policy_fn = policy_fn
+        self._value_fn = value_fn
         self._dim_act = dim_act
         self._discount = discount
         self._gae = gae
@@ -45,24 +49,28 @@ class A2C(Base):
     def _build_network(self):
         """Build networks for algorithm."""
         # Build inputs.
-        self._observation = tf.placeholder(tf.float32, [None, *self._dim_obs], "observation")
+        # self._observation = tf.placeholder(tf.float32, [None, *self._dim_obs], "observation")
+
+        self._observation = self._obs_fn()
         self._action = tf.placeholder(tf.int32, [None], "action")
         self._target_state_value = tf.placeholder(tf.float32, [None], "target_state_value")
         self._advantage = tf.placeholder(tf.float32, [None], "advantage")
 
         with tf.variable_scope("policy"):
-            x = self._dense(self._observation)
-            self._logit_a = tf.layers.dense(x, self._dim_act)
+            self._logit_a = self._policy_fn(self._observation)
+            # x = self._dense(self._observation)
+            # self._logit_a = tf.layers.dense(x, self._dim_act)
 
         with tf.variable_scope("value"):
-            x = self._dense(self._observation)
-            self._state_value = tf.squeeze(tf.layers.dense(x, 1))
+            # x = self._dense(self._observation)
+            # self._state_value = tf.squeeze(tf.layers.dense(x, 1))
+            self._state_value = self._value_fn(self._observation)
 
-    def _dense(self, obs):
-        x = tf.layers.dense(obs, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-        return x
+    # def _dense(self, obs):
+    #     x = tf.layers.dense(obs, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+    #     return x
 
     def _build_algorithm(self):
         policy_optimizer = tf.train.AdagradOptimizer(0.01)  # (self._lr, epsilon=1e-10)

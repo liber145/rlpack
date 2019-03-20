@@ -9,7 +9,8 @@ from .base import Base
 
 class DoubleDQN(Base):
     def __init__(self,
-                 dim_obs=None,
+                 obs_fn=None,
+                 value_fn=None,
                  dim_act=None,
                  rnd=1,
                  discount=0.99,
@@ -22,7 +23,8 @@ class DoubleDQN(Base):
                  save_model_freq=1000,
                  ):
 
-        self._dim_obs = dim_obs
+        self._obs_fn = obs_fn
+        self._value_fn = value_fn
         self._dim_act = dim_act
         self._discount = discount
         self._update_target_freq = update_target_freq
@@ -39,37 +41,39 @@ class DoubleDQN(Base):
         """Build networks for algorithm."""
         # self._observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.uint8, name="observation")
         # self._observation = tf.to_float(self._observation) / 256.0
-        self._observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name="observation")
+        # self._observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name="observation")
+        self._observation = self._obs_fn()
         self._action = tf.placeholder(dtype=tf.int32, shape=[None], name="action")
         self._reward = tf.placeholder(dtype=tf.float32, shape=[None], name="reward")
         self._done = tf.placeholder(dtype=tf.float32, shape=[None], name="done")
         # self._next_observation = tf.placeholder(dtype=tf.uint8, shape=[None, *self._dim_obs], name="next_observation")
         # self._next_observation = tf.to_float(self._next_observation) / 256.0
-        self._next_observation = tf.placeholder(dtype=tf.float32, shape=[None, *self._dim_obs], name="next_observation")
+        # self._next_observation = tf.placeholder(dtype=tf.float32, shape=[None, *self._dim_obs], name="next_observation")
+        self._next_observation = self._obs_fn()
 
         with tf.variable_scope("main/qnet"):
-            self._qvals = self._dense(self._observation)
+            self._qvals = self._value_fn(self._observation)
 
         with tf.variable_scope("main/qnet", reuse=True):
-            self._act_qvals = tf.stop_gradient(self._dense(self._next_observation))
+            self._act_qvals = tf.stop_gradient(self._value_fn(self._next_observation))
 
         with tf.variable_scope("target/qnet"):
-            self._target_qvals = tf.stop_gradient(self._dense(self._next_observation))
+            self._target_qvals = tf.stop_gradient(self._value_fn(self._next_observation))
 
-    def _conv(self, x):
-        x = tf.layers.conv2d(x, 32, 8, 4, activation=tf.nn.relu)
-        x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu)
-        x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu)
-        x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
-        x = tf.layers.dense(x, 512, activation=tf.nn.relu)
-        return tf.layers.dense(x, self._dim_act)
+    # def _conv(self, x):
+    #     x = tf.layers.conv2d(x, 32, 8, 4, activation=tf.nn.relu)
+    #     x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu)
+    #     x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu)
+    #     x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
+    #     x = tf.layers.dense(x, 512, activation=tf.nn.relu)
+    #     return tf.layers.dense(x, self._dim_act)
 
-    def _dense(self, x):
-        x = tf.layers.dense(x, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 128, activation=tf.nn.relu)
-        x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-        x = tf.layers.dense(x, self._dim_act)
-        return x
+    # def _dense(self, x):
+    #     x = tf.layers.dense(x, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, self._dim_act)
+    #     return x
 
     def _build_algorithm(self):
         self.optimizer = tf.train.AdamOptimizer(self._lr)

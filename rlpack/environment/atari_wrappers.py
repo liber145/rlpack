@@ -316,6 +316,6 @@ if __name__ == "__main__":
     for _ in range(1000):
         a = np.random.choice(2)
         ns, r, d, _ = env.step(a)
-        print("next state shape:", np.array(ns).shape)
+        print("next state shape:", ns.shape, type(ns[0, 0]))
         print(np.max(ns), np.min(ns))
         print("r:", r, "d:", d)
