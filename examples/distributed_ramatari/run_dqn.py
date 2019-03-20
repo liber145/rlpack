@@ -11,11 +11,28 @@ from rlpack.algos import DQN
 
 from utils import AgentWrapper
 
-agent_wrapper = AgentWrapper(port=50000)
+
+parser = argparse.ArgumentParser(description="Parse environment name.")
+parser.add_argument("--gpu", type=str, default="0")
+parser.add_argument("--port", type=int, default=50000)
+parser.add_argument("--env", type=str, default="Pong-ramNoFrameskip-v4")
+parser.add_argument("--niter", type=int, default=int(1e6))
+parser.add_argument("--batchsize", type=int, default=32)
+args = parser.parse_args()
+
+
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
+
+
+agent_wrapper = AgentWrapper(args.port)
 agent_wrapper.start()
 
 
-nb_actions = 6
+env2nact = {"Breakout-ramNoFrameskip-v4": 4,
+            "Pong-ramNoFrameskip-v4": 6,
+            }
+nb_actions = env2nact[args.env]
 
 
 class Memory(object):
