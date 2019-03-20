@@ -22,6 +22,7 @@ class AADQN(Base):
                  weight_low=-3.0,
                  weight_high=5.0,
                  lr=2.5e-4,
+                 max_grad_norm=40,
                  epsilon_schedule=lambda x: max(0.1, (1e6-x) / 1e6),
                  update_target_freq=10000,
                  train_epoch=1,
@@ -41,6 +42,7 @@ class AADQN(Base):
         self._update_target_freq = update_target_freq
         self._epsilon_schedule = epsilon_schedule
         self._lr = lr
+        self._max_grad_norm = max_grad_norm
         self._train_epoch = train_epoch
         self._weight_low = weight_low
         self._weight_high = weight_high
@@ -109,7 +111,10 @@ class AADQN(Base):
 
         # Compute loss and optimize the object.
         loss = tf.reduce_mean(tf.squared_difference(q_backup, action_q))   # 损失值。
-        self._train_op = self.optimizer.minimize(loss, var_list=trainable_variables)
+        grads = tf.gradients(loss, trainable_variables)
+        clipped_grads, _ = tf.clip_by_global_norm(grads, self._max_grad_norm)
+        self._train_op = self.optimizer.apply_gradients(zip(clipped_grads, trainable_variables))
+        # self._train_op = self.optimizer.minimize(loss, var_list=trainable_variables)
 
         # Update target network.
         update_target_operation = []

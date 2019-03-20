@@ -18,6 +18,7 @@ class DQN(Base):
                  epsilon_schedule=lambda x: max(0.1, (1e4-x) / 1e4),
                  update_target_freq=10000,
                  lr=2.5e-4,
+                 max_grad_norm=40,
                  train_epoch=5,
                  save_path="./log",
                  save_model_freq=10000,
@@ -49,6 +50,7 @@ _value_fn
         self._update_target_freq = update_target_freq
         self._epsilon_schedule = epsilon_schedule
         self._lr = lr
+        self._max_grad_norm = max_grad_norm
         self._train_epoch = train_epoch
 
         self._save_model_freq = save_model_freq
@@ -108,7 +110,11 @@ _value_fn
 
         # Compute loss and optimize the object.
         loss = tf.reduce_mean(tf.squared_difference(q_backup, action_q))   # 损失值。
-        self._train_op = self.optimizer.minimize(loss, var_list=trainable_variables)
+
+        grads = tf.gradients(loss, trainable_variables)
+        clipped_grads, _ = tf.clip_by_global_norm(grads, self._max_grad_norm)
+        self._train_op = self.optimizer.apply_gradients(zip(clipped_grads, trainable_variables))
+        # self._train_op = self.optimizer.minimize(loss, var_list=trainable_variables)
 
         # Update target network.
         def _update_target(old_net, new_net):

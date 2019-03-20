@@ -8,7 +8,7 @@ activate_env = "conda activate py36"
 export_path = "export PYTHONPATH=."
 
 
-env_names = ["Alien", "Amidar", "BankHeist", "Pong"]
+env_names = ["Breakout", "Pong"]
 
 for i in range(len(env_names)):
     gpu_id = 0
