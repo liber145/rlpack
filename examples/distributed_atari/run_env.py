@@ -6,7 +6,7 @@ from rlpack.environment import make_atari
 parser = argparse.ArgumentParser(description="Parse environment name.")
 parser.add_argument("--ip", type=str, default="localhost")
 parser.add_argument("--port", type=int, default=50000)
-parser.add_argument("--env", type=str, default="Pong-NoFrameskip-v4")
+parser.add_argument("--env", type=str, default="PongNoFrameskip-v4")
 args = parser.parse_args()
 
 

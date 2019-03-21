@@ -13,7 +13,7 @@ from rlpack.environment import make_atari
 
 parser = argparse.ArgumentParser(description="Parse environment name.")
 parser.add_argument("--gpu", type=str, default="0")
-parser.add_argument("--env", type=str, default="Pong-NoFrameskip-v4")
+parser.add_argument("--env", type=str, default="PongNoFrameskip-v4")
 parser.add_argument("--niter", type=int, default=int(10e6))
 parser.add_argument("--batchsize", type=int, default=32)
 args = parser.parse_args()
@@ -121,16 +121,17 @@ def rewttt(rewcnt, dim_act):
 def run_game():
     s = env.reset()
     totrew = 0
-    for _ in range(100):
-        a = np.random.randint(2)
+    for _ in range(100000):
+        a = np.random.randint(6)
         ns, r, d, _ = env.step(a)
         ns = s
         totrew += r
-        print("ns type:", type(ns[0, 0]))
-        input()
+        # print("ns type:", type(ns[0, 0, 0]))
         if d is True:
             s = env.reset()
+            print("totrew:", totrew)
+            totrew = 0
 
 
 if __name__ == "__main__":
-    run_main()
+    run_game()

@@ -13,7 +13,7 @@ from rlpack.environment import make_atari
 
 parser = argparse.ArgumentParser(description="Parse environment name.")
 parser.add_argument("--gpu", type=str, default="0")
-parser.add_argument("--env", type=str, default="Pong-NoFrameskip-v4")
+parser.add_argument("--env", type=str, default="PongNoFrameskip-v4")
 parser.add_argument("--niter", type=int, default=int(10e6))
 parser.add_argument("--batchsize", type=int, default=32)
 args = parser.parse_args()

@@ -1,5 +1,5 @@
 import argparse
-from collections import deque, Counter
+from collections import deque, Counter, defaultdict
 import gym
 import numpy as np
 import os
@@ -15,7 +15,7 @@ from utils import AgentWrapper
 parser = argparse.ArgumentParser(description="Parse environment name.")
 parser.add_argument("--gpu", type=str, default="0")
 parser.add_argument("--port", type=int, default=50000)
-parser.add_argument("--env", type=str, default="Pong-NoFrameskip-v4")
+parser.add_argument("--env", type=str, default="PongNoFrameskip-v4")
 args = parser.parse_args()
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -109,6 +109,8 @@ def main():
     sw = SummaryWriter(log_dir=LOG_PATH)
 
     t = 0
+    totrew = defaultdict(int)
+    printrew = deque(maxlen=20)
     while True:
         for i in tqdm(range(10)):
             env_ids, states, rewards, dones = agent_wrapper.get_srd_batch(
@@ -117,13 +119,19 @@ def main():
             actions = agent.get_action(np.asarray(states))
             agent_wrapper.put_a_batch(env_ids, actions)
 
+            for i, env_id in enumerate(env_ids):
+                totrew[env_id] += rewards[i]
+                if dones[i] is True:
+                    printrew.append(totrew[env_id])
+                    totrew[env_id] = 0
+
         s_list, a_list, r_list, d_list = agent_wrapper.get_episodes(withdraw_running=True)
         mem.store_sard(s_list, a_list, r_list, d_list)
 
-        meanrew = np.mean([np.sum(x) for x in r_list])
+        meanrew = np.mean(printrew)
         print(f"{t}th reward:", meanrew)
         t += 1
-        sw.add_scalars("dqn", {"totrew": meanrew}, global_step=i)
+        sw.add_scalars("dqn", {"totrew": meanrew}, global_step=t)
 
         print("s:", [len(x) for x in s_list])
         print("a:", [len(x) for x in a_list])
