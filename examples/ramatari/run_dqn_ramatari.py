@@ -76,7 +76,7 @@ def run_main():
     agent = DQN(obs_fn=obs_fn,
                 value_fn=value_fn,
                 dim_act=env.action_space.n,
-                update_target_freq=100,
+                update_target_freq=10000,
                 log_freq=10,
                 save_path=f"./log/dqn_ramatari/{args.env}",
                 lr=2.5e-4,
@@ -98,10 +98,6 @@ def run_main():
         rewcnt.update([a])
 
         if i % 4 == 0:
-            ts, ta, tr, td, tns = mem.sample(64)
-            print(ts.shape)
-            print(type(ts[0, 0, 0]))
-
             agent.update(mem.sample(args.batchsize))
 
         if d is True:

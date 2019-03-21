@@ -26,7 +26,7 @@ env = make_ramatari(args.env)
 
 
 class Memory(object):
-    def __init__(self, capacity: int, dim_obs, dim_act, statetype=np.float32):
+    def __init__(self, capacity: int, dim_obs, dim_act, statetype=np.uint8):
         self._state = np.zeros((capacity, *dim_obs), dtype=statetype)
         self._action = np.zeros(capacity, dtype=np.int32)
         self._reward = np.zeros(capacity, dtype=np.float32)
@@ -67,7 +67,7 @@ def conv1d(obs):
     x = tf.layers.conv1d(x, filters=64, kernel_size=4, strides=2, activation=tf.nn.relu)
     x = tf.layers.conv1d(x, filters=64, kernel_size=3, strides=1, activation=tf.nn.relu)
     x = tf.layers.flatten(x)
-    x = tf.layers.dense(x, units=256, activation=tf.nn.relu)
+    x = tf.layers.dense(x, units=64, activation=tf.nn.relu)
     x = tf.layers.dense(x, units=env.action_space.n)
     return x
 
@@ -76,10 +76,10 @@ def run_main():
     agent = AADQN(obs_fn=obs_fn,
                   value_fn=conv1d,
                   dim_act=env.action_space.n,
-                  update_target_freq=100,
-                  log_freq=10,
-                  weight_low=-1,
-                  weight_high=1,
+                  update_target_freq=10,
+                  log_freq=100,
+                  weight_low=-3,
+                  weight_high=5,
                   save_path=f"./log/aadqn_ramatari/{args.env}",
                   lr=2.5e-4,
                   epsilon_schedule=lambda x: max(0.1, (1e6-x) / 1e6),

@@ -8,10 +8,10 @@ activate_env = "conda activate py36"
 export_path = "export PYTHONPATH=."
 
 
-env_names = ["Alien", "Amidar", "BankHeist", "BattleZone", "Centipede", "ChopperCommand", "DemonAttack", "DoubleDunk"]
+env_names = ["Breakout", "Pong"]
 
 for i in range(len(env_names)):
-    gpu_id = i // 2
+    gpu_id = 0
     envname = env_names[i]
 
     window = session.new_window()
@@ -22,4 +22,4 @@ for i in range(len(env_names)):
     time.sleep(0.3)
     pane.send_keys(export_path)
     time.sleep(0.3)
-    pane.send_keys(f"python examples/atari/run_dqn_atari.py --env_name {envname}-ramNoFrameskip-v4 --gpu {gpu_id}")
+    pane.send_keys(f"python examples/ramatari/run_aadqn_ramatari.py --env {envname}-ramNoFrameskip-v4 --gpu {gpu_id}")

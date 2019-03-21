@@ -92,7 +92,7 @@ class AADQN(Base):
 
     def _build_algorithm(self):
         """Build networks for algorithm."""
-        self.optimizer = tf.train.AdamOptimizer(self._lr, epsilon=1e-8)
+        self.optimizer = tf.train.AdadeltaOptimizer(1.0)
         trainable_variables = tf.trainable_variables("main/qnet")
 
         # Compute the state value.

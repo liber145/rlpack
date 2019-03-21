@@ -271,7 +271,7 @@ class RamStack(gym.Wrapper):
     #     return (128, 4)
 
 
-def make_atari(env_id, max_episode_steps=None):
+def make_oldatari(env_id, max_episode_steps=None):
     env = gym.make(env_id)
     assert 'NoFrameskip' in env.spec.id
     env = NoopResetEnv(env, noop_max=30)
@@ -299,8 +299,14 @@ def wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=False, 
     return env
 
 
-def make_ramatari(env_id, max_episode_step=None):
-    env = make_atari(env_id)
+def make_atari(env_id, max_episode_steps=None):
+    env = make_oldatari(env_id, max_episode_steps)
+    env = wrap_deepmind(env, frame_stack=True)
+    return env
+
+
+def make_ramatari(env_id, max_episode_steps=None):
+    env = make_oldatari(env_id, max_episode_steps)
     assert "ramNoFrameskip" in env.spec.id
     env = wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=True, scale=False, warp=False)
     env = RamStack(env)
@@ -308,7 +314,7 @@ def make_ramatari(env_id, max_episode_step=None):
 
 
 if __name__ == "__main__":
-    env = make_ramatari("Pong-ramNoFrameskip-v4", max_episode_step=1000)
+    env = make_ramatari("Pong-ramNoFrameskip-v4", max_episode_steps=1000)
     env.reset()
     print(env.action_space.n)
     print(env.observation_space.shape)
