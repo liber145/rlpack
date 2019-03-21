@@ -1,14 +1,20 @@
+import argparse
 from utils import EnvironmentWrapper
-from rlpack.environment import make_ramatari
+from rlpack.environment import make_atari
 
 
-env_wrapper = EnvironmentWrapper(
-    addr_port_tuple=('localhost', 50000))
+parser = argparse.ArgumentParser(description="Parse environment name.")
+parser.add_argument("--ip", type=str, default="localhost")
+parser.add_argument("--port", type=int, default=50000)
+parser.add_argument("--env", type=str, default="Pong-NoFrameskip-v4")
+args = parser.parse_args()
+
+
+env_wrapper = EnvironmentWrapper(addr_port_tuple=(args.ip, args.port))
 
 # env side reset
 
-
-env = make_ramatari("Pong-ramNoFrameskip-v4")
+env = make_atari(args.env)
 
 
 state, reward, done = env.reset(), 0, False

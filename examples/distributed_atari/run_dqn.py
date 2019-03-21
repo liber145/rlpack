@@ -11,13 +11,19 @@ from rlpack.algos import DQN
 
 from utils import AgentWrapper
 
+
+parser = argparse.ArgumentParser(description="Parse environment name.")
+parser.add_argument("--port", type=int, default=50000)
+parser.add_argument("--env", type=str, default="Pong-NoFrameskip-v4")
+args = parser.parse_args()
+
 agent_wrapper = AgentWrapper(port=50000)
 agent_wrapper.start()
 
 
 nb_actions = 6
 OBS_SHAPE = (84, 84, 4)
-LOG_PATH = f"./log/aadqn_atari/Pong"
+LOG_PATH = f"./log/dqn_atari/Pong"
 
 
 class Memory(object):

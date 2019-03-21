@@ -11,7 +11,7 @@ pane.send_keys("cd /data/lyj/rlpack")
 time.sleep(0.3)
 pane.send_keys("conda activate gpu")
 time.sleep(0.3)
-pane.send_keys(f"python examples/distributed_ramatari/run_dqn.py --gpu 0")
+pane.send_keys(f"python examples/distributed_atari/run_dqn.py --gpu 0")
 
 
 pane_list = list()
@@ -52,4 +52,4 @@ for pane in pane_list:
     time.sleep(0.3)
     pane.send_keys("conda activate gpu")
     time.sleep(0.3)
-    pane.send_keys(f"python examples/distributed_ramatari/run_env.py --ip gpu1")
+    pane.send_keys(f"python examples/distributed_atari/run_env.py --ip gpu1")
