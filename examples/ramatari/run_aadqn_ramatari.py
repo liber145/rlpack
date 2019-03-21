@@ -24,6 +24,9 @@ os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
 env = make_ramatari(args.env)
 
+OBS_SHAPE = (128, 4)
+LOG_PATH = f"./log/aadqn_ramatari/{args.env}"
+
 
 class Memory(object):
     def __init__(self, capacity: int, dim_obs, dim_act, statetype=np.uint8):
@@ -80,12 +83,12 @@ def run_main():
                   log_freq=100,
                   weight_low=-3,
                   weight_high=5,
-                  save_path=f"./log/aadqn_ramatari/{args.env}",
+                  save_path=LOG_PATH,
                   lr=2.5e-4,
                   epsilon_schedule=lambda x: max(0.1, (1e6-x) / 1e6),
                   )
-    mem = Memory(capacity=int(1e6), dim_obs=(128, 4), dim_act=env.action_space.n)
-    sw = SummaryWriter(log_dir=f"./log/aadqn_ramatari/{args.env}")
+    mem = Memory(capacity=int(1e6), dim_obs=(128, 4), dim_act=env.action_space.n, statetype=np.uint8)
+    sw = SummaryWriter(log_dir=LOG_PATH)
     totrew, totlen, rewcnt = 0, 0, Counter()
 
     s = env.reset()

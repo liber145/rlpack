@@ -67,7 +67,7 @@ def value_fn(obs):
     x = tf.layers.conv1d(x, filters=64, kernel_size=4, strides=2, activation=tf.nn.relu)
     x = tf.layers.conv1d(x, filters=64, kernel_size=3, strides=1, activation=tf.nn.relu)
     x = tf.layers.flatten(x)
-    x = tf.layers.dense(x, units=256, activation=tf.nn.relu)
+    x = tf.layers.dense(x, units=64, activation=tf.nn.relu)
     x = tf.layers.dense(x, units=env.action_space.n)
     return x
 

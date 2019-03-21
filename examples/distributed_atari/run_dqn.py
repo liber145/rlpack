@@ -100,7 +100,7 @@ def main():
                 value_fn=value_fn,
                 dim_act=nb_actions,
                 update_target_freq=10000,
-                log_freq=10,
+                log_freq=100,
                 save_path=LOG_PATH,
                 lr=2.5e-4,
                 epsilon_schedule=lambda x: max(0.1, (1e6-x) / 1e6),
