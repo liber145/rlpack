@@ -13,9 +13,13 @@ from utils import AgentWrapper
 
 
 parser = argparse.ArgumentParser(description="Parse environment name.")
+parser.add_argument("--gpu", type=str, default="0")
 parser.add_argument("--port", type=int, default=50000)
 parser.add_argument("--env", type=str, default="Pong-NoFrameskip-v4")
 args = parser.parse_args()
+
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
 agent_wrapper = AgentWrapper(port=50000)
 agent_wrapper.start()

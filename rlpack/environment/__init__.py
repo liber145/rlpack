@@ -4,4 +4,4 @@ from .env_wrapper import AtariWrapper
 from .env_wrapper import MujocoWrapper
 from .env_wrapper import AsyncEnvWrapper
 from .env_wrapper import ClassicControlWrapper
-from .atari_wrappers import make_ramatari
+from .atari_wrappers import make_ramatari, make_atari
