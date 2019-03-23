@@ -3,7 +3,7 @@ import time
 
 server = libtmux.Server()
 session = server.new_session(session_name="atari")
-cdwp = "cd /data/lyj/rlpack"
+cdwp = "cd ~/Programs/rlpack"
 activate_env = "conda activate gpu"
 export_path = "export PYTHONPATH=."
 
