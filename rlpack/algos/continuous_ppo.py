@@ -45,7 +45,7 @@ class ContinuousPPO(Base):
 
         super().__init__(save_path=save_path, rnd=rnd)
 
-    def build_network(self):
+    def _build_network(self):
         """Build networks for algorithm."""
         self._observation = tf.placeholder(tf.float32, [None, *self._dim_obs], name="observation")
 
@@ -62,7 +62,7 @@ class ContinuousPPO(Base):
             x = tf.layers.dense(x, 64, activation=tf.nn.tanh)
             self._state_value = tf.squeeze(tf.layers.dense(x, 1, activation=None))
 
-    def build_algorithm(self):
+    def _build_algorithm(self):
         """Build networks for algorithm."""
         self._clip_epsilon = tf.placeholder(tf.float32)
         self._lr = tf.placeholder(tf.float32)
@@ -154,7 +154,7 @@ class ContinuousPPO(Base):
                                   self.old_mu: old_mu_batch[span_index, ...],
                                   self.old_log_var: old_log_var,
                                   self._lr: self._lr_schedule(global_step),
-                                  self._clip_epsilon: self._clip_epsilon(global_step)
+                                  self._clip_epsilon: self._clip_schedule(global_step),
                               })
 
         # Save model.
