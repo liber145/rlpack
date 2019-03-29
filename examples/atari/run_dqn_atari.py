@@ -1,111 +1,137 @@
-import os
-from collections import deque
-
-import numpy as np
-from rlpack.algos import DQN
-from rlpack.common import DiscreteActionMemory
-from rlpack.environment import AtariWrapper
-from tensorboardX import SummaryWriter
-from tqdm import tqdm
 import argparse
+from collections import deque, Counter
+import gym
+import numpy as np
+import os
+from tqdm import tqdm
+from tensorboardX import SummaryWriter
+import tensorflow as tf
 
-used_gpu = '0'
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = used_gpu
+from rlpack.algos import DQN
+from rlpack.environment import make_atari
 
-parser = argparse.ArgumentParser(description='Process some integers.')
-parser.add_argument('--env_name',  type=str, default="PongNoFrameskip-v4")
+
+parser = argparse.ArgumentParser(description="Parse environment name.")
+parser.add_argument("--gpu", type=str, default="0")
+parser.add_argument("--env", type=str, default="PongNoFrameskip-v4")
+parser.add_argument("--niter", type=int, default=int(10e6))
+parser.add_argument("--batchsize", type=int, default=32)
 args = parser.parse_args()
 
-
-class Config(object):
-    def __init__(self):
-        # random seed and path.
-        self.rnd = 1
-        self.save_path = f"./log/dqn_{args.env_name}"
-
-        # Environment parameters.
-        self.n_env = 1
-        self.dim_observation = None
-        self.dim_action = None   # For continuous action.
-
-        # Traning length.
-        self.update_step = int(1e6)   # for each env
-        self.warm_start_length = 2000
-
-        # Cycle parameters.
-        self.save_model_freq = 1000
-        self.log_freq = 100
-        self.update_target_freq = 10000
-
-        # Algorithm parameters.
-        self.batch_size = 64
-        self.discount = 0.99
-        self.max_grad_norm = 0.5
-        self.value_lr_schedule = lambda x: 2.5e-4
-        self.epsilon_schedule = lambda x: max(0.1, 1 - min(x, 1e5) / 1e5)
-        self.memory_size = 100000
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
 
-def process_config(env):
-    config = Config()
-    config.dim_observation = env.dim_observation
-    config.dim_action = env.dim_action
-    return config
+env = make_atari(args.env)
 
 
-def safemean(x):
-    return np.nan if len(x) == 0 else np.mean(x)
+OBS_SHAPE = (84, 84, 4)
+LOG_PATH = f"./log/aadqn_atari/{args.env}"
 
 
-def learn(env, agent, config):
+class Memory(object):
+    def __init__(self, capacity: int, dim_obs, dim_act, statetype=np.uint8):
+        self._state = np.zeros((capacity, *dim_obs), dtype=statetype)
+        self._action = np.zeros(capacity, dtype=np.int32)
+        self._reward = np.zeros(capacity, dtype=np.float32)
+        self._done = np.zeros(capacity, dtype=np.float32)
+        self._next_state = np.zeros((capacity, *dim_obs), dtype=statetype)
 
-    memory = DiscreteActionMemory(capacity=config.memory_size, n_env=config.n_env, dim_obs=config.dim_observation)
-    epinfobuf = deque(maxlen=20)
-    summary_writer = SummaryWriter(os.path.join(config.save_path, "summary"))
+        self._size = 0
+        self._capacity = capacity
 
-    # ------------ Warm start --------------
-    obs = env.reset()
-    print(f"observation: max={np.max(obs)} min={np.min(obs)}")
-    for i in tqdm(range(config.warm_start_length)):
-        actions = agent.get_action(obs)
-        next_obs, rewards, dones, infos = env.step(actions)
-        memory.store_sards(obs, actions, rewards, dones, obs)
-        obs = next_obs
+    def store_sards(self, state, action, reward, done, next_state):
+        ind = self._size % self._capacity
+        self._state[ind, ...] = state
+        self._action[ind] = action
+        self._reward[ind] = reward
+        self._done[ind] = done
+        self._next_state[ind, ...] = next_state
+        self._size += 1
 
-    print("Finish warm start.")
-    print("Start training.")
-    # --------------- Interaction, Train and Log ------------------
-    for i in tqdm(range(config.update_step)):
-        epinfos = []
-        actions = agent.get_action(obs)
-        next_obs, rewards, dones, infos = env.step(actions)
-        memory.store_sards(obs, actions, rewards, dones, obs)
+    def sample(self, n: int):
+        n_sample = self._size if self._size < self._capacity else self._capacity
+        inds = np.random.randint(n_sample, size=n)
+        state_batch = self._state[inds, ...]
+        action_batch = self._action[inds]
+        reward_batch = self._reward[inds]
+        done_batch = self._done[inds]
+        next_state_batch = self._next_state[inds, ...]
+        return state_batch, action_batch, reward_batch, done_batch, next_state_batch
 
-        obs = next_obs
 
-        for info in infos:
-            maybeepinfo = info.get('episode')
-            if maybeepinfo:
-                epinfos.append(maybeepinfo)
+def obs_fn():
+    obs = tf.placeholder(shape=[None, *OBS_SHAPE], dtype=tf.uint8, name="observation")
+    obs = tf.to_float(obs) / 255.0
+    return obs
 
-        # Get the last trajectory from memory and train the algorithm.
-        data_batch = memory.sample_transition(config.batch_size)
-        loginfo = agent.update(data_batch, i)
 
-        epinfobuf.extend(epinfos)
-        summary_writer.add_scalar("eprewmean", safemean([epinfo["r"] for epinfo in epinfobuf]), global_step=i)
-        summary_writer.add_scalar("eplenmean", safemean([epinfo['l'] for epinfo in epinfobuf]), global_step=i)
+def value_fn(obs):
+    x = tf.layers.conv2d(obs, filters=32, kernel_size=8, strides=4, activation=tf.nn.relu)
+    x = tf.layers.conv2d(obs, filters=64, kernel_size=4, strides=2, activation=tf.nn.relu)
+    x = tf.layers.conv2d(obs, filters=64, kernel_size=3, strides=1, activation=tf.nn.relu)
+    x = tf.layers.flatten(x)
+    x = tf.layers.dense(x, units=256, activation=tf.nn.relu)
+    x = tf.layers.dense(x, units=env.action_space.n)
+    return x
 
-        if i > 0 and i % config.log_freq == 0:
-            rewmean = safemean([epinfo["r"] for epinfo in epinfobuf])
-            lenmean = safemean([epinfo['l'] for epinfo in epinfobuf])
-            tqdm.write(f"eprewmean: {rewmean}  eplenmean: {lenmean} ")
+
+def run_main():
+    agent = DQN(obs_fn=obs_fn,
+                value_fn=value_fn,
+                dim_act=env.action_space.n,
+                update_target_freq=10000,
+                log_freq=10,
+                save_path=LOG_PATH,
+                lr=2.5e-4,
+                epsilon_schedule=lambda x: max(0.1, (1e6-x) / 1e6),
+                train_epoch=1)
+    mem = Memory(capacity=int(1e6), dim_obs=(128, 4), dim_act=env.action_space.n)
+    sw = SummaryWriter(log_dir=LOG_PATH)
+    totrew, totlen, rewcnt = 0, 0, Counter()
+
+    s = env.reset()
+    for i in tqdm(range(args.niter)):
+        a = agent.get_action(s[np.newaxis, :])[0]
+        ns, r, d, _ = env.step(a)
+        mem.store_sards(s, a, r, d, ns)
+        s = ns
+
+        totrew += r
+        totlen += 1
+        rewcnt.update([a])
+
+        if i % 4 == 0:
+            agent.update(mem.sample(args.batchsize))
+
+        if d is True:
+            s = env.reset()
+            sw.add_scalars("dqn", {"totrew": totrew, "totlen": totlen}, i)
+            tqdm.write(f"{i}th. totrew={totrew}, totlen={totlen}, rewcnt={rewttt(rewcnt, env.action_space.n)}")
+            totrew, totlen, rewcnt = 0, 0, Counter()
+
+
+def rewttt(rewcnt, dim_act):
+    t = ""
+    for i in range(dim_act):
+        t += f"{i}:{rewcnt[i]} "
+    return t
+
+
+def run_game():
+    s = env.reset()
+    totrew = 0
+    for _ in range(100000):
+        a = np.random.randint(6)
+        ns, r, d, _ = env.step(a)
+        ns = s
+        totrew += r
+        # print("ns type:", type(ns[0, 0, 0]))
+        if d is True:
+            s = env.reset()
+            print("totrew:", totrew)
+            totrew = 0
 
 
 if __name__ == "__main__":
-    env = AtariWrapper(f"{args.env_name}", 1)
-    config = process_config(env)
-    pol = DQN(config)
-
-    learn(env, pol, config)
+    run_game()

@@ -28,7 +28,7 @@ class Config(object):
         self.save_path = f"./log/td3/exp_async_{args.env_name}"
 
         # 环境
-        self.n_env = 1
+        # self.n_env = 1
         self.dim_observation = None
         self.dim_action = None   # gym中不同环境的action数目不同。
 
@@ -39,14 +39,14 @@ class Config(object):
         self.memory_size = int(1e6)
 
         # 周期参数
-        self.save_model_freq = 50
+        # self.save_model_freq = 50
         self.log_freq = 1
 
         # 算法参数
         self.batch_size = 128
-        self.discount = 0.99
-        self.policy_lr_schedule = lambda x: 1e-3
-        self.value_lr_schedule = lambda x: 1e-3
+        # self.discount = 0.99
+        # self.policy_lr_schedule = lambda x: 1e-3
+        # self.value_lr_schedule = lambda x: 1e-3
 
 
 def process_env(env):
@@ -115,5 +115,19 @@ def learn(env, agent, config):
 if __name__ == "__main__":
     env = AsyncMujocoWrapper(f"{args.env_name}", 1, 1, 50011)
     config = process_env(env)
-    agent = TD3(config)
+    agent = TD3(rnd=1,
+                n_env=1,
+                dim_obs=config.dim_observation,
+                dim_act=config.dim_action,
+                discount=0.99,
+                save_path=f"./log/td3/exp_async_{args.env_name}",
+                save_model_freq=50,
+                log_freq=1,
+                policy_lr=1e-3,
+                value_lr=1e-3,
+                policy_delay=2,
+                target_update_rate=0.995,
+                noise_std=0.2,
+                explore_noise_std=0.1)
+
     learn(env, agent, config)

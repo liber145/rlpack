@@ -1,36 +1,17 @@
 import os
 from abc import ABC, abstractmethod
-
 import numpy as np
 import tensorflow as tf
+from tensorboardX import SummaryWriter
 
 
 class Base(ABC):
     """Algorithm base class."""
 
-    def __init__(self, config):
-        # Environment parameters.
-        assert hasattr(config, "dim_observation")
-        assert hasattr(config, "dim_action")
-        self.n_env = config.n_env if hasattr(config, "n_env") else 4
-        self.dim_observation = config.dim_observation
-        self.dim_action = config.dim_action
-        self.rnd = config.rnd if hasattr(config, "rnd") else 1
-
-        # Training parameters.
-        self.discount = config.discount if hasattr(config, "discount") else 0.99
-        self.gae = config.gae if hasattr(config, "gae") else 0.95
-        self.batch_size = config.batch_size if hasattr(config, "batch_size") else 64
-        self.training_epoch = config.training_epoch if hasattr(config, "training_epoch") else 5
-        self.max_grad_norm = config.max_grad_norm if hasattr(config, "max_grad_norm") else 1.0
-
-        # learning scheme.
-        self.policy_lr_schedule = config.policy_lr_shedule if hasattr(config, "policy_lr_shedule") else lambda ratio: 2.5e-4 * (1 - ratio)
-        self.value_lr_schedule = config.value_lr_shedule if hasattr(config, "value_lr_shedule") else lambda ratio: 3e-4 * (1 - ratio)
-
+    def __init__(self, save_path=None, rnd=1):
         # Save.
-        self.save_path = config.save_path if hasattr(config, "save_path") else "./log"
-        self.save_model_freq = config.save_model_freq if hasattr(config, "save_model_freq") else 100
+        self.rnd = rnd
+        self.save_path = save_path
 
         # ------------------------ Reset graph ------------------------
         tf.reset_default_graph()
@@ -38,23 +19,24 @@ class Base(ABC):
         np.random.seed(self.rnd)
         tf.Variable(0, name="global_step", trainable=False)
         self.increment_global_step = tf.assign_add(tf.train.get_global_step(), 1)
+        self.sw = SummaryWriter(log_dir=self.save_path)
 
         # ------------------------ Build network ------------------------
-        self.build_network()
+        self._build_network()
 
         # ------------------------ Build algorithm ------------------------
-        self.build_algorithm()
+        self._build_algorithm()
 
         # ------------------------ Initialize model store and reload. ------------------------
         self._prepare()
 
     @abstractmethod
-    def build_network(self):
+    def _build_network(self):
         """Build tensorflow operations for algorithms."""
         pass
 
     @abstractmethod
-    def build_algorithm(self):
+    def _build_algorithm(self):
         """Build algorithms using prebuilt networks."""
         pass
 
@@ -95,10 +77,12 @@ class Base(ABC):
 
     def save_model(self):
         """Save model to `save_path`."""
+        save_dir = os.path.join(self.save_path, "model")
+        os.makedirs(save_dir, exist_ok=True)
         global_step = self.sess.run(tf.train.get_global_step())
         self.saver.save(
             self.sess,
-            os.path.join(self.save_path, "model", "model"),
+            os.path.join(save_dir, "model"),
             global_step,
             write_meta_graph=True
         )

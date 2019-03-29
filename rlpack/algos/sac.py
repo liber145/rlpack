@@ -1,4 +1,7 @@
-import sys
+"""
+alpha表示reward放缩了多少倍。
+"""
+
 
 import numpy as np
 import tensorflow as tf
@@ -8,16 +11,44 @@ from .base import Base
 
 
 class SAC(Base):
-    def __init__(self, config):
-        self.tau = 0.995
-        self.action_high = 1.0
-        self.action_low = -1.0
-        self.alpha = 0.2
+    def __init__(self,
+                 rnd=1,
+                 obs_fn=None,
+                 policy_fn=None,
+                 qval_fn=None,
+                 sval_fn=None,
+                 dim_act=None,
+                 discount=0.99,
+                 save_path="./log",
+                 save_model_freq=1000,
+                 log_freq=1000,
+                 policy_lr=1e-3,
+                 value_lr=1e-3,
+                 train_epoch=1,
+                 alpha=0.2,
+                 update_target_ratio=0.995
+                 ):
+        self.alpha = alpha
+        self._obs_fn = obs_fn
+        self._policy_fn = policy_fn
+        self._qval_fn = qval_fn
+        self._sval_fn = sval_fn
+        self._dim_act = dim_act
+        self._policy_lr = policy_lr
+        self._value_lr = value_lr
+        self._update_target_ratio = update_target_ratio
+        self._train_epoch = train_epoch
+
+        self._discount = discount
+        self._log_freq = log_freq
+        self._save_model_freq = save_model_freq
+
         self.LOG_STD_MAX = 2.0
         self.LOG_STD_MIN = -20.0
         self.EPS = 1e-8
-        super().__init__(config)
-        self.sess.run(self.init_target)
+
+        super().__init__(save_path=save_path, rnd=rnd)
+        self.sess.run(self._init_target_op)
 
     def get_vars(self, scope):
         return [x for x in tf.global_variables() if scope in x.name]
@@ -27,126 +58,150 @@ class SAC(Base):
         clip_low = tf.cast(x < l, tf.float32)
         return x + tf.stop_gradient(clip_up * (u - x) + clip_low * (l - x))
 
-    def build_network(self):
-        self.observation = tf.placeholder(tf.float32, [None, *self.dim_observation], name="observation")
-        self.action = tf.placeholder(tf.float32, [None, self.dim_action], name="action")
-        self.reward = tf.placeholder(tf.float32, [None], name="reward")
-        self.done = tf.placeholder(tf.float32, [None], name="done")
-        self.next_observation = tf.placeholder(tf.float32, [None, *self.dim_observation], name="target_observation")
+    def _build_network(self):
+        # self._observation = tf.placeholder(tf.float32, [None, *self._dim_obs], name="observation")
+        self._observation = self._obs_fn()
+        self._action = tf.placeholder(tf.int32, [None], name="action")
+        self._reward = tf.placeholder(tf.float32, [None], name="reward")
+        self._done = tf.placeholder(tf.float32, [None], name="done")
+        # self._next_observation = tf.placeholder(tf.float32, [None, *self._dim_obs], name="next_observation")
+        self._next_observation = self._obs_fn()
 
         with tf.variable_scope("main/policy"):
-            x = tf.layers.dense(self.observation, units=100, activation=tf.nn.relu)
-            x = tf.layers.dense(x, units=100, activation=tf.nn.relu)
-            self.mu = tf.layers.dense(x, units=self.dim_action, activation=None)
-            self.log_std = tf.layers.dense(x, units=self.dim_action, activation=tf.tanh)
-            self.log_std = self.LOG_STD_MIN + 0.5 * (self.LOG_STD_MAX - self.LOG_STD_MIN) * (self.log_std + 1)
+            # x = self._dense(self._observation)
+            # self._p_act = tf.layers.dense(x, self._dim_act, activation=tf.nn.softmax)
 
-            std = tf.exp(self.log_std)
-            self.pi = self.mu + tf.random_normal(tf.shape(self.mu)) * std
-            presum = -0.5 * (((self.pi-self.mu)/(tf.exp(self.log_std)+self.EPS))**2 + np.log(2*np.pi) + 2*self.log_std)
-            self.logp_pi = tf.reduce_sum(presum, axis=1)
-
-            # normal_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.mu, scale_diag=tf.exp(self.log_std))
-            # self.pi = normal_dist.sample()
-            # self.logp_pi = normal_dist.log_prob(self.pi)
-
-            # Squash into an appropriate scale.
-            self.mu = tf.tanh(self.mu)
-            self.pi = tf.tanh(self.pi)
-            self.logp_pi -= tf.reduce_sum(tf.log(self.clip_but_pass_gradient(1 - self.pi**2, l=0, u=1) + 1e-6), axis=1)
+            self._p_act = self._policy_fn(self._observation)
 
         with tf.variable_scope("main/action_value_1"):
-            x = tf.concat([self.observation, self.action], axis=-1)
-            x = tf.layers.dense(x, units=100, activation=tf.nn.relu)
-            x = tf.layers.dense(x, units=100, activation=tf.nn.relu)
-            self.q1 = tf.squeeze(tf.layers.dense(x, units=1, activation=None), axis=1)
+            # x = self._dense(self._observation)
+            # self.q1 = tf.layers.dense(x, self._dim_act)
 
-        with tf.variable_scope("main/action_value_1", reuse=True):
-            x = tf.concat([self.observation, self.pi], axis=-1)
-            x = tf.layers.dense(x, units=100, activation=tf.nn.relu)
-            x = tf.layers.dense(x, units=100, activation=tf.nn.relu)
-            self.q1_pi = tf.squeeze(tf.layers.dense(x, units=1, activation=None), axis=1)
+            self.q1 = self._qval_fn(self._observation)
 
         with tf.variable_scope("main/action_value_2"):
-            x = tf.concat([self.observation, self.action], axis=-1)
-            x = tf.layers.dense(x, units=100, activation=tf.nn.relu)
-            x = tf.layers.dense(x, units=100, activation=tf.nn.relu)
-            self.q2 = tf.squeeze(tf.layers.dense(x, units=1, activation=None), axis=1)
+            # x = self._dense(self._observation)
+            # self.q2 = tf.layers.dense(x, self._dim_act)
 
-        with tf.variable_scope("main/action_value_2", reuse=True):
-            x = tf.concat([self.observation, self.pi], axis=-1)
-            x = tf.layers.dense(x, units=100, activation=tf.nn.relu)
-            x = tf.layers.dense(x, units=100, activation=tf.nn.relu)
-            self.q2_pi = tf.squeeze(tf.layers.dense(x, units=1, activation=None), axis=1)
+            self.q2 = self._qval_fn(self._observation)
 
         with tf.variable_scope("main/state_value"):
-            x = tf.layers.dense(self.observation, units=100, activation=tf.nn.relu)
-            x = tf.layers.dense(x, units=100, activation=tf.nn.relu)
-            self.v = tf.squeeze(tf.layers.dense(x, units=1, activation=None), axis=1)
+            # x = self._dense(self._observation)
+            # self.v = tf.squeeze(tf.layers.dense(x, 1))
+            self.v = self._sval_fn(self._observation)
 
         with tf.variable_scope("target/state_value"):
-            x = tf.layers.dense(self.next_observation, units=100, activation=tf.nn.relu)
-            x = tf.layers.dense(x, units=100, activation=tf.nn.relu)
-            self.v_targ = tf.squeeze(tf.layers.dense(x, units=1, activation=None), axis=1)
+            # x = self._dense(self._next_observation)
+            # self.v_targ = tf.squeeze(tf.layers.dense(x, 1))
+            self.v_targ = self._sval_fn(self._next_observation)
 
-    def build_algorithm(self):
-        min_q_pi = tf.minimum(self.q1_pi, self.q2_pi)
+    # def _dense(self, obs):
+    #     x = tf.layers.dense(obs, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 128, activation=tf.nn.relu)
+    #     x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+    #     return x
 
-        q_backup = tf.stop_gradient(self.reward + self.discount * (1 - self.done) * self.v_targ)
-        v_backup = tf.stop_gradient(min_q_pi - self.alpha * self.logp_pi)
+    def _build_algorithm(self):
+        policy_optimizer = tf.train.AdamOptimizer(learning_rate=self._policy_lr)
+        value_optimizer = tf.train.AdamOptimizer(learning_rate=self._value_lr)
+        policy_variables = tf.trainable_variables("main/policy")
+        value_variables = tf.trainable_variables("main/action_value") + tf.trainable_variables("main/state_value")
 
-        # Soft actor-critic loss
-        self.pi_loss = tf.reduce_mean(self.alpha * self.logp_pi - self.q1_pi)
-        q1_loss = 0.5 * tf.reduce_mean((q_backup - self.q1)**2)
-        q2_loss = 0.5 * tf.reduce_mean((q_backup - self.q2)**2)
+        min_q = tf.minimum(self.q1, self.q2)
+        v_backup = tf.reduce_sum(self._p_act * (min_q - tf.log(self._p_act)), axis=1)
+        v_backup = tf.stop_gradient(v_backup)
+        q_backup = tf.stop_gradient(self._reward + self._discount * (1 - self._done) * self.v_targ)
+
+        lse_min_q = tf.reduce_logsumexp(min_q, axis=1, keepdims=True)
+        log_p_min_q = min_q - lse_min_q
+        policy_loss = tf.reduce_mean(tf.reduce_sum(self._p_act * (tf.log(self._p_act) - log_p_min_q), axis=1))
+
+        nsample = tf.shape(self._observation)[0]
+        actind = tf.stack([tf.range(nsample), self._action], axis=1)
+        q1_act = tf.gather_nd(self.q1, actind)
+        q2_act = tf.gather_nd(self.q2, actind)
+
+        q1_loss = 0.5 * tf.reduce_mean((q_backup - q1_act)**2)
+        q2_loss = 0.5 * tf.reduce_mean((q_backup - q2_act)**2)
         v_loss = 0.5 * tf.reduce_mean((v_backup - self.v)**2)
-        self.value_loss = q1_loss + q2_loss + v_loss
+        value_loss = q1_loss + q2_loss + v_loss
 
-        # Train policy.
-        pi_optimizer = tf.train.AdamOptimizer(learning_rate=1e-3)
-        self.update_policy = pi_optimizer.minimize(self.pi_loss, var_list=self.get_vars("main/policy"))
+        self._policy_train_op = policy_optimizer.minimize(policy_loss, var_list=policy_variables)
+        self._value_train_op = value_optimizer.minimize(value_loss, var_list=value_variables)
 
-        # Train value.
-        value_optimizer = tf.train.AdamOptimizer(learning_rate=1e-3)
-        value_vars = self.get_vars("main/action_value") + self.get_vars("main/state_value")
-        with tf.control_dependencies([self.update_policy]):
-            self.update_value = value_optimizer.minimize(self.value_loss, var_list=value_vars)
+        # Update target network.
+        def _update_target(net1, net2, alpha=0):
+            params1 = tf.trainable_variables(net1)
+            params1 = sorted(params1, key=lambda v: v.name)
+            params2 = tf.trainable_variables(net2)
+            params2 = sorted(params2, key=lambda v: v.name)
+            assert len(params1) == len(params2)
+            update_ops = []
+            for param1, param2 in zip(params1, params2):
+                update_ops.append(param1.assign(alpha * param1 + (1-alpha) * param2))
+            return update_ops
 
-        main_vars = self.get_vars("main/state_value")
-        target_vars = self.get_vars("target/state_value")
-        with tf.control_dependencies([self.update_value]):
-            self.update_target = tf.group([tf.assign(v_targ, 0.995*v_targ + (1-0.995)*v_main) for v_main, v_targ in zip(main_vars, target_vars)])
+        with tf.control_dependencies([self._value_train_op]):
+            self._update_target_op = _update_target("target/state_value", "main/state_value", alpha=self._update_target_ratio)
+        self._init_target_op = _update_target("target/state_value", "main/state_value", alpha=0)
 
-        self.init_target = tf.group([tf.assign(v_targ, v_main) for v_main, v_targ in zip(main_vars, target_vars)])
+        self._log_op = {"policy_loss": policy_loss, "value_loss": value_loss}
 
-    def update(self, minibatch, update_ratio: float):
-        s_batch, a_batch, r_batch, d_batch, next_s_batch = minibatch
+        # # Soft actor-critic loss
+        # self.pi_loss = tf.reduce_mean(self.alpha * self.logp_pi - self.q1_pi)
+        # q1_loss = 0.5 * tf.reduce_mean((q_backup - self.q1)**2)
+        # q2_loss = 0.5 * tf.reduce_mean((q_backup - self.q2)**2)
+        # v_loss = 0.5 * tf.reduce_mean((v_backup - self.v)**2)
+        # self.value_loss = q1_loss + q2_loss + v_loss
 
-        n_env, batch_size = s_batch.shape[:2]
-        s_batch = s_batch.reshape(n_env * batch_size, *self.dim_observation)
-        a_batch = a_batch.reshape(n_env * batch_size, self.dim_action)
-        r_batch = r_batch.reshape(n_env * batch_size)
-        d_batch = d_batch.reshape(n_env * batch_size)
-        next_s_batch = next_s_batch.reshape(n_env * batch_size, *self.dim_observation)
+        # # Train policy.
+        # pi_optimizer = tf.train.AdamOptimizer(learning_rate=self._policy_lr)
+        # self.update_policy = pi_optimizer.minimize(self.pi_loss, var_list=self.get_vars("main/policy"))
 
-        value_loss, policy_loss, _, _, _ = self.sess.run([self.value_loss, self.pi_loss, self.update_policy, self.update_value, self.update_target], feed_dict={
-            self.observation: s_batch,
-            self.action: a_batch,
-            self.reward: r_batch,
-            self.done: d_batch,
-            self.next_observation: next_s_batch})
+        # # Train value.
+        # value_optimizer = tf.train.AdamOptimizer(learning_rate=self._value_lr)
+        # value_vars = self.get_vars("main/action_value") + self.get_vars("main/state_value")
+        # with tf.control_dependencies([self.update_policy]):
+        #     self.update_value = value_optimizer.minimize(self.value_loss, var_list=value_vars)
+
+        # main_vars = self.get_vars("main/state_value")
+        # target_vars = self.get_vars("target/state_value")
+        # with tf.control_dependencies([self.update_value]):
+        #     self.update_target = tf.group([tf.assign(v_targ, self._update_target_ratio * v_targ + (1 - self._update_target_ratio)*v_main) for v_main, v_targ in zip(main_vars, target_vars)])
+
+        # self.init_target = tf.group([tf.assign(v_targ, v_main) for v_main, v_targ in zip(main_vars, target_vars)])
+
+    def update(self, databatch):
+        s_batch, a_batch, r_batch, d_batch, next_s_batch = databatch
+
+        for _ in range(self._train_epoch):
+            self.sess.run([self._policy_train_op, self._value_train_op],
+                          feed_dict={
+                self._observation: s_batch,
+                self._action: a_batch,
+                self._reward: r_batch,
+                self._done: d_batch,
+                self._next_observation: next_s_batch
+            })
 
         # Save model.
         global_step, _ = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
-        if global_step % self.save_model_freq == 0:
+
+        if global_step % self._save_model_freq == 0:
             self.save_model()
 
-    def get_action(self, obs):
-        if obs.ndim == 1 or obs.ndim == 3:
-            newobs = np.array(obs)[np.newaxis, :]
-        else:
-            assert obs.ndim == 2 or obs.ndim == 4
-            newobs = obs
+        if global_step % self._log_freq == 0:
+            log = self.sess.run(self._log_op,
+                                feed_dict={
+                                    self._observation: s_batch,
+                                    self._action: a_batch,
+                                    self._reward: r_batch,
+                                    self._done: d_batch,
+                                    self._next_observation: next_s_batch
+                                })
+            self.sw.add_scalars("sac", log, global_step=global_step)
 
-        action = self.sess.run(self.pi, feed_dict={self.observation: newobs})
-        return action
+    def get_action(self, obs):
+        p_act = self.sess.run(self._p_act, feed_dict={self._observation: obs})
+        nsample, nact = p_act.shape
+        return [np.random.choice(nact, p=p_act[i, :]) for i in range(nsample)]

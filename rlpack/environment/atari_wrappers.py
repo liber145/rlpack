@@ -1,12 +1,10 @@
-import os
-from collections import deque
-
-import cv2
-import gym
 import numpy as np
-from gym import spaces
-
+import os
 os.environ.setdefault('PATH', '')
+from collections import deque
+import gym
+from gym import spaces
+import cv2
 cv2.ocl.setUseOpenCL(False)
 
 
@@ -70,22 +68,9 @@ class EpisodicLifeEnv(gym.Wrapper):
         self.lives = 0
         self.was_real_done = True
 
-        self.trajectory_length = 0
-        self.trajectory_reward = 0
-
     def step(self, action):
-
         obs, reward, done, info = self.env.step(action)
         self.was_real_done = done
-
-        # Log trajectory length and trajectory reward.
-        self.trajectory_length += 1
-        self.trajectory_reward += reward
-        if done:
-            info["episode"] = {"r": self.trajectory_reward, "l": self.trajectory_length}
-            self.trajectory_reward = 0
-            self.trajectory_length = 0
-
         # check current lives, make loss of life terminal,
         # then update lives to handle bonus lives
         lives = self.env.unwrapped.ale.lives()
@@ -95,17 +80,6 @@ class EpisodicLifeEnv(gym.Wrapper):
             # the environment advertises done.
             done = True
         self.lives = lives
-
-        # if self.was_real_done is True:
-        #     print("real done in self mode")
-        #     obs = self.env.reset()
-        #     self.lives = self.env.unwrapped.ale.lives()
-        # elif done is True:
-        #     print("wei done in self mode")
-        #     obs, _, _, _ = self.env.step(0)
-        #     print(np.array(obs)[32, 32, :])
-        #     self.lives = self.env.unwrapped.ale.lives()
-
         return obs, reward, done, info
 
     def reset(self, **kwargs):
@@ -115,12 +89,9 @@ class EpisodicLifeEnv(gym.Wrapper):
         """
         if self.was_real_done:
             obs = self.env.reset(**kwargs)
-            # print("real done <<<<")
         else:
             # no-op step to advance from terminal/lost life state
             obs, _, _, _ = self.env.step(0)
-            # print("wei done <<<<")
-            # print(np.array(obs)[32, 32, :])
         self.lives = self.env.unwrapped.ale.lives()
         return obs
 
@@ -130,7 +101,7 @@ class MaxAndSkipEnv(gym.Wrapper):
         """Return only every `skip`-th frame"""
         gym.Wrapper.__init__(self, env)
         # most recent raw observations (for max pooling across time steps)
-        self._obs_buffer = np.zeros((2,) + env.observation_space.shape, dtype=np.uint8)
+        self._obs_buffer = np.zeros((2,)+env.observation_space.shape, dtype=np.uint8)
         self._skip = skip
 
     def step(self, action):
@@ -149,9 +120,6 @@ class MaxAndSkipEnv(gym.Wrapper):
         # Note that the observation on the done=True frame
         # doesn't matter
         max_frame = self._obs_buffer.max(axis=0)
-
-        info["real_reward"] = total_reward
-        info["real_done"] = done
 
         return max_frame, total_reward, done, info
 
@@ -194,9 +162,7 @@ class WarpFrame(gym.ObservationWrapper):
 class FrameStack(gym.Wrapper):
     def __init__(self, env, k):
         """Stack k last frames.
-
         Returns lazy array, which is much more memory efficient.
-
         See Also
         --------
         baselines.common.atari_wrappers.LazyFrames
@@ -206,9 +172,6 @@ class FrameStack(gym.Wrapper):
         self.frames = deque([], maxlen=k)
         shp = env.observation_space.shape
         self.observation_space = spaces.Box(low=0, high=255, shape=(shp[:-1] + (shp[-1] * k,)), dtype=env.observation_space.dtype)
-
-        # self._dim_action = self.env.action_space.n
-        # self._dim_observation = self.observation_space.shape
 
     def reset(self):
         ob = self.env.reset()
@@ -224,35 +187,6 @@ class FrameStack(gym.Wrapper):
     def _get_ob(self):
         assert len(self.frames) == self.k
         return LazyFrames(list(self.frames))
-
-
-class NeverStop(gym.Wrapper):
-    def __init__(self, env):
-        gym.Wrapper.__init__(self, env)
-
-        self._dim_action = self.env.action_space.n
-        self._dim_observation = self.env.observation_space.shape
-
-    def reset(self):
-        ob = self.env.reset()
-        return ob
-
-    def step(self, action):
-        ob, rew, done, info = self.env.step(action)
-        if done is True:
-            ob = self.env.reset()
-        return ob, rew, done, info
-
-    @property
-    def dim_action(self):
-        return self._dim_action
-
-    @property
-    def dim_observation(self):
-        return self._dim_observation
-
-    def sample_action(self):
-        return self.env.action_space.sample()
 
 
 class ScaledFloatFrame(gym.ObservationWrapper):
@@ -271,9 +205,7 @@ class LazyFrames(object):
         """This object ensures that common frames between the observations are only stored once.
         It exists purely to optimize memory usage which can be huge for DQN's 1M frames replay
         buffers.
-
         This object should only be converted to numpy array before being passed to the model.
-
         You'd not believe how complex the previous solution was."""
         self._frames = frames
         self._out = None
@@ -297,25 +229,67 @@ class LazyFrames(object):
         return self._force()[i]
 
 
-def old_make_atari(env_id, timelimit=True):
-    # XXX(john): remove timelimit argument after gym is upgraded to allow double wrapping
+class TimeLimit(gym.Wrapper):
+    def __init__(self, env, max_episode_steps=None):
+        super(TimeLimit, self).__init__(env)
+        self._max_episode_steps = max_episode_steps
+        self._elapsed_steps = 0
+
+    def step(self, ac):
+        observation, reward, done, info = self.env.step(ac)
+        self._elapsed_steps += 1
+        if self._elapsed_steps >= self._max_episode_steps:
+            done = True
+            info['TimeLimit.truncated'] = True
+        return observation, reward, done, info
+
+    def reset(self, **kwargs):
+        self._elapsed_steps = 0
+        return self.env.reset(**kwargs)
+
+
+class RamStack(gym.Wrapper):
+    def __init__(self, env):
+        gym.Wrapper.__init__(self, env)
+        # self._dim_act = self.env.dim_action
+        # self._dim_obs = self.env.dim_observation
+
+    def reset(self):
+        ob = self.env.reset()
+        return np.array(ob).reshape(4, 128).swapaxes(0, 1)
+
+    def step(self, action):
+        ob, rew, done, info = self.env.step(action)
+        return np.array(ob).reshape(4, 128).swapaxes(0, 1), rew, done, info
+
+    # @property
+    # def dim_action(self):
+    #     return self._dim_act
+
+    # @property
+    # def dim_observation(self):
+    #     return (128, 4)
+
+
+def make_oldatari(env_id, max_episode_steps=None):
     env = gym.make(env_id)
-    if not timelimit:
-        env = env.env
     assert 'NoFrameskip' in env.spec.id
     env = NoopResetEnv(env, noop_max=30)
     env = MaxAndSkipEnv(env, skip=4)
+    if max_episode_steps is not None:
+        env = TimeLimit(env, max_episode_steps=max_episode_steps)
     return env
 
 
-def wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=False, scale=False):
+def wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=False, scale=False, warp=True):
     """Configure environment for DeepMind-style Atari.
     """
     if episode_life:
         env = EpisodicLifeEnv(env)
     if 'FIRE' in env.unwrapped.get_action_meanings():
         env = FireResetEnv(env)
-    env = WarpFrame(env)
+    if warp:
+        env = WarpFrame(env)
     if scale:
         env = ScaledFloatFrame(env)
     if clip_rewards:
@@ -325,26 +299,29 @@ def wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=False, 
     return env
 
 
-def make_atari(env_name):
-    env = old_make_atari(env_name)
-    env = wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=True, scale=True)
-    env = NeverStop(env)
+def make_atari(env_id, max_episode_steps=None):
+    env = make_oldatari(env_id, max_episode_steps)
+    env = wrap_deepmind(env, frame_stack=True)
+    return env
+
+
+def make_ramatari(env_id, max_episode_steps=None):
+    env = make_oldatari(env_id, max_episode_steps)
+    assert "ramNoFrameskip" in env.spec.id
+    env = wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=True, scale=False, warp=False)
+    env = RamStack(env)
     return env
 
 
 if __name__ == "__main__":
-    env = make_atari("AlienNoFrameskip-v4")
-    env.seed(1)
-    s = env.reset()
-
-    all_r = []
-    for i in range(10000):
-        s, r, d, info = env.step(env.action_space.sample())
-
-        all_r.append(r)
-        if d is True:
-            print(f"r max: {np.max(all_r)} min: {np.min(all_r)}")
-
-            if "episode" in info:
-                print("info:", info["episode"]["r"], info["episode"]["l"])
-            input()
+    env = make_ramatari("Pong-ramNoFrameskip-v4", max_episode_steps=1000)
+    env.reset()
+    print(env.action_space.n)
+    print(env.observation_space.shape)
+    input()
+    for _ in range(1000):
+        a = np.random.choice(2)
+        ns, r, d, _ = env.step(a)
+        print("next state shape:", ns.shape, type(ns[0, 0]))
+        print(np.max(ns), np.min(ns))
+        print("r:", r, "d:", d)
