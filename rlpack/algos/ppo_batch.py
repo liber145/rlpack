@@ -15,7 +15,7 @@ from ..common.utils import assert_shape
 from .base import Base
 
 
-class PPO(Base):
+class PPOBATCH(Base):
     def __init__(self,
                  obs_fn=None,
                  policy_fn=None,
@@ -153,21 +153,17 @@ class PPO(Base):
 
         # Compute gradients.
         total_loss = surrogate + self._vf_coef * vf - self._entropy_coef * entropy
-        grads = tf.gradients(total_loss, tf.trainable_variables())
+        self._grad_op = tf.gradients(total_loss, tf.trainable_variables())
+        self._grad_names = [x.name for x in self._grad_op]
 
-        print("grads:", grads)
-        print("shape:")
-        print([x.shape for x in grads])
+        self._grad_list = [tf.placeholder(tf.float32, shape=x.shape) for x in self._grad_op]
 
-        grad_norm = tf.global_norm(grads)
-
-        # Clip gradients.
-        clipped_grads, _ = tf.clip_by_global_norm(grads, self._max_grad_norm)
-        print("clipped_grads:", clipped_grads)
-        print("shape:")
-        print([x.shape for x in clipped_grads])
+        grad_norm = tf.global_norm(self._grad_op)
+        clipped_grad_list, _ = tf.clip_by_global_norm(self._grad_list, self._max_grad_norm)
+        print("clipped grad:", clipped_grad_list)
         input()
-        self._train_op = self._optimizer.apply_gradients(zip(clipped_grads, tf.trainable_variables()))
+
+        self._apply_gradient_op = self._optimizer.apply_gradients(zip(clipped_grad_list, tf.trainable_variables()))
 
         self._log_op = {"entropy": entropy, "mean_ratio": tf.reduce_mean(ratio), "total_loss": total_loss, "value_loss": vf, "policy_loss": surrogate, "grad_norm": grad_norm}
 
@@ -205,16 +201,22 @@ class PPO(Base):
                 span_index = slice(i*self._batch_size, min((i+1)*self._batch_size, n_sample))
                 span_index = index[span_index]
 
-                _, log = self.sess.run([self._train_op, self._log_op],
-                                       feed_dict={self._observation: s_batch[span_index, ...],
-                                                  self._action: a_batch[span_index],
-                                                  self._advantage: adv_batch[span_index],
-                                                  self._target_state_value: tsv_batch[span_index],
-                                                  self._old_logit_p_act: old_logit_p_act[span_index],
-                                                  self._lr: self._lr_schedule(global_step),
-                                                  self._clip_ratio: self._clip_schedule(global_step)})
+                grads, log = self.sess.run([self._grad_op, self._log_op],
+                                           feed_dict={self._observation: s_batch[span_index, ...],
+                                                      self._action: a_batch[span_index],
+                                                      self._advantage: adv_batch[span_index],
+                                                      self._target_state_value: tsv_batch[span_index],
+                                                      self._old_logit_p_act: old_logit_p_act[span_index],
+                                                      self._lr: self._lr_schedule(global_step),
+                                                      self._clip_ratio: self._clip_schedule(global_step)})
 
+                self._collect_grads(grads)
                 self._collect_log(log)
+
+            grad_list = self._average_grads()
+            feeddict = {x: y for x, y in zip(self._grad_list, grad_list)}
+            feeddict.update({self._lr: self._lr_schedule(global_step)})
+            self.sess.run(self._apply_gradient_op, feed_dict=feeddict)
 
         if global_step % self._save_model_freq == 0:
             self.save_model()
@@ -260,6 +262,19 @@ class PPO(Base):
             last_state_value = state_value
 
         return s_batch, a_batch, target_sv_batch, adv_batch
+
+    def _collect_grads(self, grads):
+        if self._gradients is None:
+            self._gradients = defaultdict(deque)
+        for x, y in zip(self._grad_names, grads):
+            self._gradients[x].append(y)
+
+    def _average_grads(self):
+        t = list()
+        for x in self._grad_names:
+            t.append(np.mean(self._gradients[x], axis=0))
+        self._gradients = None
+        return t
 
     def _collect_log(self, log):
         for k, v in log.items():

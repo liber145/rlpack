@@ -4,8 +4,9 @@ import gym
 import numpy as np
 from tqdm import tqdm
 from tensorboardX import SummaryWriter
+import tensorflow as tf
 
-from rlpack.algos import PPO
+from rlpack.algos import PPOBATCH
 
 
 parser = argparse.ArgumentParser(description="Parse environment name.")
@@ -13,6 +14,9 @@ parser.add_argument("--env", type=str, default="CartPole-v1")
 parser.add_argument("--niter", type=int, default=1000)
 parser.add_argument("--batchsize", type=int, default=128)
 args = parser.parse_args()
+
+
+env = gym.make(args.env)
 
 
 def trajectory(env, agent):
@@ -30,17 +34,40 @@ def trajectory(env, agent):
     return t, tsum
 
 
+def obs_fn():
+    obs = tf.placeholder(shape=[None, *env.observation_space.shape], dtype=tf.float32, name="observation")
+    return obs
+
+
+def policy_fn(obs):
+    x = tf.layers.dense(obs, units=128, activation=tf.nn.relu)
+    x = tf.layers.dense(x, units=128, activation=tf.nn.relu)
+    x = tf.layers.dense(x, units=64, activation=tf.nn.relu)
+    x = tf.layers.dense(x, units=env.action_space.n, activation=None)
+    return x
+
+
+def value_fn(obs):
+    x = tf.layers.dense(obs, units=128, activation=tf.nn.relu)
+    x = tf.layers.dense(x, units=128, activation=tf.nn.relu)
+    x = tf.layers.dense(x, units=64, activation=tf.nn.relu)
+    x = tf.layers.dense(x, units=1)
+    return x
+
+
 def run_main():
-    env = gym.make(args.env)
-    agent = PPO(dim_obs=env.observation_space.shape,
-                dim_act=env.action_space.n,
-                clip_schedule=lambda x: 0.1,
-                lr_schedule=lambda x: 1e-4,
-                train_epoch=10,
-                batch_size=args.batchsize,
-                log_freq=10,
-                save_path="./log/ppo_cc",
-                save_model_freq=1000)
+
+    agent = PPOBATCH(obs_fn=obs_fn,
+                     policy_fn=policy_fn,
+                     value_fn=value_fn,
+                     dim_act=env.action_space.n,
+                     clip_schedule=lambda x: 0.1,
+                     lr_schedule=lambda x: 1e-4,
+                     train_epoch=10,
+                     batch_size=args.batchsize,
+                     log_freq=10,
+                     save_path="./log/ppo_cc",
+                     save_model_freq=1000)
     sw = SummaryWriter(log_dir="./log/ppo_cc")
     totrew = 0
     for i in tqdm(range(args.niter)):
@@ -48,8 +75,6 @@ def run_main():
         totrew_list = deque()
         for _ in range(10):
             traj, totrew = trajectory(env, agent)
-            # print("traj:", traj, "totrew:", totrew)
-            # input()
             traj_list.append(traj)
             totrew_list.append(totrew)
         sw.add_scalars("ppo", {"totrew": np.mean(totrew_list)}, i)
