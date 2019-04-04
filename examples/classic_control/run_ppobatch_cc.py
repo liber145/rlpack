@@ -6,7 +6,7 @@ from tqdm import tqdm
 from tensorboardX import SummaryWriter
 import tensorflow as tf
 
-from rlpack.algos import PPO
+from rlpack.algos import PPOBATCH
 
 
 parser = argparse.ArgumentParser(description="Parse environment name.")
@@ -24,9 +24,10 @@ def trajectory(env, agent):
     s = env.reset()
     tsum = 0
     while True:
-        a = agent.get_action(s[np.newaxis, :])[0]
+        a, logit, sval = agent.get_action(s[np.newaxis, :])
+        a, logit = a[0], logit[0]
         ns, r, d, _ = env.step(a)
-        t.append((s, a, r))
+        t.append((s, a, r, logit, sval))
         s = ns
         tsum += r
         if d is True:
@@ -51,24 +52,24 @@ def value_fn(obs):
     x = tf.layers.dense(obs, units=128, activation=tf.nn.relu)
     x = tf.layers.dense(x, units=128, activation=tf.nn.relu)
     x = tf.layers.dense(x, units=64, activation=tf.nn.relu)
-    x = tf.layers.dense(x, units=1)
+    x = tf.squeeze(tf.layers.dense(x, units=1))
     return x
 
 
 def run_main():
 
-    agent = PPO(obs_fn=obs_fn,
-                policy_fn=policy_fn,
-                value_fn=value_fn,
-                dim_act=env.action_space.n,
-                clip_schedule=lambda x: 0.1,
-                lr_schedule=lambda x: 1e-4,
-                train_epoch=10,
-                batch_size=args.batchsize,
-                log_freq=10,
-                save_path="./log/ppo_cc",
-                save_model_freq=1000)
-    sw = SummaryWriter(log_dir="./log/ppo_cc")
+    agent = PPOBATCH(obs_fn=obs_fn,
+                     policy_fn=policy_fn,
+                     value_fn=value_fn,
+                     dim_act=env.action_space.n,
+                     clip_schedule=lambda x: 0.1,
+                     lr_schedule=lambda x: 1e-4,
+                     train_epoch=10,
+                     batch_size=args.batchsize,
+                     log_freq=10,
+                     save_path="./log/ppobatch_cc",
+                     save_model_freq=1000)
+    sw = SummaryWriter(log_dir="./log/ppobatch_cc")
     totrew = 0
     for i in tqdm(range(args.niter)):
         traj_list = deque()

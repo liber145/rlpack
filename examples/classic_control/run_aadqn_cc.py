@@ -5,6 +5,7 @@ import numpy as np
 import os
 from tqdm import tqdm
 from tensorboardX import SummaryWriter
+import tensorflow as tf
 
 from rlpack.algos import AADQN
 from rlpack.environment import make_ramatari
@@ -19,6 +20,9 @@ args = parser.parse_args()
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
+
+
+env = gym.make(args.env)
 
 
 class Memory(object):
@@ -52,16 +56,33 @@ class Memory(object):
         return state_batch, action_batch, reward_batch, done_batch, next_state_batch
 
 
+def obs_fn():
+    obs = tf.placeholder(shape=[None, *env.observation_space.shape], dtype=tf.float32, name="observation")
+    return obs
+
+
+def value_fn(obs):
+    x = tf.layers.dense(obs, 128, activation=tf.nn.relu)
+    x = tf.layers.dense(x, 128, activation=tf.nn.relu)
+    x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+    x = tf.layers.dense(x, env.action_space.n)
+    return x
+
+
 def run_main():
-    env = gym.make(args.env)
-    agent = AADQN(dim_obs=env.observation_space.shape,
+    agent = AADQN(obs_fn=obs_fn,
+                  value_fn=value_fn,
                   dim_act=env.action_space.n,
-                  update_target_freq=100,
+                  update_target_freq=2,
                   log_freq=10,
-                  weight_low=0,
-                  weight_high=1,
+                  weight_low=-3,
+                  weight_high=3,
                   save_path=f"./log/aadqn_cc/{args.env}",
-                  lr=1e-4
+                  lr=1e-4,
+                  epsilon_schedule=lambda x: max(0.1, (1e4-x) / 1e4),
+                  n_net=2,
+                  ridge_coef=None,
+                  train_epoch=1
                   )
     mem = Memory(capacity=int(1e5), dim_obs=env.observation_space.shape, dim_act=env.action_space.n)
     sw = SummaryWriter(log_dir=f"./log/aadqn_cc/{args.env}")

@@ -160,8 +160,6 @@ class PPOBATCH(Base):
 
         grad_norm = tf.global_norm(self._grad_op)
         clipped_grad_list, _ = tf.clip_by_global_norm(self._grad_list, self._max_grad_norm)
-        print("clipped grad:", clipped_grad_list)
-        input()
 
         self._apply_gradient_op = self._optimizer.apply_gradients(zip(clipped_grad_list, tf.trainable_variables()))
 
@@ -169,11 +167,12 @@ class PPOBATCH(Base):
 
     def get_action(self, obs)->np.ndarray:
         n_inference = obs.shape[0]
-        logit = self.sess.run(self._logit_p_act, feed_dict={self._observation: obs})
-        logit = logit - np.max(logit, axis=1, keepdims=True)
-        prob = np.exp(logit) / np.sum(np.exp(logit), axis=1, keepdims=True)
+        logit, sval = self.sess.run([self._logit_p_act, self._state_value], feed_dict={self._observation: obs})
+        newlogit = logit - np.max(logit, axis=1, keepdims=True)
+        prob = np.exp(newlogit) / np.sum(np.exp(newlogit), axis=1, keepdims=True)
         action = [np.random.choice(self._dim_act, p=prob[i, :]) for i in range(n_inference)]
-        return np.array(action)
+        # t_logit = np.array([x[y] for x, y in zip(logit, action)])
+        return np.array(action), logit, sval
 
     def update(self, databatch):
         """
@@ -181,11 +180,10 @@ class PPOBATCH(Base):
             databatch {list of list} -- A list of trajectories, each of which is also a list filled with (s,a,r).
         """
 
-        s_batch, a_batch, tsv_batch, adv_batch = self._parse_databatch(databatch)
+        s_batch, a_batch, tsv_batch, adv_batch, old_logit_p_act = self._parse_databatch(databatch)
 
         # Normalize Advantage.
         adv_batch = (adv_batch - adv_batch.mean()) / (adv_batch.std() + 1e-8)
-        old_logit_p_act = self.sess.run(self._logit_p_act, feed_dict={self._observation: s_batch})
 
         global_step, _ = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
 
@@ -229,13 +227,15 @@ class PPOBATCH(Base):
         a_list = deque()
         tsv_list = deque()
         adv_list = deque()
+        logit_list = deque()
         for trajectory in databatch:
-            s_batch, a_batch, tsv_batch, adv_batch = self._parse_trajectory(trajectory)
+            s_batch, a_batch, tsv_batch, adv_batch, logit_batch = self._parse_trajectory(trajectory)
             s_list.append(s_batch)
             a_list.append(a_batch)
             tsv_list.append(tsv_batch)
             adv_list.append(adv_batch)
-        return np.concatenate(s_list), np.concatenate(a_list), np.concatenate(tsv_list), np.concatenate(adv_list)
+            logit_list.append(logit_batch)
+        return np.concatenate(s_list), np.concatenate(a_list), np.concatenate(tsv_list), np.concatenate(adv_list), np.concatenate(logit_list)
 
     def _parse_trajectory(self, trajectory):
         """trajectory由一系列(s,a,r)构成。最后一组操作之后游戏结束。
@@ -244,11 +244,13 @@ class PPOBATCH(Base):
         target_sv_batch = np.zeros(n, dtype=np.float32)
         adv_batch = np.zeros(n, dtype=np.float32)
 
-        a_batch = np.array([t[1] for t in trajectory], dtype=np.int32)
         s_batch = np.array([t[0] for t in trajectory], dtype=np.float32)
-        sv_batch = self.sess.run(self._state_value, feed_dict={self._observation: s_batch})
+        a_batch = np.array([t[1] for t in trajectory], dtype=np.int32)
+        logit_batch = np.array([t[3] for t in trajectory], dtype=np.float32)
+        sv_batch = np.array([t[4] for t in trajectory], dtype=np.float32)
+        #  self.sess.run(self._state_value, feed_dict={self._observation: s_batch})
 
-        for i, (_, _, r) in enumerate(reversed(trajectory)):   # 注意这里是倒序操作。
+        for i, (_, _, r, _, _) in enumerate(reversed(trajectory)):   # 注意这里是倒序操作。
             i = n-1-i
             state_value = sv_batch[i]
             if i == n-1:
@@ -261,7 +263,7 @@ class PPOBATCH(Base):
             target_sv_batch[i] = state_value + adv_batch[i]
             last_state_value = state_value
 
-        return s_batch, a_batch, target_sv_batch, adv_batch
+        return s_batch, a_batch, target_sv_batch, adv_batch, logit_batch
 
     def _collect_grads(self, grads):
         if self._gradients is None:

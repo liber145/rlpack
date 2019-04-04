@@ -15,6 +15,8 @@ parser.add_argument("--niter", type=int, default=int(2e4))
 parser.add_argument("--batchsize", type=int, default=128)
 args = parser.parse_args()
 
+env = gym.make(args.env)
+
 
 class Memory(object):
     def __init__(self, capacity: int, dim_obs, dim_act, statetype=np.float32):
@@ -49,7 +51,7 @@ class Memory(object):
 
 
 def obs_fn():
-    obs = tf.placeholder(shape=[None, 4], dtype=tf.float32, name="observation")
+    obs = tf.placeholder(shape=[None, *env.observation_space.shape], dtype=tf.float32, name="observation")
     extra = tf.placeholder(tf.float32, [None], "extra")
     return (obs, extra)
 
@@ -59,22 +61,22 @@ def value_fn(inputs):
     x = tf.layers.dense(obs, 128, activation=tf.nn.relu)
     x = tf.layers.dense(x, 128, activation=tf.nn.relu)
     x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-    x = tf.layers.dense(x, 2)
+    x = tf.layers.dense(x, env.action_space.n)
     return x
 
 
 def run_main():
-    env = gym.make(args.env)
     agent = DQN(obs_fn=obs_fn,
                 value_fn=value_fn,
                 dim_act=env.action_space.n,
                 update_target_freq=100,
                 log_freq=10,
-                save_path="./log/dqn_cc",
+                save_path=f"./log/dqn_cc/{args.env}",
                 lr=1e-4,
+                epsilon_schedule=lambda x: max(0.1, (1e4-x) / 1e4),
                 train_epoch=1)
     mem = Memory(capacity=int(1e5), dim_obs=env.observation_space.shape, dim_act=env.action_space.n)
-    sw = SummaryWriter(log_dir="./log/dqn_cc")
+    sw = SummaryWriter(log_dir=f"./log/dqn_cc/{args.env}")
     totrew, totlen, rewcnt = 0, 0, Counter()
 
     s = env.reset()

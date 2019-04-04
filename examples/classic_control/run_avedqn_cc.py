@@ -4,6 +4,7 @@ import gym
 import numpy as np
 from tqdm import tqdm
 from tensorboardX import SummaryWriter
+import tensorflow as tf
 
 from rlpack.algos import AveDQN
 
@@ -13,6 +14,8 @@ parser.add_argument("--env", type=str, default="CartPole-v1")
 parser.add_argument("--niter", type=int, default=int(2e4))
 parser.add_argument("--batchsize", type=int, default=128)
 args = parser.parse_args()
+
+env = gym.make(args.env)
 
 
 class Memory(object):
@@ -46,17 +49,33 @@ class Memory(object):
         return state_batch, action_batch, reward_batch, done_batch, next_state_batch
 
 
+def obs_fn():
+    obs = tf.placeholder(shape=[None, *env.observation_space.shape], dtype=tf.float32, name="observation")
+    return obs
+
+
+def value_fn(obs):
+    x = tf.layers.dense(obs, 128, activation=tf.nn.relu)
+    x = tf.layers.dense(x, 128, activation=tf.nn.relu)
+    x = tf.layers.dense(x, 64, activation=tf.nn.relu)
+    x = tf.layers.dense(x, env.action_space.n)
+    return x
+
+
 def run_main():
-    env = gym.make(args.env)
-    agent = AveDQN(dim_obs=env.observation_space.shape,
+    agent = AveDQN(obs_fn=obs_fn,
+                   value_fn=value_fn,
                    dim_act=env.action_space.n,
                    update_target_freq=100,
                    log_freq=10,
-                   save_path="./log/avedqn_cc",
+                   save_path=f"./log/avedqn_cc/{args.env}",
                    lr=1e-4,
-                   train_epoch=1)
+                   epsilon_schedule=lambda x: max(0.1, (1e4-x) / 1e4),
+                   n_net=5,
+                   train_epoch=1,
+                   )
     mem = Memory(capacity=int(1e5), dim_obs=env.observation_space.shape, dim_act=env.action_space.n)
-    sw = SummaryWriter(log_dir="./log/avedqn_cc")
+    sw = SummaryWriter(log_dir=f"./log/avedqn_cc/{args.env}")
     totrew, totlen = 0, 0
 
     s = env.reset()

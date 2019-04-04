@@ -23,7 +23,7 @@ class AADQN(Base):
                  weight_high=5.0,
                  lr=2.5e-4,
                  max_grad_norm=40,
-                 epsilon_schedule=lambda x: max(0.1, (1e6-x) / 1e6),
+                 epsilon_schedule=lambda x: max(0.1, (1e4-x) / 1e4),
                  update_target_freq=10000,
                  train_epoch=1,
                  save_path="./log",
@@ -141,7 +141,7 @@ class AADQN(Base):
 
         tmp = tf.matmul(td_mat, td_mat, transpose_b=True)
         tmax = tf.reduce_max(tmp)
-        ridge_coef = tmax * 1e-3 if self._ridge_coef is None else self._ridge_coef
+        ridge_coef = tmax * 0.1 if self._ridge_coef is None else self._ridge_coef
         mat = tmp + ridge_coef * tf.eye(self._n_net)
         inv_mat = tf.matrix_inverse(mat)
         ones = tf.ones((self._n_net, 1))
