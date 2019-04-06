@@ -112,7 +112,8 @@ class PPOBATCH(Base):
         self._lr = tf.placeholder(tf.float32)
         self._optimizer = tf.train.AdamOptimizer(self._lr, epsilon=1e-8)
 
-        self._old_logit_p_act = tf.placeholder(tf.float32, [None, self._dim_act])
+        # self._old_logit_p_act = tf.placeholder(tf.float32, [None, self._dim_act])
+        self._old_p_act = tf.placeholder(tf.float32, [None])
         self._action = tf.placeholder(tf.int32, [None], name="action")
         self._advantage = tf.placeholder(tf.float32, [None], name="advantage")
         self._target_state_value = tf.placeholder(tf.float32, [None], name="target_state_value")
@@ -123,9 +124,9 @@ class PPOBATCH(Base):
 
         # Compute entropy of the action probability.
         log_prob_1 = tf.nn.log_softmax(self._logit_p_act)
-        log_prob_2 = tf.stop_gradient(tf.nn.log_softmax(self._old_logit_p_act))
+        # log_prob_2 = tf.stop_gradient(tf.nn.log_softmax(self._old_logit_p_act))
         assert_shape(log_prob_1, [None, self._dim_act])
-        assert_shape(log_prob_2, [None, self._dim_act])
+        # assert_shape(log_prob_2, [None, self._dim_act])
 
         prob_1 = tf.nn.softmax(self._logit_p_act)
         assert_shape(prob_1, [None, self._dim_act])
@@ -134,11 +135,11 @@ class PPOBATCH(Base):
 
         # Compute ratio of the action probability.
         logit_act1 = tf.gather_nd(log_prob_1, selected_action_index)
-        logit_act2 = tf.gather_nd(log_prob_2, selected_action_index)
+        # logit_act2 = tf.gather_nd(log_prob_2, selected_action_index)
         assert_shape(logit_act1, [None])
-        assert_shape(logit_act2, [None])
+        # assert_shape(logit_act2, [None])
 
-        ratio = tf.exp(logit_act1 - logit_act2)
+        ratio = tf.div(tf.exp(logit_act1), self._old_p_act)
 
         # Get surrogate object.
         surrogate_1 = ratio * self._advantage
@@ -172,7 +173,8 @@ class PPOBATCH(Base):
         prob = np.exp(newlogit) / np.sum(np.exp(newlogit), axis=1, keepdims=True)
         action = [np.random.choice(self._dim_act, p=prob[i, :]) for i in range(n_inference)]
         # t_logit = np.array([x[y] for x, y in zip(logit, action)])
-        return np.array(action), logit, sval
+        p_act = np.array([x[y] for x, y in zip(prob, action)])
+        return np.array(action), p_act, sval
 
     def update(self, databatch):
         """
@@ -180,7 +182,7 @@ class PPOBATCH(Base):
             databatch {list of list} -- A list of trajectories, each of which is also a list filled with (s,a,r).
         """
 
-        s_batch, a_batch, tsv_batch, adv_batch, old_logit_p_act = self._parse_databatch(databatch)
+        s_batch, a_batch, tsv_batch, adv_batch, old_p_act = self._parse_databatch(databatch)
 
         # Normalize Advantage.
         adv_batch = (adv_batch - adv_batch.mean()) / (adv_batch.std() + 1e-8)
@@ -204,7 +206,7 @@ class PPOBATCH(Base):
                                                       self._action: a_batch[span_index],
                                                       self._advantage: adv_batch[span_index],
                                                       self._target_state_value: tsv_batch[span_index],
-                                                      self._old_logit_p_act: old_logit_p_act[span_index],
+                                                      self._old_p_act: old_p_act[span_index],
                                                       self._lr: self._lr_schedule(global_step),
                                                       self._clip_ratio: self._clip_schedule(global_step)})
 
@@ -238,7 +240,7 @@ class PPOBATCH(Base):
         return np.concatenate(s_list), np.concatenate(a_list), np.concatenate(tsv_list), np.concatenate(adv_list), np.concatenate(logit_list)
 
     def _parse_trajectory(self, trajectory):
-        """trajectory由一系列(s,a,r)构成。最后一组操作之后游戏结束。
+        """trajectory由一系列(s,a,r,logit,state_value)构成。最后一组操作之后游戏结束。
         """
         n = len(trajectory)
         target_sv_batch = np.zeros(n, dtype=np.float32)

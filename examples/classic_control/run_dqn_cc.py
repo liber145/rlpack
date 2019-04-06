@@ -10,12 +10,14 @@ from rlpack.algos import DQN
 
 
 parser = argparse.ArgumentParser(description="Parse environment name.")
-parser.add_argument("--env", type=str, default="CartPole-v1")
-parser.add_argument("--niter", type=int, default=int(2e4))
+parser.add_argument("--env", type=str, default="MountainCar-v0")
+parser.add_argument("--niter", type=int, default=int(4e5))
 parser.add_argument("--batchsize", type=int, default=128)
+parser.add_argument("--experiment-id", type=int, default=0)
 args = parser.parse_args()
 
 env = gym.make(args.env)
+LOG_PATH = f"./log/dqn_cc/{args.env}/{args.experiment_id}"
 
 
 class Memory(object):
@@ -71,13 +73,13 @@ def run_main():
                 dim_act=env.action_space.n,
                 update_target_freq=100,
                 log_freq=10,
-                save_path=f"./log/dqn_cc/{args.env}",
+                save_path=LOG_PATH,
                 lr=1e-4,
-                epsilon_schedule=lambda x: max(0.1, (1e4-x) / 1e4),
+                epsilon_schedule=lambda x: max(0.1, (1e5-x) / 1e5),
                 train_epoch=1)
     mem = Memory(capacity=int(1e5), dim_obs=env.observation_space.shape, dim_act=env.action_space.n)
-    sw = SummaryWriter(log_dir=f"./log/dqn_cc/{args.env}")
-    totrew, totlen, rewcnt = 0, 0, Counter()
+    sw = SummaryWriter(log_dir=LOG_PATH)
+    totrew, totlen, actcnt = 0, 0, Counter()
 
     s = env.reset()
     for i in tqdm(range(args.niter)):
@@ -88,35 +90,46 @@ def run_main():
 
         totrew += r
         totlen += 1
-        rewcnt.update([a])
+        actcnt.update([a])
 
         agent.update(mem.sample(args.batchsize))
 
         if d is True:
             s = env.reset()
             sw.add_scalars("dqn", {"totrew": totrew, "totlen": totlen}, i)
+            tqdm.write(f"{i}th. totrew={totrew}, totlen={totlen}, actcnt={rewttt(actcnt, env.action_space.n)}")
+            totrew, totlen, actcnt = 0, 0, Counter()
 
-            tqdm.write(f"{i}th. totrew={totrew}, totlen={totlen}, rewcnt={rewttt(rewcnt, env.action_space.n)}")
-            totrew, totlen, rewcnt = 0, 0, Counter()
 
-
-def rewttt(rewcnt, dim_act):
+def rewttt(actcnt, dim_act):
     t = ""
     for i in range(dim_act):
-        t += f"{i}:{rewcnt[i]} "
+        t += f"{i}:{actcnt[i]} "
     return t
 
 
 def run_game():
-    env = gym.make(args.env)
+    agent = DQN(obs_fn=obs_fn,
+                value_fn=value_fn,
+                dim_act=env.action_space.n,
+                update_target_freq=100,
+                log_freq=10,
+                save_path=LOG_PATH,
+                lr=1e-4,
+                epsilon_schedule=lambda x: 0.01,
+                train_epoch=1,
+                )
     s = env.reset()
     totrew = 0
-    for i in range(100):
-        a = np.random.randint(2)
+    for i in range(400):
+        a = agent.get_action((s[np.newaxis, :], np.zeros(1)))[0]
         ns, r, d, _ = env.step(a)
+        env.render()
         ns = s
         totrew += r
         if d is True:
+            print("totrew:", totrew)
+            totrew = 0
             s = env.reset()
 
 

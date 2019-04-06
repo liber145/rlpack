@@ -24,10 +24,10 @@ def trajectory(env, agent):
     s = env.reset()
     tsum = 0
     while True:
-        a, logit, sval = agent.get_action(s[np.newaxis, :])
-        a, logit = a[0], logit[0]
+        a, p_act, sval = agent.get_action(s[np.newaxis, :])
+        a, p_act = a[0], p_act[0]
         ns, r, d, _ = env.step(a)
-        t.append((s, a, r, logit, sval))
+        t.append((s, a, r, p_act, sval))
         s = ns
         tsum += r
         if d is True:

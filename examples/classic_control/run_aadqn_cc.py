@@ -16,6 +16,7 @@ parser.add_argument("--gpu", type=str, default="0")
 parser.add_argument("--env", type=str, default="CartPole-v1")
 parser.add_argument("--niter", type=int, default=int(2e4))
 parser.add_argument("--batchsize", type=int, default=128)
+parser.add_argument("--experiment-id", type=int, default=0)
 args = parser.parse_args()
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -23,6 +24,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
 
 env = gym.make(args.env)
+LOG_PATH = f"./log/aadqn_atari/{args.env}/{args.experiment_id}"
 
 
 class Memory(object):
@@ -77,7 +79,7 @@ def run_main():
                   log_freq=10,
                   weight_low=-3,
                   weight_high=3,
-                  save_path=f"./log/aadqn_cc/{args.env}",
+                  save_path=LOG_PATH,
                   lr=1e-4,
                   epsilon_schedule=lambda x: max(0.1, (1e4-x) / 1e4),
                   n_net=2,
@@ -85,7 +87,7 @@ def run_main():
                   train_epoch=1
                   )
     mem = Memory(capacity=int(1e5), dim_obs=env.observation_space.shape, dim_act=env.action_space.n)
-    sw = SummaryWriter(log_dir=f"./log/aadqn_cc/{args.env}")
+    sw = SummaryWriter(log_dir=LOG_PATH)
     totrew, totlen = 0, 0
 
     s = env.reset()

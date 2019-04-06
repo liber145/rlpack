@@ -12,3 +12,4 @@ document/
 # Distribution / packaging
 *.egg-info/
 *.egg
+run.py
