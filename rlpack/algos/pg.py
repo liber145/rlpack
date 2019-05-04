@@ -107,5 +107,5 @@ class PG(Base):
         tsum = 0
         for i, (s, a, r) in enumerate(reversed(trajectory)):
             tsum = self._discount * tsum + r
-            allr_batch[i] = tsum
+            allr_batch[n-1-i] = tsum
         return s_batch, a_batch, allr_batch
