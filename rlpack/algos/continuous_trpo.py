@@ -7,7 +7,7 @@ from ..common.utils import assert_shape
 from .base import Base
 
 
-class TRPO(Base):
+class ContinuousTRPO(Base):
     def __init__(self,
                  rnd=1,
                  n_env=1,

@@ -10,6 +10,7 @@ from .ppo import PPO
 from .ppo_batch import PPOBATCH
 from .continuous_ppo import ContinuousPPO
 from .trpo import TRPO
+from .continuous_trpo import ContinuousTRPO
 from .td3 import TD3
 from .sac import SAC
 from .pg import PG
