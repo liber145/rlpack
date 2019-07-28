@@ -1,17 +1,22 @@
-### Introduction
+### 简介
 
-**rlpack** is an intuitive, lightweight and flexible reinforcement learning library based on TensorFlow.
+**rlpack**是一个直观，灵活，轻量级，基于tensorflow的强化学习算法库。
+它集合了一些最新强化学习算法。
+
+<!--
+is an intuitive, lightweight and flexible reinforcement learning library based on TensorFlow.
 It bundles up-to-date reinforcement learning algorithms. 
+-->
 
 
-**Features:**
+**特点：**
 
-- Lightweight
-- Decoupling agent and environment, making it easy to integrate and use
-- Providing an asynchronous environment framework to reduce the interaction waiting time
+- 轻量级；
+- 解耦智能体与环境的关系，方便调用；
+- 支持异步收集数据，以降低训练时间。
 
 
-### Usage
+### 用法
 
 Look how to use it:
 
@@ -119,9 +124,9 @@ if __name__ == "__main__":
 ```
 
 
-### Installation
+### 安装
 
-Python3.6+ is required.
+**需求：** Python3.6+
 
 1. Install the dependencies using `environment.yml`:
 
@@ -141,7 +146,7 @@ Python3.6+ is required.
 It will install a basic learning environment in `gym`.
 To install more environments like mujoco, please refer to https://github.com/openai/gym.
 
-### Reference
+### 算法表
 
 - [Human-level control through deep reinforcement learning](https://www.nature.com/articles/nature14236)
 - [Deep Reinforcement Learning with Double Q-learning](https://arxiv.org/abs/1509.06461)

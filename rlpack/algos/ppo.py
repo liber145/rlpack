@@ -171,7 +171,7 @@ class PPO(Base):
 
         self._log_op = {"entropy": entropy, "mean_ratio": tf.reduce_mean(ratio), "total_loss": total_loss, "value_loss": vf, "policy_loss": surrogate, "grad_norm": grad_norm}
 
-    def get_action(self, obs)->np.ndarray:
+    def get_action(self, obs) -> np.ndarray:
         n_inference = obs.shape[0]
         logit = self.sess.run(self._logit_p_act, feed_dict={self._observation: obs})
         logit = logit - np.max(logit, axis=1, keepdims=True)
