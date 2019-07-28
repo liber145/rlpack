@@ -189,13 +189,13 @@ PPO简化了TRPO中复杂的计算流程，从而降低了计算复杂度以及�
 <p>优势函数的定义是 <span class="math notranslate nohighlight">\(A_{\pi_{old}}(s,a) = Q_{\pi_{old}}(s,a) - V_{\pi_{old}}(s)\)</span> ，
 表示采样动作相对于平均动作的优势值。</p>
 <ul class="simple">
-<li>当 <span class="math notranslate nohighlight">\(A &gt; 0\)</span> 时，表示此时优势值为正，即当前策略在该状态上正确执行，没必要在此样本上过度修正算法。</li>
-</ul>
-<p>因此，min操作和clip操作组合使得如果比值超过 <span class="math notranslate nohighlight">\(1+\epsilon\)</span> ，最终为 <span class="math notranslate nohighlight">\(1+\epsilon\)</span> ，否则保持原值。
-这样就限制了更新程度。
-- 当 <span class="math notranslate nohighlight">\(A &lt; 0\)</span> 时，表示此时优势值为负（<span class="math notranslate nohighlight">\(-\max(r, clip(r, 1-\epsilon, 1+\epsilon))A\)</span> ，<span class="math notranslate nohighlight">\(r\)</span> 表示比值），即当前策略在该状态上效果不好，有必要在此样本上修正算法。
+<li>当 <span class="math notranslate nohighlight">\(A &gt; 0\)</span> 时，表示此时优势值为正，即当前策略在该状态上正确执行，没必要在此样本上过度修正算法。
+因此，min操作和clip操作组合使得如果比值超过 <span class="math notranslate nohighlight">\(1+\epsilon\)</span> ，最终为 <span class="math notranslate nohighlight">\(1+\epsilon\)</span> ，否则保持原值。
+这样就限制了更新程度。</li>
+<li>当 <span class="math notranslate nohighlight">\(A &lt; 0\)</span> 时，表示此时优势值为负（<span class="math notranslate nohighlight">\(-\max(r, clip(r, 1-\epsilon, 1+\epsilon))A\)</span> ，<span class="math notranslate nohighlight">\(r\)</span> 表示比值），即当前策略在该状态上效果不好，有必要在此样本上修正算法。
 因此，min操作和clip操作组合使得如果比值低于 <span class="math notranslate nohighlight">\(1-\epsilon\)</span>，最后为 <span class="math notranslate nohighlight">\(1-\epsilon\)</span> ，否则保持原值。
-这样就使得更新成都可以很大。</p>
+这样就使得更新成都可以很大。</li>
+</ul>
 </div>
 <div class="section" id="id3">
 <h2>参考文献<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>

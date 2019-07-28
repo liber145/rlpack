@@ -131,6 +131,7 @@ latex_elements = {
     #
     # 'figure_align': 'htbp',
 }
+latex_engine = 'xelatex'
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
