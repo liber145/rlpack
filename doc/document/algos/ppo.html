@@ -94,9 +94,9 @@
 <li class="toctree-l1"><a class="reference internal" href="a2c.html">A2C</a></li>
 <li class="toctree-l1"><a class="reference internal" href="trpo.html">TRPO</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">PPO</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#quick-review">Quick Review</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#practice">Practice</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#reference">Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id1">优化目标</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id2">直观释义</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id3">参考文献</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="ddpg.html">DDPG</a></li>
@@ -173,24 +173,32 @@
             
   <div class="section" id="ppo">
 <h1>PPO<a class="headerlink" href="#ppo" title="Permalink to this headline">¶</a></h1>
-<p>PPO is an on-policy algorithm.</p>
-<div class="section" id="quick-review">
-<h2>Quick Review<a class="headerlink" href="#quick-review" title="Permalink to this headline">¶</a></h2>
-<p>While TRPO uses a hard constraint to control the policy update in a small scale,
-PPO modifeies the surrogate objective by clipping the probability ratio [1].</p>
+<p>PPO全称是Proximal Policy Optimization，中文译为近端策略优化。
+PPO简化了TRPO中复杂的计算流程，从而降低了计算复杂度以及实现难度。</p>
+<div class="section" id="id1">
+<h2>优化目标<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<p>PPO简化了TRPO中的优化问题，将优化问题转化为，</p>
 <div class="math notranslate nohighlight">
-\[\begin{split}L(\theta) &amp;= \mathbb{E}_t \min( r_t(\theta) A_t, clip( r_t(\theta) A_t , 1-\epsilon, 1+\epsilon) )  \\
-r_t(\theta) &amp;=  \frac{\pi_{\theta}(a_t | s_t)}{ \pi_{\theta_{old}}(a_t | s_t) }\end{split}\]</div>
+\[\max_\theta \mathbb{E}_{s \sim \rho_{\pi_{\theta_{old}}}(\cdot), a \sim \pi_{\theta_{old}}(\cdot|s)} \min \left(  \frac{\pi_\theta(a|s)}{\pi_{\theta_{old}}(a|s)} A_{\pi_{\theta_{old}}}(s,a), clip \left(\frac{\pi_\theta(a|s)}{\pi_{\theta_{old}}(a|s)} , 1-\epsilon, 1+\epsilon \right) A_{\pi_{\theta_{old}}}(s,a)\right)\]</div>
+<p>沿用TRPO中的思路，将新策略约束在旧策略的邻域内：首先使用clip操作，约束新旧策略在动作概率上的比率，获得一个近似目标；
+然后通过min操作，确保最终的优化目标是一个真实目标的下界。
+最后，求解优化问题来抬高下界，从而达到改进目标的效果。</p>
 </div>
-<div class="section" id="practice">
-<h2>Practice<a class="headerlink" href="#practice" title="Permalink to this headline">¶</a></h2>
-<p>To update the policy for PPO, one only needs to call a gradient descent optimizer.
-Its implementation is quite easier than TRPO.
-In practice, PPO is more robust than TRPO.
-The champion of OpenAI Retro Contest uses an A3C version of PPO, joint PPO <a class="reference external" href="https://blog.openai.com/first-retro-contest-retrospective/">link</a>.</p>
+<div class="section" id="id2">
+<h2>直观释义<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<p>优势函数的定义是 <span class="math notranslate nohighlight">\(A_{\pi_{old}}(s,a) = Q_{\pi_{old}}(s,a) - V_{\pi_{old}}(s)\)</span> ，
+表示采样动作相对于平均动作的优势值。</p>
+<ul class="simple">
+<li>当 <span class="math notranslate nohighlight">\(A &gt; 0\)</span> 时，表示此时优势值为正，即当前策略在该状态上正确执行，没必要在此样本上过度修正算法。</li>
+</ul>
+<p>因此，min操作和clip操作组合使得如果比值超过 <span class="math notranslate nohighlight">\(1+\epsilon\)</span> ，最终为 <span class="math notranslate nohighlight">\(1+\epsilon\)</span> ，否则保持原值。
+这样就限制了更新程度。
+- 当 <span class="math notranslate nohighlight">\(A &lt; 0\)</span> 时，表示此时优势值为负（<span class="math notranslate nohighlight">\(-\max(r, clip(r, 1-\epsilon, 1+\epsilon))A\)</span> ，<span class="math notranslate nohighlight">\(r\)</span> 表示比值），即当前策略在该状态上效果不好，有必要在此样本上修正算法。
+因此，min操作和clip操作组合使得如果比值低于 <span class="math notranslate nohighlight">\(1-\epsilon\)</span>，最后为 <span class="math notranslate nohighlight">\(1-\epsilon\)</span> ，否则保持原值。
+这样就使得更新成都可以很大。</p>
 </div>
-<div class="section" id="reference">
-<h2>Reference<a class="headerlink" href="#reference" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id3">
+<h2>参考文献<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
 <p>[1] Schulman, John, et al. “Proximal policy optimization algorithms.” arXiv preprint arXiv:1707.06347 (2017).</p>
 </div>
 </div>

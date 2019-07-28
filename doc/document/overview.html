@@ -182,7 +182,7 @@ It bundles up-to-date reinforcement learning algorithms.</p>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">rlpack.algos</span> <span class="k">import</span> <span class="n">PPO</span>
 <span class="kn">from</span> <span class="nn">rlpack.environment</span> <span class="k">import</span> <span class="n">AsyncAtariWrapper</span>
-<span class="kn">from</span> <span class="nn">rlpack.common</span> <span class="k">import</span> <span class="n">DistributedMemory</span>
+<span class="kn">from</span> <span class="nn">rlpack.common</span> <span class="k">import</span> <span class="n">AsyncDiscreteActionMemory</span>
 
 <span class="c1"># initialization.</span>
 <span class="n">env</span> <span class="o">=</span> <span class="n">AsyncAtariWrapper</span><span class="p">(</span><span class="s2">&quot;BreakoutNoFrameskip-v4&quot;</span><span class="p">)</span>
@@ -197,7 +197,7 @@ It bundles up-to-date reinforcement learning algorithms.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">dim_action</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">dim_action</span>
 <span class="n">config</span> <span class="o">=</span> <span class="n">Config</span><span class="p">()</span>
 <span class="n">agent</span> <span class="o">=</span> <span class="n">PPO</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
-<span class="n">memory</span> <span class="o">=</span> <span class="n">DistributedMemory</span><span class="p">(</span><span class="mi">10000</span><span class="p">)</span>
+<span class="n">memory</span> <span class="o">=</span> <span class="n">AsyncDiscreteActionMemory</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span> <span class="n">dim_obs</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">dim_observation</span><span class="p">)</span>
 <span class="n">memory</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">env</span><span class="p">)</span>
 <span class="n">epinfos</span> <span class="o">=</span> <span class="p">[]</span>
 
@@ -233,7 +233,7 @@ $ conda activate py36
 <ol class="arabic simple" start="2">
 <li>Install <cite>rlpack</cite> by running:</li>
 </ol>
-<div class="code bash highlight-default notranslate"><div class="highlight"><pre><span></span>$ git clone https://github.com/smsxgz/rl-algo.git
+<div class="code bash highlight-default notranslate"><div class="highlight"><pre><span></span>$ git clone https://github.com/liber145/rlpack
 $ cd rl-algo
 $ python setup.py install
 </pre></div>

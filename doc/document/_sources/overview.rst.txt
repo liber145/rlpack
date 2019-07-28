@@ -19,11 +19,12 @@ Look how to use it:
 
 .. code:: python
 
+
     from tqdm import tqdm
     import numpy as np
     from rlpack.algos import PPO
     from rlpack.environment import AsyncAtariWrapper
-    from rlpack.common import DistributedMemory
+    from rlpack.common import AsyncDiscreteActionMemory
 
     # initialization.
     env = AsyncAtariWrapper("BreakoutNoFrameskip-v4")
@@ -38,7 +39,7 @@ Look how to use it:
             self.dim_action = env.dim_action
     config = Config()
     agent = PPO(config)
-    memory = DistributedMemory(10000)
+    memory = AsyncDiscreteActionMemory(maxsize=10000, dim_obs=config.dim_observation)
     memory.register(env)
     epinfos = []
 
@@ -61,6 +62,7 @@ Look how to use it:
 
 
 
+
 Installation
 ============
 
@@ -78,7 +80,7 @@ Python3.6+ is required.
 
 .. code:: bash
 
-    $ git clone https://github.com/smsxgz/rl-algo.git
+    $ git clone https://github.com/liber145/rlpack
     $ cd rl-algo
     $ python setup.py install
 

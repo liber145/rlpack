@@ -93,9 +93,10 @@
 <li class="toctree-l1"><a class="reference internal" href="dqn.html">DQN</a></li>
 <li class="toctree-l1"><a class="reference internal" href="a2c.html">A2C</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">TRPO</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#quick-review">Quick Review</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#computation">Computation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#reference">Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id1">优化目标</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id4">理论分析</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id5">计算过程</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id6">参考文献</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="ppo.html">PPO</a></li>
@@ -173,48 +174,82 @@
             
   <div class="section" id="trpo">
 <h1>TRPO<a class="headerlink" href="#trpo" title="Permalink to this headline">¶</a></h1>
-<p>TRPO is an on-policy algorithm [1].
-It uses KL-divergence to control the updated policy not exceeding a reasonable ball of the last policy.</p>
-<div class="section" id="quick-review">
-<h2>Quick Review<a class="headerlink" href="#quick-review" title="Permalink to this headline">¶</a></h2>
-<p>Like all reinforcement learing algorithms, TRPO cares the future accumulative reward:</p>
+<p>TRPO是一种经典的强化学习算法，全称是Trust Region Policy Optimization，中文译为信赖域策略优化。 策略梯度算法更新策略时，如何选择合适步长从而确保累积奖励增加是一个关键问题。
+TRPO通过限制新策略在旧策略的邻域中搜索，具有</p>
+<ul class="simple">
+<li>累积奖励递增的理论分析，</li>
+<li>不错的训练效果。</li>
+</ul>
+<div class="section" id="id1">
+<h2>优化目标<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<p>策略 <span class="math notranslate nohighlight">\(\pi\)</span> 的累积奖励定义为 <span class="math notranslate nohighlight">\(J(\pi) = \mathbb{E}_{s_0, a_0, ... \sim \pi} \sum_{t=0}^\infty \gamma^t r(s_t, a_t)\)</span>.
+Sham Kakade（2012）分析了两个策略 <span class="math notranslate nohighlight">\(\tilde{\pi}\)</span> 和 <span class="math notranslate nohighlight">\(\pi\)</span> 之间的累积奖励差值，</p>
 <div class="math notranslate nohighlight">
-\[\eta(\pi) = \mathbb{E}_{s_0, a_0, ...} \sum_{t=0}^\infty \gamma^t r(s_t).\]</div>
-<p>Note that the expected return of another policy <span class="math notranslate nohighlight">\(\eta(\tilde{\pi})\)</span> can be expressed:</p>
+\[\begin{split}J(\tilde{\pi}) - J(\pi) &amp;= \mathbb{E}_{s_0,a_0, ... \sim \tilde{\pi}} \sum_{t=0}^\infty \gamma^t A_\pi(s_t, a_t) \\
+&amp;= \sum_s \rho_{\tilde{\pi}}(s) \sum_a \tilde{\pi}(a|s) A_\pi(s, a).\end{split}\]</div>
+<p>其中，<span class="math notranslate nohighlight">\(A_\pi(s_t, a_t)\)</span> 表示优势函数，<span class="math notranslate nohighlight">\(A_\pi(s_t, a_t) = Q_\pi(s_t, a_t) - V_\pi(s_t)\)</span>.</p>
+<p>因此，给定当前策略 <span class="math notranslate nohighlight">\(\pi\)</span> ，我们可以通过提升差值项来改进模型。
+在实际计算过程中，动作分布 :math:<a href="#id2"><span class="problematic" id="id3">`</span></a>tilde{pi}(a|s)`可以通过重要性采样（importance sampling）解决，</p>
 <div class="math notranslate nohighlight">
-\[\eta(\tilde{\pi}) = \eta(\pi) + \sum_s \rho_{\tilde{\pi}}(s) \sum_a \tilde{\pi}(a|s) A_\pi(s, a)\]</div>
-<p>Therefore, given the current policy <span class="math notranslate nohighlight">\(\pi\)</span>, to update the new policy <span class="math notranslate nohighlight">\(\tilde{\pi}\)</span>, we will maximize the right term of the above equation.
-However, it is not easy to solve since we do not have <span class="math notranslate nohighlight">\(\rho_{\tilde{\pi}}(s)\)</span>.
-Instead, Consider the surrogate function:</p>
+\[\sum_a \pi(a|s) \frac{\tilde{\pi}(a|s)}{\pi(a|s)} A_\pi(s, a),\]</div>
+<p>但状态分布 <span class="math notranslate nohighlight">\(\rho_{\tilde{\pi}}(s)\)</span> 难以通过重要性采样解决，因为状态分布受决策序列影响，概率依赖很深。
+TRPO使用旧策略对应的状态分布 <span class="math notranslate nohighlight">\(\rho_{\pi}(s)\)</span> 去近似该状态分布。
+因此，优化目标转化为最大化下面的近似累积奖励差函数，</p>
 <div class="math notranslate nohighlight">
-\[L_{\pi}(\tilde{\pi}) = \eta(\pi) + \sum_s \rho_{\pi} (s) \sum_a \tilde{\pi}(a|s) A_\pi(s, a).\]</div>
-<p>Further, [1] gives the relationship between new policy and old policy.</p>
+\[L_\pi(\tilde{\pi}) = \sum_s \rho_\pi(s) \sum_a \pi(a|s) \frac{\tilde{\pi}(a|s)}{\pi(a|s)} A_\pi(s,a)\]</div>
+<p>以上优化目标和普通Actor Critic的优化目标是相同的。可见，普通Actor Critic也有近似优化目标。
+TRPO进一步添加了KL散度来约束策略更新，最终的优化目标为，</p>
 <div class="math notranslate nohighlight">
-\[\begin{split}&amp; \eta(\pi_{new}) \geq L_{\pi_{old}}(\pi_{new}) - CD_{KL}^{max} (\pi, \tilde{\pi}) \\
-&amp; \text{where}~~ C = \frac{4\epsilon \gamma}{ (1-\gamma)^2 }\end{split}\]</div>
-<p>[1] considers solving the below optimization problem:</p>
-<div class="math notranslate nohighlight">
-\[\begin{split}&amp;\max_{\theta} L_{\theta_{old}}(\theta) \\
-&amp;\text{subject to} ~~ D_{KL}^{max} (\theta_{old}, \theta) \leq \delta\end{split}\]</div>
-<p>The maximum KL divergence is depended on every point in the state space and is impractical to estimate.
-Instead, a heuristic approximation is used:</p>
-<div class="math notranslate nohighlight">
-\[\bar{D}_{KL}^{\rho} (\theta_1, \theta_2) = \mathbb{E}_{s\sim \rho} D_{KL}( \pi_{\theta_1}(\cdot|s) \| \pi_{\theta_2(\cdot | s)} )\]</div>
+\[\begin{split}&amp; \max_{\tilde{\pi}} \sum_s \rho_\pi(s) \sum_a \pi(a|s) \frac{\tilde{\pi}(a|s)}{\pi(a|s)} A_\pi(s,a) \\
+&amp; s.t. ~~~~ \mathbb{E}_{s \sim \rho_\pi} D_{KL}(\pi(\cdot|s) \| \tilde{\pi}(\cdot|s)) \leq \epsilon \nonumber\end{split}\]</div>
 </div>
-<div class="section" id="computation">
-<h2>Computation<a class="headerlink" href="#computation" title="Permalink to this headline">¶</a></h2>
-<p>To sovle it, [1] uses the gradient descent algorithm.</p>
+<div class="section" id="id4">
+<h2>理论分析<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h2>
+<p>优化近似的目标会有两个问题</p>
+<ul class="simple">
+<li>不知道更新方向对不对，</li>
+<li>不知道如何挑选合适的步长。</li>
+</ul>
+<p>TRPO建立了以下的边界分析，</p>
 <div class="math notranslate nohighlight">
-\[\begin{split}&amp;\min_x \nabla f(x) (x - x_0)   \\
-&amp;\text{s.t.}~~   (x - x_0)^\top H (x - x_0) \leq \delta\end{split}\]</div>
-<p>The Lagrangian function can be expressed by:</p>
-<div class="math notranslate nohighlight">
-\[L(\lambda, x) \nabla f(x) (x - x_0) + \lambda [(x - x_0)^\top H (x - x_0) - \delta]\]</div>
-<p>Therefore, we can get the update direction <span class="math notranslate nohighlight">\(d(x) = H^{-1} \nabla f(x)\)</span>.
-Then, we can use line search to get a proper step length such that the new policy satisfies the KL-divergence constraint.</p>
+\[\begin{split}J(\tilde{\pi}) - J(\pi) \geq L_\pi(\tilde{\pi}) - CD_{KL}^\max(\pi, \tilde{\pi}) \\
+\text{其中，} C= \frac{4\gamma \epsilon}{(1-\gamma)^2}, \epsilon = \max_{s,a} |A(s,a)|.\end{split}\]</div>
+<p>以上不等式打通了累积奖励增益 <span class="math notranslate nohighlight">\(J(\tilde{\pi}) - J(\pi)\)</span> 和近似目标 <span class="math notranslate nohighlight">\(L_\pi(\tilde{\pi})\)</span> 之间的关系。
+由此，我们不需要担心上述两个问题，只需优化不等式右边的项。
+注意，具体求解优化目标时，我们进一步近似了策略约束，将KL散度的最大化操作替换为平均操作。</p>
 </div>
-<div class="section" id="reference">
-<h2>Reference<a class="headerlink" href="#reference" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id5">
+<h2>计算过程<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h2>
+<p>求解优化问题时，我们对目标进行一阶泰勒近似，得到</p>
+<div class="math notranslate nohighlight">
+\[\mathbb{E}_{s \sim \rho_{\pi_{\theta_{old}}}(\cdot), a \sim \pi_{\theta_{old}}(\cdot|s)} \frac{\pi_\theta(a|s)}{\pi_{\theta_{old}}(a|s)} A_{\pi_{\theta_{old}}}(s,a)
+= g^\top (\theta - \theta_{old}) + K_0,\]</div>
+<p>其中 :math`g` 表示 <span class="math notranslate nohighlight">\(A_{\pi_{\theta_{old}}}(s,a) \pi_\theta(a|s) / \pi_{\theta_{old}}(a|s)\)</span> 在 <span class="math notranslate nohighlight">\(\theta = \theta_{old}\)</span> 处导数的期望，
+<span class="math notranslate nohighlight">\(K_0\)</span> 表示和 <span class="math notranslate nohighlight">\(\theta\)</span> 无关的常数。
+我们对策略约束使用二阶泰勒近似，可以得到</p>
+<div class="math notranslate nohighlight">
+\[\mathbb{E}_{s \sim \rho_{\pi_{\theta_{old}}}(\cdot)} D_\alpha (\pi_{\theta_{old}}(\cdot|s) \| \pi_\theta(\cdot|s))
+= \frac{1}{2} (\theta - \theta_{old})^\top H (\theta - \theta_{old}) + K_1,\]</div>
+<p>其中 <span class="math notranslate nohighlight">\(H\)</span> 表示在等式左边项在 <span class="math notranslate nohighlight">\(\theta=\theta_{old}\)</span> 处的二阶导数，<span class="math notranslate nohighlight">\(K_1\)</span> 表示和 <span class="math notranslate nohighlight">\(\theta\)</span> 无关的常数。
+注意，上面等式的右边没有一阶项，这是因为左边项在 <span class="math notranslate nohighlight">\(\theta = \theta_{old}\)</span> 的一阶项为零。
+在实现过程中，上述一阶导数和二阶导数期望的计算都是使用采样的数据近似计算得到的。</p>
+<p>我们去掉与 <span class="math notranslate nohighlight">\(\theta\)</span> 无关的常数项之后，可以得到如下的优化问题，</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}&amp; \min_\theta ~   - g^\top (\theta - \theta_{old}) \\
+&amp; s.t. ~~ \frac{1}{2}(\theta - \theta_{old})^\top H (\theta - \theta_{old}) \leq \epsilon.\end{split}\]</div>
+<p>上式可以转化成等价的最小最大问题，</p>
+<div class="math notranslate nohighlight">
+\[\min_\theta  \max_{\lambda \geq 0} ~  L(\theta, \lambda) = - g^\top(\theta - \theta_{old}) +
+\lambda \cdot  (\frac{1}{2} (\theta - \theta_{old})^\top H (\theta - \theta_{old}) - \epsilon).\]</div>
+<p>接下来我们使用KKT条件求解上述问题。
+根据 <span class="math notranslate nohighlight">\(L(\theta, \lambda)\)</span> 的稳定性，我们可以得到 <span class="math notranslate nohighlight">\(\partial L/\partial \theta = 0\)</span>，
+进而推导出 <span class="math notranslate nohighlight">\(\theta = \theta_{old} + \lambda^{-1} H^{-1}g\)</span>.
+然后我们将其带入到  <span class="math notranslate nohighlight">\(\partial L/\partial \lambda = 0\)</span> ，
+可以计算得到 <span class="math notranslate nohighlight">\(\lambda = \sqrt{ (g^\top H^{-1} g)/(2\epsilon) }\)</span>.
+从而可以计算得出问题的解 <span class="math notranslate nohighlight">\(\theta = \theta_{old} + \sqrt{ 2\epsilon (g^\top H^{-1}g)^{-1} } H^{-1}g\)</span>.</p>
+</div>
+<div class="section" id="id6">
+<h2>参考文献<a class="headerlink" href="#id6" title="Permalink to this headline">¶</a></h2>
 <p>[1] Schulman, John, et al. “Trust region policy optimization.” International Conference on Machine Learning. 2015.</p>
 </div>
 </div>

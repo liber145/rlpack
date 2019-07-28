@@ -12,4 +12,8 @@ document/
 # Distribution / packaging
 *.egg-info/
 *.egg
+
+*.html
+*.org
+*.doctree
 run.py

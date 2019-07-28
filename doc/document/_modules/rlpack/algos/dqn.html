@@ -162,69 +162,128 @@
             
   <h1>Source code for rlpack.algos.dqn</h1><div class="highlight"><pre>
 <span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">deque</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+<span class="kn">from</span> <span class="nn">tqdm</span> <span class="k">import</span> <span class="n">tqdm</span>
 
 <span class="kn">from</span> <span class="nn">..common.utils</span> <span class="k">import</span> <span class="n">assert_shape</span>
 <span class="kn">from</span> <span class="nn">.base</span> <span class="k">import</span> <span class="n">Base</span>
 
 
 <div class="viewcode-block" id="DQN"><a class="viewcode-back" href="../../../api/rlpack.algos.html#rlpack.algos.dqn.DQN">[docs]</a><span class="k">class</span> <span class="nc">DQN</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Deep Q Network.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">obs_fn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">value_fn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">dim_act</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">rnd</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                 <span class="n">discount</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span>
+                 <span class="n">epsilon_schedule</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="p">(</span><span class="mf">1e4</span><span class="o">-</span><span class="n">x</span><span class="p">)</span> <span class="o">/</span> <span class="mf">1e4</span><span class="p">),</span>
+                 <span class="n">update_target_freq</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
+                 <span class="n">lr</span><span class="o">=</span><span class="mf">2.5e-4</span><span class="p">,</span>
+                 <span class="n">max_grad_norm</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span>
+                 <span class="n">train_epoch</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+                 <span class="n">save_path</span><span class="o">=</span><span class="s2">&quot;./log&quot;</span><span class="p">,</span>
+                 <span class="n">save_model_freq</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
+                 <span class="n">log_freq</span><span class="o">=</span><span class="mi">1000</span>
+                 <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Deep Q Networ_value_fnk.</span>
+<span class="sd">_value_fn</span>
+<span class="sd">        Keyword Argument_value_fns:</span>
+<span class="sd">            rnd {int} --_value_fn [description] (default: {1})</span>
+<span class="sd">            n_env {int} _value_fn-- [description] (default: {1})</span>
+<span class="sd">            dim_obs {[type]} -- [description] (default: {None})</span>
+<span class="sd">            dim_act {[type]} -- [description] (default: {None})</span>
+<span class="sd">            discount {float} -- [description] (default: {0.99})</span>
+<span class="sd">            save_path {str} -- [description] (default: {&quot;./log&quot;})</span>
+<span class="sd">            save_model_freq {int} -- [description] (default: {1000})</span>
+<span class="sd">            update_target_freq {int} -- [description] (default: {10000})</span>
+<span class="sd">            log_freq {int} -- [description] (default: {1000})</span>
+<span class="sd">            epsilon_schedule {func} -- epsilon schedule. (default: {lambdax:(1-x)*1})</span>
+<span class="sd">            lr {[type]} -- [description] (default: {2.5e-4})</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+        <span class="c1"># self._dim_obs = dim_obs</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">lr</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">value_lr_schedule</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">epsilon_schedule</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">epsilon_schedule</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon_schedule</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">update_target_freq</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">update_target_freq</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_obs_fn</span> <span class="o">=</span> <span class="n">obs_fn</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dim_act</span> <span class="o">=</span> <span class="n">dim_act</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_value_fn</span> <span class="o">=</span> <span class="n">value_fn</span>
 
-<div class="viewcode-block" id="DQN.build_network"><a class="viewcode-back" href="../../../api/rlpack.algos.html#rlpack.algos.dqn.DQN.build_network">[docs]</a>    <span class="k">def</span> <span class="nf">build_network</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_discount</span> <span class="o">=</span> <span class="n">discount</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_target_freq</span> <span class="o">=</span> <span class="n">update_target_freq</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_epsilon_schedule</span> <span class="o">=</span> <span class="n">epsilon_schedule</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lr</span> <span class="o">=</span> <span class="n">lr</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_max_grad_norm</span> <span class="o">=</span> <span class="n">max_grad_norm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_train_epoch</span> <span class="o">=</span> <span class="n">train_epoch</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_save_model_freq</span> <span class="o">=</span> <span class="n">save_model_freq</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log_freq</span> <span class="o">=</span> <span class="n">log_freq</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">save_path</span><span class="o">=</span><span class="n">save_path</span><span class="p">,</span> <span class="n">rnd</span><span class="o">=</span><span class="n">rnd</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_build_network</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Build networks for algorithm.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">observation</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">dim_observation</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;observation&quot;</span><span class="p">)</span>
+        <span class="c1"># self._observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.uint8, name=&quot;observation&quot;)</span>
+        <span class="c1"># self._observation = tf.to_float(self._observation) / 255.0</span>
+        <span class="c1"># self._observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name=&quot;observation&quot;)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_observation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obs_fn</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_action</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">[</span><span class="kc">None</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;action&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_reward</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">[</span><span class="kc">None</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;reward&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_done</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">[</span><span class="kc">None</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;done&quot;</span><span class="p">)</span>
+        <span class="c1"># self._next_observation = tf.placeholder(dtype=tf.uint8, shape=[None, *self._dim_obs], name=&quot;next_observation&quot;)</span>
+        <span class="c1"># self._next_observation = tf.to_float(self._next_observation) / 255.0</span>
+        <span class="c1"># self._next_observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name=&quot;next_observation&quot;)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_next_observation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obs_fn</span><span class="p">()</span>
 
-        <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s2">&quot;qnet&quot;</span><span class="p">):</span>
-            <span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">observation</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">)</span>
-            <span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">)</span>
-            <span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">)</span>
-            <span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>  <span class="c1"># pylint: disable=E1101</span>
-            <span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">dense</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">512</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">qvals</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">dense</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim_action</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s2">&quot;main/qnet&quot;</span><span class="p">):</span>
+            <span class="c1"># self._qvals = self._dense(self._observation)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_qvals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value_fn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_observation</span><span class="p">)</span>
 
-        <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s2">&quot;target_qnet&quot;</span><span class="p">):</span>
-            <span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">observation</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">,</span> <span class="n">trainable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-            <span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">,</span> <span class="n">trainable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-            <span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">,</span> <span class="n">trainable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-            <span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>  <span class="c1"># pylint: disable=E1101</span>
-            <span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">dense</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">512</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">,</span> <span class="n">trainable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">target_qvals</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">dense</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim_action</span><span class="p">,</span> <span class="n">trainable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
+        <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s2">&quot;target/qnet&quot;</span><span class="p">):</span>
+            <span class="c1"># self._target_qvals = self._dense(self._next_observation)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_target_qvals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value_fn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_next_observation</span><span class="p">)</span>
 
-<div class="viewcode-block" id="DQN.build_algorithm"><a class="viewcode-back" href="../../../api/rlpack.algos.html#rlpack.algos.dqn.DQN.build_algorithm">[docs]</a>    <span class="k">def</span> <span class="nf">build_algorithm</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="c1"># def _cnn1d(self, x, cnn1d_hidden_sizes=[(32, 8, 4), (64, 4, 2)], mlp_hidden_sizes=[64, 4]):</span>
+    <span class="c1">#     for n_filter, stride, pad in cnn1d_hidden_sizes:</span>
+    <span class="c1">#         x = tf.layers.conv1d(x, n_filter, stride, pad, activation=tf.nn.relu)</span>
+    <span class="c1">#     x = tf.contrib.layers.flatten(x)</span>
+    <span class="c1">#     for hsize in mlp_hidden_sizes[:-1]:</span>
+    <span class="c1">#         x = tf.layers.dense(x, hsize, activation=tf.nn.relu)</span>
+    <span class="c1">#     return tf.squeeze(tf.layers.dense(x, mlp_hidden_sizes[-1]))</span>
+
+    <span class="c1"># def _dense(self, x):</span>
+    <span class="c1">#     x = tf.layers.dense(x, 128, activation=tf.nn.relu)</span>
+    <span class="c1">#     x = tf.layers.dense(x, 128, activation=tf.nn.relu)</span>
+    <span class="c1">#     x = tf.layers.dense(x, 64, activation=tf.nn.relu)</span>
+    <span class="c1">#     x = tf.layers.dense(x, self._dim_act)</span>
+    <span class="c1">#     return x</span>
+
+    <span class="k">def</span> <span class="nf">_build_algorithm</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Build networks for algorithm.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">AdamOptimizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lr</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">1.5e-8</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">action</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">[</span><span class="kc">None</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;action&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">target</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">[</span><span class="kc">None</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;target&quot;</span><span class="p">)</span>  <span class="c1"># 目标状态动作值。</span>
-        <span class="n">trainable_variables</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">trainable_variables</span><span class="p">(</span><span class="s2">&quot;qnet&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">AdadeltaOptimizer</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span>
+        <span class="n">trainable_variables</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">trainable_variables</span><span class="p">(</span><span class="s2">&quot;main/qnet&quot;</span><span class="p">)</span>
 
         <span class="c1"># Compute the state value.</span>
-        <span class="n">batch_size</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">observation</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">action_index</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">tf</span><span class="o">.</span><span class="n">range</span><span class="p">(</span><span class="n">batch_size</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">action</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-        <span class="n">action_q</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">gather_nd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qvals</span><span class="p">,</span> <span class="n">action_index</span><span class="p">)</span>
-        <span class="n">assert_shape</span><span class="p">(</span><span class="n">action_q</span><span class="p">,</span> <span class="p">[</span><span class="kc">None</span><span class="p">])</span>
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_done</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">action_index</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">tf</span><span class="o">.</span><span class="n">range</span><span class="p">(</span><span class="n">batch_size</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_action</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">action_q</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">gather_nd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_qvals</span><span class="p">,</span> <span class="n">action_index</span><span class="p">)</span>
+
+        <span class="c1"># Compute back up.</span>
+        <span class="n">q_backup</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">stop_gradient</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_reward</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_discount</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_done</span><span class="p">)</span> <span class="o">*</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_target_qvals</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
 
         <span class="c1"># Compute loss and optimize the object.</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">loss</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">squared_difference</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">target</span><span class="p">,</span> <span class="n">action_q</span><span class="p">))</span>   <span class="c1"># 损失值。</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">train_op</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="o">.</span><span class="n">minimize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loss</span><span class="p">,</span>
-                                                <span class="n">global_step</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">get_global_step</span><span class="p">(),</span>
-                                                <span class="n">var_list</span><span class="o">=</span><span class="n">trainable_variables</span>
-                                                <span class="p">)</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">squared_difference</span><span class="p">(</span><span class="n">q_backup</span><span class="p">,</span> <span class="n">action_q</span><span class="p">))</span>   <span class="c1"># 损失值。</span>
+
+        <span class="n">grads</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">gradients</span><span class="p">(</span><span class="n">loss</span><span class="p">,</span> <span class="n">trainable_variables</span><span class="p">)</span>
+        <span class="n">clipped_grads</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">clip_by_global_norm</span><span class="p">(</span><span class="n">grads</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_max_grad_norm</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_train_op</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="o">.</span><span class="n">apply_gradients</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">clipped_grads</span><span class="p">,</span> <span class="n">trainable_variables</span><span class="p">))</span>
+        <span class="c1"># self._train_op = self.optimizer.minimize(loss, var_list=trainable_variables)</span>
 
         <span class="c1"># Update target network.</span>
-        <span class="k">def</span> <span class="nf">_update_target</span><span class="p">(</span><span class="n">new_net</span><span class="p">,</span> <span class="n">old_net</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">_update_target</span><span class="p">(</span><span class="n">old_net</span><span class="p">,</span> <span class="n">new_net</span><span class="p">):</span>
             <span class="n">params1</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">trainable_variables</span><span class="p">(</span><span class="n">old_net</span><span class="p">)</span>
             <span class="n">params1</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">params1</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">v</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
-            <span class="n">params2</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">global_variables</span><span class="p">(</span><span class="n">new_net</span><span class="p">)</span>
+            <span class="n">params2</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">trainable_variables</span><span class="p">(</span><span class="n">new_net</span><span class="p">)</span>
             <span class="n">params2</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">params2</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">v</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
             <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">params1</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">params2</span><span class="p">)</span>
             <span class="n">update_ops</span> <span class="o">=</span> <span class="p">[]</span>
@@ -232,94 +291,63 @@
                 <span class="n">update_ops</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">param2</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">param1</span><span class="p">))</span>
             <span class="k">return</span> <span class="n">update_ops</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">update_target_op</span> <span class="o">=</span> <span class="n">_update_target</span><span class="p">(</span><span class="s2">&quot;target_qnet&quot;</span><span class="p">,</span> <span class="s2">&quot;qnet&quot;</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">max_qval</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qvals</span><span class="p">)</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_target_op</span> <span class="o">=</span> <span class="n">_update_target</span><span class="p">(</span><span class="s2">&quot;main/qnet&quot;</span><span class="p">,</span> <span class="s2">&quot;target/qnet&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log_op</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;loss&quot;</span><span class="p">:</span> <span class="n">loss</span><span class="p">}</span>
 
 <div class="viewcode-block" id="DQN.get_action"><a class="viewcode-back" href="../../../api/rlpack.algos.html#rlpack.algos.dqn.DQN.get_action">[docs]</a>    <span class="k">def</span> <span class="nf">get_action</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Get actions according to the given observation.</span>
-
-<span class="sd">        Parameters:</span>
-<span class="sd">            - ob: An ndarray with shape (n, state_dimension).</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Arguments:</span>
+<span class="sd">            obs -- 两种类型：1. 由np.ndarray构成的tuple类型；2. np.ndarray类型。</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            - An ndarray for action with shape (n).</span>
+<span class="sd">            list -- A list of actions.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">obs</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">obs</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
-            <span class="n">newobs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">obs</span><span class="p">)[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span>
+
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">list</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">tuple</span><span class="p">:</span>
+            <span class="n">batch_size</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">assert</span> <span class="n">obs</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">or</span> <span class="n">obs</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">4</span>
-            <span class="n">newobs</span> <span class="o">=</span> <span class="n">obs</span>
+            <span class="n">batch_size</span> <span class="o">=</span> <span class="n">obs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
-        <span class="n">qvals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qvals</span><span class="p">,</span> <span class="n">feed_dict</span><span class="o">=</span><span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">observation</span><span class="p">:</span> <span class="n">newobs</span><span class="p">})</span>
-        <span class="n">best_action</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">qvals</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-        <span class="n">batch_size</span> <span class="o">=</span> <span class="n">newobs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">actions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim_action</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">)</span>
-        <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">)</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span>
-        <span class="n">actions</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">best_action</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
-
-        <span class="k">if</span> <span class="n">obs</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">actions</span> <span class="o">=</span> <span class="n">actions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_qvals</span><span class="p">,</span> <span class="n">feed_dict</span><span class="o">=</span><span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_observation</span><span class="p">:</span> <span class="n">obs</span><span class="p">})</span>
+        <span class="n">max_a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="c1"># Epsilon greedy method.</span>
+        <span class="n">global_step</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">get_global_step</span><span class="p">())</span>
+        <span class="n">actions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dim_act</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">)</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">)</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_epsilon_schedule</span><span class="p">(</span><span class="n">global_step</span><span class="p">)</span>
+        <span class="n">actions</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">max_a</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">actions</span></div>
 
-<div class="viewcode-block" id="DQN.update"><a class="viewcode-back" href="../../../api/rlpack.algos.html#rlpack.algos.dqn.DQN.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">minibatch</span><span class="p">,</span> <span class="n">update_ratio</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Update the algorithm by suing a batch of data.</span>
+<div class="viewcode-block" id="DQN.update"><a class="viewcode-back" href="../../../api/rlpack.algos.html#rlpack.algos.dqn.DQN.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">databatch</span><span class="p">):</span>
+        <span class="n">s_batch</span><span class="p">,</span> <span class="n">a_batch</span><span class="p">,</span> <span class="n">r_batch</span><span class="p">,</span> <span class="n">d_batch</span><span class="p">,</span> <span class="n">next_s_batch</span> <span class="o">=</span> <span class="n">databatch</span>
 
-<span class="sd">        Parameters:</span>
-<span class="sd">            - minibatch:  a list of ndarray containing a minibatch of state, action, reward, done, next_state.</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_train_epoch</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_train_op</span><span class="p">,</span>
+                          <span class="n">feed_dict</span><span class="o">=</span><span class="p">{</span>
+                              <span class="bp">self</span><span class="o">.</span><span class="n">_observation</span><span class="p">:</span> <span class="n">s_batch</span><span class="p">,</span>
+                              <span class="bp">self</span><span class="o">.</span><span class="n">_action</span><span class="p">:</span> <span class="n">a_batch</span><span class="p">,</span>
+                              <span class="bp">self</span><span class="o">.</span><span class="n">_reward</span><span class="p">:</span> <span class="n">r_batch</span><span class="p">,</span>
+                              <span class="bp">self</span><span class="o">.</span><span class="n">_done</span><span class="p">:</span> <span class="n">d_batch</span><span class="p">,</span>
+                              <span class="bp">self</span><span class="o">.</span><span class="n">_next_observation</span><span class="p">:</span> <span class="n">next_s_batch</span>
+                          <span class="p">})</span>
 
-<span class="sd">                - state shape: (n_env, batch_size, state_dimension)</span>
-<span class="sd">                - action shape: (n_env, batch_size)</span>
-<span class="sd">                - reward shape: (n_env, batch_size)</span>
-<span class="sd">                - done shape: (n_env, batch_size)</span>
-<span class="sd">                - next_state shape: (n_env, batch_size, state_dimension)</span>
+        <span class="n">global_step</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">get_global_step</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">increment_global_step</span><span class="p">])</span>
 
-<span class="sd">            - update_ratio: a float scalar in (0, 1).</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            - training infomation.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon_schedule</span><span class="p">(</span><span class="n">update_ratio</span><span class="p">)</span>
-
-        <span class="n">s_batch</span><span class="p">,</span> <span class="n">a_batch</span><span class="p">,</span> <span class="n">r_batch</span><span class="p">,</span> <span class="n">d_batch</span><span class="p">,</span> <span class="n">next_s_batch</span> <span class="o">=</span> <span class="n">minibatch</span>
-
-        <span class="n">mb_s</span><span class="p">,</span> <span class="n">mb_a</span><span class="p">,</span> <span class="n">mb_target</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[]</span>
-
-        <span class="n">n_env</span> <span class="o">=</span> <span class="n">s_batch</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_env</span><span class="p">):</span>
-            <span class="n">target_next_q_vals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">target_qvals</span><span class="p">,</span> <span class="n">feed_dict</span><span class="o">=</span><span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">observation</span><span class="p">:</span> <span class="n">next_s_batch</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]})</span>
-            <span class="n">target_batch</span> <span class="o">=</span> <span class="n">r_batch</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">d_batch</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:])</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">discount</span> <span class="o">*</span> <span class="n">target_next_q_vals</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-            <span class="n">mb_target</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">target_batch</span><span class="p">)</span>
-
-            <span class="n">mb_s</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">s_batch</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:])</span>
-            <span class="n">mb_a</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">a_batch</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:])</span>
-
-        <span class="n">mb_s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">mb_s</span><span class="p">)</span>
-        <span class="n">mb_a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">mb_a</span><span class="p">)</span>
-        <span class="n">mb_target</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">mb_target</span><span class="p">)</span>
-
-        <span class="n">_</span><span class="p">,</span> <span class="n">global_step</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">max_q_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-            <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">train_op</span><span class="p">,</span>
-             <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">get_global_step</span><span class="p">(),</span>
-             <span class="bp">self</span><span class="o">.</span><span class="n">loss</span><span class="p">,</span>
-             <span class="bp">self</span><span class="o">.</span><span class="n">max_qval</span><span class="p">],</span>
-            <span class="n">feed_dict</span><span class="o">=</span><span class="p">{</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">observation</span><span class="p">:</span> <span class="n">mb_s</span><span class="p">,</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">action</span><span class="p">:</span> <span class="n">mb_a</span><span class="p">,</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">target</span><span class="p">:</span> <span class="n">mb_target</span>
-            <span class="p">}</span>
-        <span class="p">)</span>
-
-        <span class="c1"># Store model.</span>
-        <span class="k">if</span> <span class="n">global_step</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">save_model_freq</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">global_step</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">_save_model_freq</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">save_model</span><span class="p">()</span>
 
-        <span class="c1"># Update target policy.</span>
-        <span class="k">if</span> <span class="n">global_step</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">update_target_freq</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">update_target_op</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">global_step</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_target_freq</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_target_op</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;loss&quot;</span><span class="p">:</span> <span class="n">loss</span><span class="p">,</span> <span class="s2">&quot;max_q_value&quot;</span><span class="p">:</span> <span class="n">max_q_val</span><span class="p">,</span> <span class="s2">&quot;global_step&quot;</span><span class="p">:</span> <span class="n">global_step</span><span class="p">}</span></div></div>
+        <span class="k">if</span> <span class="n">global_step</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log_freq</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">log</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_log_op</span><span class="p">,</span>
+                                <span class="n">feed_dict</span><span class="o">=</span><span class="p">{</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">_observation</span><span class="p">:</span> <span class="n">s_batch</span><span class="p">,</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">_action</span><span class="p">:</span> <span class="n">a_batch</span><span class="p">,</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">_reward</span><span class="p">:</span> <span class="n">r_batch</span><span class="p">,</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">_done</span><span class="p">:</span> <span class="n">d_batch</span><span class="p">,</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">_next_observation</span><span class="p">:</span> <span class="n">next_s_batch</span>
+                                <span class="p">})</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sw</span><span class="o">.</span><span class="n">add_scalars</span><span class="p">(</span><span class="s2">&quot;dqn&quot;</span><span class="p">,</span> <span class="n">log</span><span class="p">,</span> <span class="n">global_step</span><span class="o">=</span><span class="n">global_step</span><span class="p">)</span></div></div>
 </pre></div>
 
            </div>
