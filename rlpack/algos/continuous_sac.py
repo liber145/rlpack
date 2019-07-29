@@ -51,7 +51,7 @@ class SAC(Base):
         clip_low = tf.cast(x < l, tf.float32)
         return x + tf.stop_gradient(clip_up * (u - x) + clip_low * (l - x))
 
-    def build_network(self):
+    def _build_network(self):
         self.observation = tf.placeholder(tf.float32, [None, *self.dim_obs], name="observation")
         self.action = tf.placeholder(tf.float32, [None, self.dim_act], name="action")
         self.reward = tf.placeholder(tf.float32, [None], name="reward")
@@ -113,7 +113,7 @@ class SAC(Base):
             x = tf.layers.dense(x, units=100, activation=tf.nn.relu)
             self.v_targ = tf.squeeze(tf.layers.dense(x, units=1, activation=None), axis=1)
 
-    def build_algorithm(self):
+    def _build_algorithm(self):
         min_q_pi = tf.minimum(self.q1_pi, self.q2_pi)
 
         q_backup = tf.stop_gradient(self.reward + self.discount * (1 - self.done) * self.v_targ)

@@ -7,9 +7,11 @@ policy loss需要计算当前policy和old policy在当前state上的ratio。
 
 
 import math
-from collections import deque, defaultdict
+from collections import defaultdict, deque
+
 import numpy as np
 import tensorflow as tf
+from tqdm import tqdm
 
 from ..common.utils import assert_shape
 from .base import Base
@@ -26,7 +28,7 @@ class PPO(Base):
                  vf_coef=1.0,
                  entropy_coef=0.01,
                  max_grad_norm=40,
-                 train_epoch=3,
+                 train_epoch=5,
                  batch_size=128,
                  is_action_continuous=False,
                  lr_schedule=lambda x: 2.5e-4,
@@ -84,88 +86,86 @@ class PPO(Base):
         self._observation = tf.placeholder(tf.float32, [None, *self._dim_obs], name="observation")
 
         if self._is_action_continuous:
-            self._logit_p_act = self._policy_fn(self._observation)
+            self.mu = self._policy_fn(self._observation)
+            self.log_std = tf.get_variable("log_std", initializer=-0.5*np.ones(self._dim_act, dtype=np.float32))
         else:
-            self._mu = self._policy_fn(self._observation)
-            self.log_var = tf.get_variable("logvars", [self._mu.shape.as_list()[1]], tf.float32, tf.constant_initializer(0.0))
+            self._logit_p_act = self._policy_fn(self._observation)
 
         self._state_value = self._value_fn(self._observation)
-        print("state value shape:", self._state_value.shape)
-
-        # self._logit_p_act = tf.layers.dense(x, self._dim_act, activation=None, kernel_initializer=tf.truncated_normal_initializer(0.0, 0.01))
-        # self._state_value = tf.squeeze(tf.layers.dense(x, 1, activation=None, kernel_initializer=tf.truncated_normal_initializer()))
 
     def _build_algorithm(self):
-        self._clip_ratio = tf.placeholder(tf.float32)
-        self._lr = tf.placeholder(tf.float32)
-        self._optimizer = tf.train.AdamOptimizer(self._lr, epsilon=1e-8)
-
-        self._old_logit_p_act = tf.placeholder(tf.float32, [None, self._dim_act])
-
-        self._advantage = tf.placeholder(tf.float32, [None], name="advantage")
-        self._target_state_value = tf.placeholder(tf.float32, [None], name="target_state_value")
 
         # Compute policy loss.
         if self._is_action_continuous:
 
             """Build networks for algorithm."""
-            self._clip_epsilon = tf.placeholder(tf.float32)
-            self._lr = tf.placeholder(tf.float32)
+            self._clip_ratio = tf.placeholder(tf.float32, name="clip_ratio")
+            self._lr = tf.placeholder(tf.float32, name="lr")
             optimizer = tf.train.AdamOptimizer(self._lr)
 
             self.action = tf.placeholder(tf.float32, [None, self._dim_act], "action")
-            self.span_reward = tf.placeholder(tf.float32, [None], "span_reward")
+            self._target_state_value = tf.placeholder(tf.float32, [None], "target_state_value")
             self.advantage = tf.placeholder(tf.float32, [None], "advantage")
             self.old_mu = tf.placeholder(tf.float32, [None, self._dim_act], "old_mu")
-            self.old_log_var = tf.placeholder(tf.float32, [self._dim_act], "old_var")
+            self.old_log_std = tf.placeholder(tf.float32, [self._dim_act], "old_log_std")
 
-            logp = -0.5 * tf.reduce_sum(self.log_var * 2)
-            logp += -0.5 * tf.reduce_sum(tf.square(self.action - self.mu) / tf.exp(self.log_var * 2), axis=1)  # 　- 0.5 * math.log(2 * math.pi)
+            def gaussian_likelihood(x, mu, log_std, EPS=1e-8):
+                pre_sum = -0.5 * (((x-mu)/(tf.exp(log_std)+EPS))**2 + 2*log_std + np.log(2*np.pi))
+                return tf.reduce_sum(pre_sum, axis=1)
 
-            # var = tf.exp(self.log_var * 2)
-            # logp = - (self.action - self.mu) ** 2 / (2 * var) - self.log_var  # - 0.5 * math.log(2 * math.pi)
-            # logp = tf.reduce_sum(logp, axis=1)
-            # print(f"logp shape: {logp.shape}")
+            logp = gaussian_likelihood(self.action, self.mu, self.log_std)
 
-            logp_old = -0.5 * tf.reduce_sum(self.old_log_var * 2)
-            logp_old += -0.5 * tf.reduce_sum(tf.square(self.action - self.old_mu) / tf.exp(self.old_log_var * 2), axis=1)  # - 0.5 * math.log(2 * math.pi)
+            logp_old = gaussian_likelihood(self.action, self.old_mu, self.old_log_std)
 
             # var_old = tf.exp(self.old_log_var * 2)
             # logp_old = - (self.action - self.old_mu) ** 2 / (2 * var_old) - self.old_log_var
             # logp_old = tf.reduce_sum(logp_old, axis=1)
 
-            # Compute KL divergence.
-            log_det_cov_old = tf.reduce_sum(self.old_log_var)
-            log_det_cov_new = tf.reduce_sum(self.log_var)
-            tr_old_new = tf.reduce_sum(tf.exp(self.old_log_var - self.log_var))
+            # # Compute KL divergence.
+            # log_det_cov_old = tf.reduce_sum(self.old_log_var)
+            # log_det_cov_new = tf.reduce_sum(self.log_var)
+            # tr_old_new = tf.reduce_sum(tf.exp(self.old_log_var - self.log_var))
 
-            self.kl = 0.5 * tf.reduce_mean(log_det_cov_new - log_det_cov_old + tr_old_new + tf.reduce_sum(
-                tf.square(self.mu - self.old_mu) / tf.exp(self.log_var), axis=1) - self._dim_act)
+            # self.kl = 0.5 * tf.reduce_mean(log_det_cov_new - log_det_cov_old + tr_old_new + tf.reduce_sum(
+            #     tf.square(self.mu - self.old_mu) / tf.exp(self.log_var), axis=1) - self._dim_act)
 
-            entropy = 0.5 * (self._dim_act + self._dim_act * tf.log(2 * np.pi) + tf.exp(tf.reduce_sum(self.log_var)))
+            # entropy = 0.5 * (self._dim_act + self._dim_act * tf.log(2 * np.pi) + tf.exp(tf.reduce_sum(self.log_var)))
+
+            sample_entropy = tf.reduce_mean(-logp)
 
             # Build surrogate loss.
             ratio = tf.exp(logp - logp_old)
             surr1 = ratio * self.advantage
-            surr2 = tf.clip_by_value(ratio, 1.0 - self._clip_epsilon, 1.0 + self._clip_epsilon) * self.advantage
+            surr2 = tf.clip_by_value(ratio, 1.0 - self._clip_ratio, 1.0 + self._clip_ratio) * self.advantage
             policy_loss = -tf.reduce_mean(tf.minimum(surr1, surr2))
 
             # Build value loss.
-            value_loss = tf.reduce_mean(tf.square(self._state_value - self.span_reward))
+            value_loss = tf.reduce_mean(tf.square(self._state_value - self._target_state_value))
 
             # Build total_loss.
-            total_loss = policy_loss + self._vf_coef * value_loss - self._entropy_coef * entropy
+            total_loss = policy_loss + self._vf_coef * value_loss - self._entropy_coef * sample_entropy
 
             grads = tf.gradients(total_loss, tf.trainable_variables())
             clipped_grads, _ = tf.clip_by_global_norm(grads, self._max_grad_norm)
             self._train_op = optimizer.apply_gradients(zip(clipped_grads, tf.trainable_variables()))
 
-            self._log_op = {"policy_loss": policy_loss, "value_loss": value_loss, "total_loss": total_loss}
+            grad_norm = tf.global_norm(grads)
+            self._log_op = {"policy_loss": policy_loss, "value_loss": value_loss, "total_loss": total_loss,
+                            "ratio": tf.reduce_mean(ratio), "grad_norm": grad_norm, "entropy": sample_entropy}
 
             # Build action sample.
-            self.sample_action = self.mu + tf.exp(self.log_var) * tf.random_normal(shape=[self._dim_act], dtype=tf.float32)
+            self.sample_action = self.mu + tf.exp(self.log_std) * tf.random_normal(shape=[self._dim_act], dtype=tf.float32)
 
         else:
+            self._clip_ratio = tf.placeholder(tf.float32, name="clip_ratio")
+            self._lr = tf.placeholder(tf.float32)
+            self._optimizer = tf.train.AdamOptimizer(self._lr, epsilon=1e-8)
+
+            self._old_logit_p_act = tf.placeholder(tf.float32, [None, self._dim_act])
+
+            self._advantage = tf.placeholder(tf.float32, [None], name="advantage")
+            self._target_state_value = tf.placeholder(tf.float32, [None], name="target_state_value")
+
             self._action = tf.placeholder(tf.int32, [None], name="action")
 
             # Get selected action index.
@@ -223,12 +223,17 @@ class PPO(Base):
             self._log_op = {"entropy": entropy, "mean_ratio": tf.reduce_mean(ratio), "total_loss": total_loss, "value_loss": vf, "policy_loss": surrogate, "grad_norm": grad_norm}
 
     def get_action(self, obs) -> np.ndarray:
-        n_inference = obs.shape[0]
-        logit = self.sess.run(self._logit_p_act, feed_dict={self._observation: obs})
-        logit = logit - np.max(logit, axis=1, keepdims=True)
-        prob = np.exp(logit) / np.sum(np.exp(logit), axis=1, keepdims=True)
-        action = [np.random.choice(self._dim_act, p=prob[i, :]) for i in range(n_inference)]
-        return np.array(action)
+
+        if self._is_action_continuous:
+            actions = self.sess.run(self.sample_action, feed_dict={self._observation: obs})
+            return actions
+        else:
+            n_inference = obs.shape[0]
+            logit = self.sess.run(self._logit_p_act, feed_dict={self._observation: obs})
+            logit = logit - np.max(logit, axis=1, keepdims=True)
+            prob = np.exp(logit) / np.sum(np.exp(logit), axis=1, keepdims=True)
+            action = [np.random.choice(self._dim_act, p=prob[i, :]) for i in range(n_inference)]
+            return np.array(action)
 
     def update(self, databatch):
         """
@@ -243,7 +248,7 @@ class PPO(Base):
 
         if self._is_action_continuous:
             # Compute old terms for placeholder.
-            old_mu_batch, old_log_var = self.sess.run([self.mu, self.log_var], feed_dict={self._observation: s_batch})
+            old_mu_batch, old_log_std = self.sess.run([self.mu, self.log_std], feed_dict={self._observation: s_batch})
         else:
             old_logit_p_act = self.sess.run(self._logit_p_act, feed_dict={self._observation: s_batch})
 
@@ -263,18 +268,15 @@ class PPO(Base):
 
                     self.sess.run(self._train_op,
                                   feed_dict={
-                                    self._observation: s_batch[span_index, ...],
-                                    self.action: a_batch[span_index, ...],
-                                    self.span_reward: tsv_batch[span_index],
-                                    self.advantage: adv_batch[span_index],
-                                    self.old_mu: old_mu_batch[span_index, ...],
-                                    self.old_log_var: old_log_var,
-                                    self._lr: self._lr_schedule(global_step),
-                                    self._clip_epsilon: self._clip_schedule(global_step),
-                                })
-
-            # Save model.
-            global_step, _ = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
+                                      self._observation: s_batch[span_index, ...],
+                                      self.action: a_batch[span_index, ...],
+                                      self._target_state_value: tsv_batch[span_index],
+                                      self.advantage: adv_batch[span_index],
+                                      self.old_mu: old_mu_batch[span_index, ...],
+                                      self.old_log_std: old_log_std,
+                                      self._lr: self._lr_schedule(global_step),
+                                      self._clip_ratio: self._clip_schedule(global_step),
+                                  })
 
             if global_step % self._save_model_freq == 0:
                 self.save_model()
@@ -284,12 +286,14 @@ class PPO(Base):
                                     feed_dict={
                                         self._observation: s_batch[span_index, ...],
                                         self.action: a_batch[span_index, ...],
-                                        self.span_reward: tsv_batch[span_index],
+                                        self._target_state_value: tsv_batch[span_index],
                                         self.advantage: adv_batch[span_index],
                                         self.old_mu: old_mu_batch[span_index, ...],
-                                        self.old_log_var: old_log_var,
+                                        self.old_log_std: old_log_std,
+                                        self._clip_ratio: self._clip_schedule(global_step),
                                     })
                 self.sw.add_scalars("cont_ppo", log, global_step=global_step)
+                tqdm.write(f"log: {log}")
 
         else:
             # Train network.
@@ -305,13 +309,13 @@ class PPO(Base):
                     span_index = index[span_index]
 
                     _, log = self.sess.run([self._train_op, self._log_op],
-                                        feed_dict={self._observation: s_batch[span_index, ...],
-                                                    self._action: a_batch[span_index],
-                                                    self._advantage: adv_batch[span_index],
-                                                    self._target_state_value: tsv_batch[span_index],
-                                                    self._old_logit_p_act: old_logit_p_act[span_index],
-                                                    self._lr: self._lr_schedule(global_step),
-                                                    self._clip_ratio: self._clip_schedule(global_step)})
+                                           feed_dict={self._observation: s_batch[span_index, ...],
+                                                      self._action: a_batch[span_index],
+                                                      self._advantage: adv_batch[span_index],
+                                                      self._target_state_value: tsv_batch[span_index],
+                                                      self._old_logit_p_act: old_logit_p_act[span_index],
+                                                      self._lr: self._lr_schedule(global_step),
+                                                      self._clip_ratio: self._clip_schedule(global_step)})
 
                     self._collect_log(log)
 
@@ -323,11 +327,11 @@ class PPO(Base):
                 self.add_scalar("ppo/mean_ratio", log["mean_ratio"], global_step)
                 self.add_scalar("ppo/grad_norm", log["grad_norm"], global_step)
                 self.add_scalars("ppo",
-                                {"value_loss": log["value_loss"],
-                                "policy_loss": log["policy_loss"],
-                                "total_loss": log["total_loss"],
-                                "entropy": log["entropy"]},
-                                global_step)
+                                 {"value_loss": log["value_loss"],
+                                  "policy_loss": log["policy_loss"],
+                                  "total_loss": log["total_loss"],
+                                  "entropy": log["entropy"]},
+                                 global_step)
 
     def _parse_databatch(self, databatch):
         s_list = deque()
