@@ -95,3 +95,9 @@ class Base(ABC):
             self.saver.restore(self.sess, latest_checkpoint)
         else:
             print("## New start!")
+
+    def add_scalar(self, *args):
+        return self.sw.add_scalar(*args)
+
+    def add_scalars(self, *args):
+        return self.sw.add_scalars(*args)
