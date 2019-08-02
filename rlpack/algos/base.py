@@ -14,11 +14,11 @@ class Base(ABC):
         self.save_path = save_path
 
         # ------------------------ Reset graph ------------------------
-        tf.reset_default_graph()
+        # tf.reset_default_graph()
         tf.set_random_seed(self.rnd)
         np.random.seed(self.rnd)
-        tf.Variable(0, name="global_step", trainable=False)
-        self.increment_global_step = tf.assign_add(tf.train.get_global_step(), 1)
+        # tf.Variable(0, name="global_step", trainable=False)
+        # self.increment_global_step = tf.assign_add(tf.train.get_global_step(), 1)
         self.sw = SummaryWriter(log_dir=self.save_path)
 
         # ------------------------ Build network ------------------------
@@ -43,6 +43,8 @@ class Base(ABC):
     def _prepare(self):
         # ------------------------ Initialize saver. ------------------------
         self.saver = tf.train.Saver(max_to_keep=5)
+        tf.Variable(0, name="global_step", trainable=False)
+        self.increment_global_step = tf.assign_add(tf.train.get_global_step(), 1)
 
         # ------------------------ Initialize Session. ------------------------
         conf = tf.ConfigProto(allow_soft_placement=True)

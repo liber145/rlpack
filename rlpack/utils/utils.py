@@ -1,7 +1,5 @@
-import math
-
-import numpy as np
 import tensorflow as tf
+import numpy as np
 
 
 def assert_shape(tensor: tf.Tensor, expected_shape):
