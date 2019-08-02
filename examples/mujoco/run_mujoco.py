@@ -73,6 +73,9 @@ def run_main():
 
         print(f"{epoch}th epoch. average_return={np.mean(ep_ret_list)}, average_len={np.mean(ep_len_list)}")
 
+        agent.add_scalar("average_return", np.mean(ep_ret_list), epoch*1000)
+        agent.add_scalar("average_length", np.mean(ep_len_list), epoch*1000)
+
         # 更新策略。
         batch = memory.sample()
         agent.update([np.array(x) for x in batch])

@@ -38,6 +38,9 @@ class PPO(Base):
         self._policy_lr = policy_lr
         self._value_lr = value_lr
 
+        self._log_freq = log_freq
+        self._save_model_freq = save_model_freq
+
         super().__init__(save_path=save_path, rnd=rnd)
 
     def _build_network(self):
@@ -91,6 +94,10 @@ class PPO(Base):
             self.sess.run(self._train_value_op, feed_dict=inputs)
 
         pi_l_new, v_l_new = self.sess.run([self.policy_loss, self.value_loss], feed_dict=inputs)
+
+        global_step, _ = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
+        if global_step % self._save_model_freq == 0:
+            self.save_model()
 
     def _parse_databatch(self, states, actions, rewards, dones, earlystops, nextstates):
 

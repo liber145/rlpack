@@ -19,21 +19,19 @@ It bundles up-to-date reinforcement learning algorithms.
 
 
 ```python
+# -*- coding: utf-8 -*-
+
 
 import argparse
-import os
 import time
-from collections import deque, namedtuple
+from collections import namedtuple
 
 import gym
 import numpy as np
 import tensorflow as tf
-from tensorboardX import SummaryWriter
-from tqdm import tqdm
 
 from rlpack.algos import PPO
-from rlpack.algos.utils import mlp_gaussian_policy, mlp
-
+from rlpack.utils import mlp, mlp_gaussian_policy
 
 parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('--env',  type=str, default="Reacher-v2")
@@ -52,9 +50,6 @@ class Memory(object):
     def sample(self):
         return Transition(*zip(*self.memory))
 
-    def __len__(self):
-        return len(self.memory)
-
 
 def policy_fn(x, a):
     return mlp_gaussian_policy(x, a, hidden_sizes=[64, 64], activation=tf.tanh)
@@ -66,18 +61,17 @@ def value_fn(x):
 
 
 def run_main():
-
-    env = gym.make("Reacher-v2")
+    env = gym.make(args.env)
     dim_obs = env.observation_space.shape[0]
     dim_act = env.action_space.shape[0]
     max_ep_len = 1000
+
     agent = PPO(dim_act=dim_act, dim_obs=dim_obs, policy_fn=policy_fn, value_fn=value_fn, save_path="./log/ppo")
 
     start_time = time.time()
-    o, r, d, ep_ret, ep_len = env.reset(), 0, False, 0, 0
+    o, ep_ret, ep_len = env.reset(), 0, 0
     for epoch in range(50):
-        memory = Memory()
-        ep_ret_list, ep_len_list = [], []
+        memory, ep_ret_list, ep_len_list = Memory(), [], []
         for t in range(1000):
             a = agent.get_action(o[np.newaxis, :])[0]
             nexto, r, d, _ = env.step(a)
@@ -92,20 +86,16 @@ def run_main():
             if terminal or (t == 1000-1):
                 if not(terminal):
                     print('Warning: trajectory cut off by epoch at %d steps.' % ep_len)
-                # if trajectory didn't reach terminal state, bootstrap value target
-                # last_val = r if d else agent.sess.run(agent.v, feed_dict={agent._obs: o.reshape(1, -1)})
-                # buf.finish_path(last_val)
                 if terminal:
-                    # only save EpRet / EpLen if trajectory finished
+                    # 当到达完结状态或是最长状态时，记录结果
                     ep_ret_list.append(ep_ret)
                     ep_len_list.append(ep_len)
-                o, r, d, ep_ret, ep_len = env.reset(), 0, False, 0, 0
+                o, ep_ret, ep_len = env.reset(), 0, 0
 
         print(f"{epoch}th epoch. average_return={np.mean(ep_ret_list)}, average_len={np.mean(ep_len_list)}")
 
-        # 采样数据，更新策略。
+        # 更新策略。
         batch = memory.sample()
-
         agent.update([np.array(x) for x in batch])
 
     elapsed_time = time.time() - start_time
@@ -114,6 +104,7 @@ def run_main():
 
 if __name__ == "__main__":
     run_main()
+
 ```
 
 

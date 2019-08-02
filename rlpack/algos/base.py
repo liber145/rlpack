@@ -9,7 +9,6 @@ class Base(ABC):
     """Algorithm base class."""
 
     def __init__(self, save_path=None, rnd=1):
-        # Save.
         self.rnd = rnd
         self.save_path = save_path
 
@@ -32,33 +31,30 @@ class Base(ABC):
 
     @abstractmethod
     def _build_network(self):
-        """Build tensorflow operations for algorithms."""
+        """构建网络。"""
         pass
 
     @abstractmethod
     def _build_algorithm(self):
-        """Build algorithms using prebuilt networks."""
+        """构建算法。"""
         pass
 
     def _prepare(self):
-        # ------------------------ Initialize saver. ------------------------
+        # ------------------------ 初始化保存。 ------------------------
         self.saver = tf.train.Saver(max_to_keep=5)
         tf.Variable(0, name="global_step", trainable=False)
         self.increment_global_step = tf.assign_add(tf.train.get_global_step(), 1)
 
-        # ------------------------ Initialize Session. ------------------------
+        # ------------------------ 初始化session. ------------------------
         conf = tf.ConfigProto(allow_soft_placement=True)
         conf.gpu_options.allow_growth = True  # pylint: disable=E1101
         self.sess = tf.Session(config=conf)
 
-        # ------------------------ Initialize tensorflow variables.  ------------------------
+        # ------------------------ 初始化变量。  ------------------------
         self.sess.run(tf.global_variables_initializer())
 
-        # ------------------------ Reload model from the saved path. ------------------------
+        # ------------------------ 如果有模型，加载模型。 ------------------------
         self.load_model()
-
-        # ------------------------ 初始化其他 ------------------------
-        # self.total_reward = 0
 
     @abstractmethod
     def get_action(self, obs):
@@ -69,10 +65,9 @@ class Base(ABC):
         pass
 
     @abstractmethod
-    def update(self, minibatch, update_ratio):
+    def update(self, minibatch):
         """Update policy using minibatch samples.
         :param minibatch: a minibatch of training data
-        :param update_ratio: the ratio of current update step in total update step
         :return: update info, i.e. loss.
         """
         pass
