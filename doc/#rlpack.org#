@@ -140,6 +140,10 @@ PPO简化了TRPO中的优化问题，将优化问题转化为，
 - 对于动作而言，离散输出N个动作；连续使用Gaussian，输出均值，共享方差。
 
 
+*** 分布式收集state
+不同process共享数据可使用multiprocessing包，我们这里使用其中的BaseManager方式。
+
+
 *** state value处理方式
 假设我们获得样本s1, r1, s2, r2, s3, r3, s4.
 - 如果s4表示结束状态，那么V(s3) = r3, V(s2) = r2 + gamma * V(s3),
