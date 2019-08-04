@@ -1,6 +1,8 @@
 * 相似rl包
 rlkit https://github.com/vitchyr/rlkit
 
+
+
 * TRPO
 TRPO是一种经典的强化学习算法，全称是Trust Region Policy Optimization，中文译为信赖域策略优化。
 策略梯度算法更新策略时，如何选择合适步长从而确保累积奖励增加是一个关键问题。
@@ -136,6 +138,10 @@ PPO简化了TRPO中的优化问题，将优化问题转化为，
 *** 统一离散和连续情况
 - 对于状态而言，离散和连续没区别，最后统一输出状态值。且大部分是连续的。
 - 对于动作而言，离散输出N个动作；连续使用Gaussian，输出均值，共享方差。
+
+
+*** 分布式收集state
+不同process共享数据可使用multiprocessing包，我们这里使用其中的BaseManager方式。
 
 
 *** state value处理方式

@@ -1,34 +1,51 @@
+"""
+alpha表示reward放缩了多少倍。
+"""
+
+
 import numpy as np
 import tensorflow as tf
 
+from ..common.utils import assert_shape
 from .base import Base
 
 
 class SAC(Base):
     def __init__(self,
-                 rnd=0,
-                 dim_obs=None, dim_act=None,
-                 policy_fn=None, value_fn=None,
-                 discount=0.99, gae=0.95,
-                 train_epoch=40, policy_lr=1e-3, value_lr=1e-3,
-                 save_path="./log", log_freq=10, save_model_freq=100,
+                 rnd=1,
+                 obs_fn=None,
+                 policy_fn=None,
+                 qval_fn=None,
+                 sval_fn=None,
+                 dim_act=None,
+                 discount=0.99,
+                 save_path="./log",
+                 save_model_freq=1000,
+                 log_freq=1000,
+                 policy_lr=1e-3,
+                 value_lr=1e-3,
+                 train_epoch=1,
                  alpha=0.2,
-                 update_target_ratio=0.995):
-        self._dim_obs = dim_obs
-        self._dim_act = dim_act
+                 update_target_ratio=0.995
+                 ):
+        self.alpha = alpha
+        self._obs_fn = obs_fn
         self._policy_fn = policy_fn
-        self._value_fn = value_fn
-
-        self._discount = discount
-        self._gae = gae
-        self._train_epoch = train_epoch
+        self._qval_fn = qval_fn
+        self._sval_fn = sval_fn
+        self._dim_act = dim_act
         self._policy_lr = policy_lr
         self._value_lr = value_lr
+        self._update_target_ratio = update_target_ratio
+        self._train_epoch = train_epoch
 
+        self._discount = discount
         self._log_freq = log_freq
         self._save_model_freq = save_model_freq
 
-        self._update_target_ratio = update_target_ratio
+        self.LOG_STD_MAX = 2.0
+        self.LOG_STD_MIN = -20.0
+        self.EPS = 1e-8
 
         super().__init__(save_path=save_path, rnd=rnd)
         self.sess.run(self._init_target_op)
@@ -42,9 +59,11 @@ class SAC(Base):
         return x + tf.stop_gradient(clip_up * (u - x) + clip_low * (l - x))
 
     def _build_network(self):
-        self._obs = tf.placeholder(tf.float32, [None, *self._dim_obs], name="observation")
-        self._act = tf.placeholder(tf.float32, [None, self._dim_act], name="action")
-
+        # self._observation = tf.placeholder(tf.float32, [None, *self._dim_obs], name="observation")
+        self._observation = self._obs_fn()
+        self._action = tf.placeholder(tf.int32, [None], name="action")
+        self._reward = tf.placeholder(tf.float32, [None], name="reward")
+        self._done = tf.placeholder(tf.float32, [None], name="done")
         # self._next_observation = tf.placeholder(tf.float32, [None, *self._dim_obs], name="next_observation")
         self._next_observation = self._obs_fn()
 

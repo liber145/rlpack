@@ -1,4 +1,4 @@
-### 简介
+### 本包简介
 
 **rlpack**是一个直观，灵活，轻量级，基于**tensorflow**的强化学习算法库。
 它集合了一些最新强化学习算法。
@@ -15,7 +15,7 @@ It bundles up-to-date reinforcement learning algorithms.
 - 解耦算法和环境，方便调用。
 
 
-### 用法
+### 使用方法
 
 
 ```python
@@ -108,7 +108,7 @@ if __name__ == "__main__":
 ```
 
 
-### 安装
+### 安装流程
 
 **需求：** Python3.6.7
 
@@ -132,6 +132,15 @@ To install more environments like mujoco, please refer to https://github.com/ope
 
 ### 算法表
 
+
+| 算法   | 论文链接                                                                                                 |     
+|-------|---------------------------------------------------------------------------------------------------------|
+| TRPO  | [Trust Region Policy Optimization](https://arxiv.org/abs/1502.05477)                                    |
+| PPO   | [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347)                             |
+| TD3   | [Addressing Function Approximation Error in Actor-Critic Methods](https://arxiv.org/pdf/1802.09477.pdf) | 
+
+
+
 - [Human-level control through deep reinforcement learning](https://www.nature.com/articles/nature14236)
 - [Deep Reinforcement Learning with Double Q-learning](https://arxiv.org/abs/1509.06461)
 - [A Distributional Perspective on Reinforcement Learning](https://arxiv.org/abs/1707.06887)
@@ -139,12 +148,17 @@ To install more environments like mujoco, please refer to https://github.com/ope
 - [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347)
 - [Asynchronous Methods for Deep Reinforcement Learning](https://arxiv.org/abs/1602.01783)
 - [Continuous control with deep reinforcement learning](https://arxiv.org/abs/1509.02971)
-- [Introduction to Reinforcement Learning](https://dl.acm.org/citation.cfm?id=551283)
 
 
 
 ### 参考代码
-在实现过程中，参考了其他优秀代码，帮助比较大列举如下：
+在实现过程中，参考了其他优秀代码，帮助比较大的列举如下：
 - [openai的baselines](https://github.com/openai/baselines)
 - [openai的spinningup](https://github.com/openai/spinningup)
 - [清华张楚珩同学的算法实现](https://github.com/zhangchuheng123/Reinforcement-Implementation)
+
+
+
+### 学习资料
+
+- [Introduction to Reinforcement Learning](https://dl.acm.org/citation.cfm?id=551283)

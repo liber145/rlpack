@@ -1,8 +1,8 @@
-import math
+"""解决Q网络估值偏高问题。DoubleDQN的升级版，外加DDPG.
+"""
 import numpy as np
 import tensorflow as tf
 
-from ..common.utils import assert_shape
 from .base import Base
 
 

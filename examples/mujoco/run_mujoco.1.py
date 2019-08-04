@@ -21,37 +21,27 @@ dim_obs = env.observation_space.shape
 dim_act = env.action_space.shape[0]
 max_ep_len = 1000
 
+Transition = namedtuple('Transition', ('state', 'action', 'reward', 'done', 'early_stop', 'next_state'))
 
-class ReplayBuffer:
-    """
-    A simple FIFO experience replay buffer for TD3 agents.
-    """
 
-    def __init__(self, obs_dim, act_dim, size):
-        self.obs1_buf = np.zeros([size, *obs_dim], dtype=np.float32)
-        self.obs2_buf = np.zeros([size, *obs_dim], dtype=np.float32)
-        self.acts_buf = np.zeros([size, act_dim], dtype=np.float32)
-        self.rews_buf = np.zeros(size, dtype=np.float32)
-        self.done_buf = np.zeros(size, dtype=np.float32)
-        self.ptr, self.size, self.max_size = 0, 0, size
+class Memory(object):
+    def __init__(self):
+        self.memory = []
 
-    def store(self, obs, act, rew, next_obs, done):
-        self.obs1_buf[self.ptr] = obs
-        self.obs2_buf[self.ptr] = next_obs
-        self.acts_buf[self.ptr] = act
-        self.rews_buf[self.ptr] = rew
-        self.done_buf[self.ptr] = done
-        self.ptr = (self.ptr+1) % self.max_size
-        self.size = min(self.size+1, self.max_size)
+    def push(self, *args):
+        self.memory.append(Transition(*args))
 
-    def sample_batch(self, batch_size=32):
-        idxs = np.random.randint(0, self.size, size=batch_size)
-        return dict(obs1=self.obs1_buf[idxs],
-                    obs2=self.obs2_buf[idxs],
-                    acts=self.acts_buf[idxs],
-                    rews=self.rews_buf[idxs],
-                    done=self.done_buf[idxs])
+    def sample(self):
+        return Transition(*zip(*self.memory))
 
+
+# def trpo_policy_fn(x, a):
+#     pi, logp, logp_pi, mu, log_std = mlp_gaussian_policy(x, a, hidden_sizes=[64, 64], activation=tf.tanh)
+#     return pi, logp, logp_pi, mu, log_std
+
+# def trpo_value_fn(x):
+#     v = mlp(x, [64, 64, 1])
+#     return tf.squeeze(v, axis=1)
 
 def policy_fn(x):
     x = tf.layers.dense(x, units=64, activation=tf.nn.relu)
@@ -72,29 +62,23 @@ def run_main():
     # agent = TRPO(dim_act=dim_act, dim_obs=dim_obs, policy_fn=trpo_policy_fn, value_fn=trpo_value_fn, delta=0.1, save_path="./log/trpo")
     # agent = PPO(dim_act=dim_act, dim_obs=dim_obs, policy_fn=ppo_policy_fn, value_fn=value_fn, save_path="./log/ppo")
     agent = TD3(dim_act=dim_act, dim_obs=dim_obs, act_limit=1, policy_fn=policy_fn, value_fn=value_fn, save_path="./log/td3")
-    replay_buffer = ReplayBuffer(obs_dim=dim_obs, act_dim=dim_act, size=int(1e6))
 
     start_time = time.time()
     o, ep_ret, ep_len = env.reset(), 0, 0
     for epoch in range(50):
-        ep_ret_list, ep_len_list = [], []
+        memory, ep_ret_list, ep_len_list = Memory(), [], []
         for t in range(1000):
             a = agent.get_action(o[np.newaxis, :])[0]
             nexto, r, d, _ = env.step(a)
             ep_ret += r
             ep_len += 1
 
-            replay_buffer.store(o, a, r, nexto, int(d))
+            memory.push(o, a, r, int(d), int(ep_len == max_ep_len or t == 1000-1), nexto)
 
             o = nexto
 
             terminal = d or (ep_len == max_ep_len)
             if terminal or (t == 1000-1):
-
-                for _ in range(ep_len):
-                    batch = replay_buffer.sample_batch(100)
-                    agent.update([batch["obs1"], batch["acts"], batch["rews"], batch["done"], batch["obs2"]])
-
                 if not(terminal):
                     print('Warning: trajectory cut off by epoch at %d steps.' % ep_len)
                 if terminal:
@@ -107,6 +91,10 @@ def run_main():
 
         agent.add_scalar("average_return", np.mean(ep_ret_list), epoch*1000)
         agent.add_scalar("average_length", np.mean(ep_len_list), epoch*1000)
+
+        # 更新策略。
+        batch = memory.sample()
+        agent.update([np.array(x) for x in batch])
 
     elapsed_time = time.time() - start_time
     print("elapsed time:", elapsed_time)
