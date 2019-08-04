@@ -32,7 +32,7 @@ class TRPO(Base):
 
         super().__init__(save_path=save_path, rnd=rnd)
 
-    def build_network(self):
+    def _build_network(self):
         self._obs = tf.placeholder(tf.float32, [None, *self._dim_obs], "observation")
         self._act = tf.placeholder(tf.float32, [None, self._dim_act], "action")
 
@@ -40,31 +40,33 @@ class TRPO(Base):
         self._adv = tf.placeholder(tf.float32, [None])
         self._ret = tf.placeholder(tf.float32, [None])
         self._old_mu = tf.placeholder(tf.float32, [None, self._dim_act])
-        self._old_log_std = tf.placeholder(tf.float32, [None, self._dim_act])
+        self._old_log_std = tf.placeholder(tf.float32, [self._dim_act])
 
         with tf.variable_scope("pi"):
             self.pi, self.logp, self.logp_pi, self.mu, self.log_std = self._policy_fn(self._obs, self._act)
         with tf.variable_scope("value"):
             self.v = self._value_fn(self._obs)
 
+        self.policy_vars = tf.trainable_variables("pi")
         size_vec = np.sum([np.prod(x.shape.as_list()) for x in self.policy_vars])
         self.vec = tf.placeholder(tf.float32, [size_vec], "vector")
 
         self.all_phs = [self._obs, self._act, self._adv, self._ret, self._logp_old, self._old_mu, self._old_log_std]
 
-    def build_algorithm(self):
-        self.policy_vars = tf.trainable_variables("pi")
+        for ph in self.all_phs:
+            print("??????? ph shape :", ph.shape.as_list())
 
+    def _build_algorithm(self):
         self.d_kl = diagonal_gaussian_kl(self.mu, self.log_std, self._old_mu, self._old_log_std)
         g_kl = self._flat_param_list(tf.gradients(self.d_kl, self.policy_vars))
         # Add damping vector.
-        self.Hv = self._flat_param_list(tf.gradients(tf.reduce_sum(g_kl * self.vec), self.policy_vars)) + 0.01 * self.vec
+        self.Hv = self._flat_param_list(tf.gradients(tf.reduce_sum(g_kl * self.vec), self.policy_vars))  # + 0.01 * self.vec
 
         ratio = tf.exp(self.logp - self._logp_old)
         self.policy_loss = -tf.reduce_mean(ratio * self._adv)
         value_loss = tf.reduce_mean((self.v - self._ret)**2)
 
-        self._policy_grad_op = tf.gradients(self.policy_loss, self.policy_vars)
+        self._policy_grad_op = self._flat_param_list(tf.gradients(self.policy_loss, self.policy_vars))
         self._train_value_op = tf.train.AdamOptimizer(self._value_lr).minimize(value_loss)
 
     def update(self, databatch):
@@ -85,7 +87,7 @@ class TRPO(Base):
         step_direction = self._conjugate_gradient(policy_grad, inputs)
         max_step_length = np.sqrt(2*self._delta/np.dot(policy_grad, step_direction))
 
-        def func(self, theta):
+        def func(theta):
             self._recover_param_list(theta)
             return self.sess.run([self.policy_loss, self.d_kl], feed_dict=inputs)
 
@@ -100,11 +102,13 @@ class TRPO(Base):
         fval, _ = target_func(old_theta)
         for i in range(max_backtrack):
             step_frac = 0.5 ** i
-            theta = step_frac * step_len * step_dir + old_theta
+            theta = old_theta - step_frac * step_len * step_dir
             new_fval, new_kl = target_func(theta)
             if new_kl < self._delta and new_fval < fval:
+                print(f"line search finished in the {i}th backtrack")
                 break
             if i == max_backtrack - 1:
+                print("line search failed.")
                 self._recover_param_list(old_theta)
 
     def _flat_param_list(self, ts):
@@ -146,8 +150,8 @@ class TRPO(Base):
     def _parse_databatch(self, states, actions, rewards, dones, earlystops, nextstates):
 
         batch_size = len(dones)
-        oldlogproba, values, old_mu, old_log_std = self.sess.run([self.logp, self.v, self.mu, self.log_std], 
-                                                        feed_dict={self._obs: states, self._act: actions})
+        oldlogproba, values, old_mu, old_log_std = self.sess.run([self.logp, self.v, self.mu, self.log_std],
+                                                                 feed_dict={self._obs: states, self._act: actions})
         nextvalues = self.sess.run(self.v, feed_dict={self._obs: nextstates})
 
         returns = np.zeros(batch_size)

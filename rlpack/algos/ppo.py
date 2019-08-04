@@ -39,7 +39,7 @@ class PPO(Base):
 
     def _build_network(self):
         """Build tensorflow operations for algorithms."""
-        self._obs = tf.placeholder(tf.float32, [None, self._dim_obs])
+        self._obs = tf.placeholder(tf.float32, [None, *self._dim_obs])
         self._act = tf.placeholder(tf.float32, [None, self._dim_act])
 
         self._adv = tf.placeholder(tf.float32, [None])

@@ -9,7 +9,7 @@ import gym
 import numpy as np
 import tensorflow as tf
 
-from rlpack.algos import PPO
+from rlpack.algos import PPO, TRPO
 from rlpack.utils import mlp, mlp_gaussian_policy
 
 parser = argparse.ArgumentParser(description='Process some integers.')
@@ -30,7 +30,11 @@ class Memory(object):
         return Transition(*zip(*self.memory))
 
 
-def policy_fn(x, a):
+# def trpo_policy_fn(x, a):
+#     pi, logp, logp_pi, mu, log_std = mlp_gaussian_policy(x, a, hidden_sizes=[64, 64], activation=tf.tanh)
+#     return pi, logp, logp_pi, mu, log_std
+
+def ppo_policy_fn(x, a):
     pi, logp, logp_pi, _, _ = mlp_gaussian_policy(x, a, hidden_sizes=[64, 64], activation=tf.tanh)
     return pi, logp, logp_pi
 
@@ -42,11 +46,12 @@ def value_fn(x):
 
 def run_main():
     env = gym.make(args.env)
-    dim_obs = env.observation_space.shape[0]
+    dim_obs = env.observation_space.shape
     dim_act = env.action_space.shape[0]
     max_ep_len = 1000
 
-    agent = PPO(dim_act=dim_act, dim_obs=dim_obs, policy_fn=policy_fn, value_fn=value_fn, save_path="./log/ppo")
+    # agent = TRPO(dim_act=dim_act, dim_obs=dim_obs, policy_fn=trpo_policy_fn, value_fn=value_fn, delta=0.1, save_path="./log/trpo")
+    agent = PPO(dim_act=dim_act, dim_obs=dim_obs, policy_fn=ppo_policy_fn, value_fn=value_fn, save_path="./log/ppo")
 
     start_time = time.time()
     o, ep_ret, ep_len = env.reset(), 0, 0
