@@ -6,14 +6,9 @@ policy loss需要计算当前policy和old policy在当前state上的ratio。
 """
 
 
-import math
-from collections import defaultdict, deque
-
 import numpy as np
 import tensorflow as tf
-from tqdm import tqdm
 
-from ..common.utils import assert_shape
 from .base import Base
 
 
@@ -25,7 +20,6 @@ class PPO(Base):
                  discount=0.99, gae=0.95, clip_ratio=0.2,
                  train_epoch=40, policy_lr=1e-3, value_lr=1e-3,
                  save_path="./log", log_freq=10, save_model_freq=100):
-        # Save.
         self._dim_obs = dim_obs
         self._dim_act = dim_act
         self._policy_fn = policy_fn

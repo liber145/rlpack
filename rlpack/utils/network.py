@@ -13,6 +13,18 @@ def gaussian_likelihood(x, mu, log_std, EPS=1e-8):
     return tf.reduce_sum(pre_sum, axis=1)
 
 
+def diagonal_gaussian_kl(mu0, log_std0, mu1, log_std1, EPS=1e-8):
+    """
+    tf symbol for mean KL divergence between two batches of diagonal gaussian distributions,
+    where distributions are specified by means and log stds.
+    (https://en.wikipedia.org/wiki/Kullback-Leibler_divergence#Multivariate_normal_distributions)
+    """
+    var0, var1 = tf.exp(2 * log_std0), tf.exp(2 * log_std1)
+    pre_sum = 0.5*(((mu1 - mu0)**2 + var0)/(var1 + EPS) - 1) + log_std1 - log_std0
+    all_kls = tf.reduce_sum(pre_sum, axis=1)
+    return tf.reduce_mean(all_kls)
+
+
 def mlp_gaussian_policy(x, a, hidden_sizes, activation=tf.nn.relu, output_activation=None):
     act_dim = a.shape.as_list()[-1]
     mu = mlp(x, list(hidden_sizes)+[act_dim], activation, output_activation)
@@ -21,4 +33,4 @@ def mlp_gaussian_policy(x, a, hidden_sizes, activation=tf.nn.relu, output_activa
     pi = mu + tf.random_normal(tf.shape(mu)) * std
     logp = gaussian_likelihood(a, mu, log_std)
     logp_pi = gaussian_likelihood(pi, mu, log_std)
-    return pi, logp, logp_pi
+    return pi, logp, logp_pi, mu, log_std

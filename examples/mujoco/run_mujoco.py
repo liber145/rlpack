@@ -31,7 +31,8 @@ class Memory(object):
 
 
 def policy_fn(x, a):
-    return mlp_gaussian_policy(x, a, hidden_sizes=[64, 64], activation=tf.tanh)
+    pi, logp, logp_pi, _, _ = mlp_gaussian_policy(x, a, hidden_sizes=[64, 64], activation=tf.tanh)
+    return pi, logp, logp_pi
 
 
 def value_fn(x):

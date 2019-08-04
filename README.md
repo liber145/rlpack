@@ -147,4 +147,4 @@ To install more environments like mujoco, please refer to https://github.com/ope
 在实现过程中，参考了其他优秀代码，帮助比较大列举如下：
 - [openai的baselines](https://github.com/openai/baselines)
 - [openai的spinningup](https://github.com/openai/spinningup)
-- [清华大神张楚珩的强化学习实现](https://github.com/zhangchuheng123/Reinforcement-Implementation)
+- [清华张楚珩同学的算法实现](https://github.com/zhangchuheng123/Reinforcement-Implementation)
