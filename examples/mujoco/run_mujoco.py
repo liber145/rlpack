@@ -19,6 +19,7 @@ args = parser.parse_args()
 env = gym.make(args.env)
 dim_obs = env.observation_space.shape
 dim_act = env.action_space.shape[0]
+act_limit = 1
 max_ep_len = 1000
 
 
@@ -56,7 +57,7 @@ class ReplayBuffer:
 def policy_fn(x):
     x = tf.layers.dense(x, units=64, activation=tf.nn.relu)
     x = tf.layers.dense(x, units=64, activation=tf.nn.relu)
-    act = tf.layers.dense(x, units=dim_act, activation=tf.tanh)
+    act = act_limit * tf.layers.dense(x, units=dim_act, activation=tf.tanh)
     return act
 
 
@@ -71,7 +72,7 @@ def run_main():
 
     # agent = TRPO(dim_act=dim_act, dim_obs=dim_obs, policy_fn=trpo_policy_fn, value_fn=trpo_value_fn, delta=0.1, save_path="./log/trpo")
     # agent = PPO(dim_act=dim_act, dim_obs=dim_obs, policy_fn=ppo_policy_fn, value_fn=value_fn, save_path="./log/ppo")
-    agent = TD3(dim_act=dim_act, dim_obs=dim_obs, act_limit=1, policy_fn=policy_fn, value_fn=value_fn, save_path="./log/td3")
+    agent = TD3(dim_act=dim_act, dim_obs=dim_obs, act_limit=act_limit, policy_fn=policy_fn, value_fn=value_fn, save_path="./log/td3")
     replay_buffer = ReplayBuffer(obs_dim=dim_obs, act_dim=dim_act, size=int(1e6))
 
     start_time = time.time()
