@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 import tensorflow as tf
 
@@ -14,7 +15,6 @@ class TD3(Base):
                  target_update_rate=0.995, noise_std=0.2, noise_clip=0.5,
                  save_path="./log", log_freq=10, save_model_freq=100,
                  ):
-
         self._dim_obs = dim_obs
         self._dim_act = dim_act
         self._act_limit = act_limit
@@ -85,16 +85,16 @@ class TD3(Base):
         policy_vars = tf.trainable_variables("main/policy")
         value_vars = tf.trainable_variables("main/value")
 
+        policy_loss = -tf.reduce_mean(self.q_act)
+
         min_q_targ = tf.minimum(self.q1_targ, self.q2_targ)
         backup = tf.stop_gradient(self._reward + self._discount*(1-self._done)*min_q_targ)
-
-        policy_loss = -tf.reduce_mean(self.q_act)
         q1_loss = tf.reduce_mean((self.q1-backup)**2)
         q2_loss = tf.reduce_mean((self.q2-backup)**2)
-        q_loss = q1_loss + q2_loss
+        value_loss = q1_loss + q2_loss
 
         self.train_policy_op = tf.train.AdamOptimizer(self._policy_lr).minimize(policy_loss, var_list=policy_vars)
-        self.train_value_op = tf.train.AdamOptimizer(self._value_lr).minimize(q_loss, var_list=value_vars)
+        self.train_value_op = tf.train.AdamOptimizer(self._value_lr).minimize(value_loss, var_list=value_vars)
 
         self._update_target_policy_op = self._update_target("target/policy", "main/policy", self._target_update_ratio)
         self._update_target_value_op = self._update_target("target/value", "main/value", self._target_update_ratio)
@@ -113,10 +113,12 @@ class TD3(Base):
         s_batch, a_batch, r_batch, d_batch, next_s_batch = databatch
         inputs = {k: v for k, v in zip(self.all_phs, [s_batch, a_batch, r_batch, d_batch, next_s_batch])}
 
-        self.sess.run(self.train_value_op, feed_dict=inputs)
-
         global_step, _ = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
 
+        # 更新值函数。
+        self.sess.run(self.train_value_op, feed_dict=inputs)
+
+        # 延迟更新策略模型。
         if global_step % self._policy_decay == 0:
             self.sess.run([self.train_policy_op, self._update_target_value_op, self._update_target_policy_op], feed_dict=inputs)
 

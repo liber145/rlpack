@@ -9,7 +9,7 @@ import gym
 import numpy as np
 import tensorflow as tf
 
-from rlpack.algos import PPO, TRPO, TD3
+from rlpack.algos import PPO, TRPO, TD3, DDPG
 from rlpack.utils import mlp, mlp_gaussian_policy
 
 parser = argparse.ArgumentParser(description='Process some integers.')
@@ -72,7 +72,8 @@ def run_main():
 
     # agent = TRPO(dim_act=dim_act, dim_obs=dim_obs, policy_fn=trpo_policy_fn, value_fn=trpo_value_fn, delta=0.1, save_path="./log/trpo")
     # agent = PPO(dim_act=dim_act, dim_obs=dim_obs, policy_fn=ppo_policy_fn, value_fn=value_fn, save_path="./log/ppo")
-    agent = TD3(dim_act=dim_act, dim_obs=dim_obs, act_limit=act_limit, policy_fn=policy_fn, value_fn=value_fn, save_path="./log/td3")
+    # agent = TD3(dim_act=dim_act, dim_obs=dim_obs, act_limit=act_limit, policy_fn=policy_fn, value_fn=value_fn, save_path="./log/td3")
+    agent = DDPG(dim_act=dim_act, dim_obs=dim_obs, act_limit=act_limit, policy_fn=policy_fn, value_fn=value_fn, save_path="./log/ddpg")
     replay_buffer = ReplayBuffer(obs_dim=dim_obs, act_dim=dim_act, size=int(1e6))
 
     start_time = time.time()

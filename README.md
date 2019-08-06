@@ -104,7 +104,6 @@ def run_main():
 
 if __name__ == "__main__":
     run_main()
-
 ```
 
 
@@ -130,14 +129,15 @@ if __name__ == "__main__":
 It will install a basic learning environment in `gym`.
 To install more environments like mujoco, please refer to https://github.com/openai/gym.
 
-### 算法表
+### 算法列表
 
 
-| 算法   | 论文链接                                                                                                 |     
-|-------|---------------------------------------------------------------------------------------------------------|
-| TRPO  | [Trust Region Policy Optimization](https://arxiv.org/abs/1502.05477)                                    |
-| PPO   | [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347)                             |
-| TD3   | [Addressing Function Approximation Error in Actor-Critic Methods](https://arxiv.org/pdf/1802.09477.pdf) | 
+| 算法  | 论文链接                                                                                             | 类型        | 连续动作  | 离散动作  |
+|------|-----------------------------------------------------------------------------------------------------|------------|----------|----------|
+| TRPO | [Trust Region Policy Optimization](https://arxiv.org/abs/1502.05477)                                | on-policy  | &#10004; | &#10005; |
+| PPO  | [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347)                         | on-policy  | &#10004; | &#10005; |
+| TD3  | [Addressing Function Approximation Error in Actor-Critic Methods](https://arxiv.org/abs/1802.09477) | off-policy | &#10004; | &#10005; |
+| DDPG | [Continuous control with deep reinforcement learning](https://arxiv.org/abs/1509.02971)             | off-policy | &#10004; | &#10005; |
 
 
 

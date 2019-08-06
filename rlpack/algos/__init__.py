@@ -7,10 +7,7 @@ from .ave_dqn import AveDQN
 from .aa_dqn import AADQN
 from .duel_dqn import DuelDQN
 from .ppo import PPO
-from .ppo_batch import PPOBATCH
-from .continuous_ppo import ContinuousPPO
 from .trpo import TRPO
-from .continuous_trpo import ContinuousTRPO
 from .td3 import TD3
 from .continuous_sac import SAC
 from .pg import PG
