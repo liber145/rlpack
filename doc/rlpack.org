@@ -177,6 +177,14 @@ PPO简化了TRPO中的优化问题，将优化问题转化为，
 8. 神经网络结构：全连接，激活函数=tanh
 advantage和observation正则化对结果影响挺大
 
+**** 额外技巧
+1. （SAC）通常会使用Gaussian分布近似action分布。Gaussian分布的定义域在正负无穷之间。
+   而大部分环境中的action是有界的。因此，
+   a. 使用tanh去限制Gassuian分布采样的action；
+   b. 使用雅克比矩阵修正tanh之后的likelihood.
+2. （TD3）两个q网络取min后，估计值更准。
+上面两个技巧的效果均非常明显。
+
 
 *** 现有发现
 advantage的正则化对结果影响挺大

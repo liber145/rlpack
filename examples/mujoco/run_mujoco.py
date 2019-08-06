@@ -9,8 +9,8 @@ import gym
 import numpy as np
 import tensorflow as tf
 
-from rlpack.algos import PPO, TRPO, TD3, DDPG
-from rlpack.utils import mlp, mlp_gaussian_policy
+from rlpack.algos import DDPG, TD3, SAC
+from rlpack.utils import mlp, mlp_gaussian_policy2
 
 parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('--env',  type=str, default="Reacher-v2")
@@ -54,14 +54,23 @@ class ReplayBuffer:
                     done=self.done_buf[idxs])
 
 
-def policy_fn(x):
-    x = tf.layers.dense(x, units=64, activation=tf.nn.relu)
-    x = tf.layers.dense(x, units=64, activation=tf.nn.relu)
-    act = act_limit * tf.layers.dense(x, units=dim_act, activation=tf.tanh)
-    return act
+# def policy_fn(x):
+#     x = tf.layers.dense(x, units=64, activation=tf.nn.relu)
+#     x = tf.layers.dense(x, units=64, activation=tf.nn.relu)
+#     act = act_limit * tf.layers.dense(x, units=dim_act, activation=tf.tanh)
+#     return act
+
+def policy_fn(x, a):
+    pi, logp, logp_pi = mlp_gaussian_policy2(x, a, hidden_sizes=[64, 64], activation=tf.tanh)
+    return pi, logp_pi
 
 
-def value_fn(x, a):
+def value_fn(x):
+    v = mlp(x, [64, 64, 1])
+    return tf.squeeze(v, axis=1)
+
+
+def qvalue_fn(x, a):
     y = tf.layers.dense(tf.concat([x, a], axis=-1), units=64, activation=tf.nn.relu)
     y = tf.layers.dense(y, units=64, activation=tf.nn.relu)
     v = tf.squeeze(tf.layers.dense(y, units=1, activation=None), axis=1)
@@ -70,10 +79,9 @@ def value_fn(x, a):
 
 def run_main():
 
-    # agent = TRPO(dim_act=dim_act, dim_obs=dim_obs, policy_fn=trpo_policy_fn, value_fn=trpo_value_fn, delta=0.1, save_path="./log/trpo")
-    # agent = PPO(dim_act=dim_act, dim_obs=dim_obs, policy_fn=ppo_policy_fn, value_fn=value_fn, save_path="./log/ppo")
     # agent = TD3(dim_act=dim_act, dim_obs=dim_obs, act_limit=act_limit, policy_fn=policy_fn, value_fn=value_fn, save_path="./log/td3")
-    agent = DDPG(dim_act=dim_act, dim_obs=dim_obs, act_limit=act_limit, policy_fn=policy_fn, value_fn=value_fn, save_path="./log/ddpg")
+    # agent = DDPG(dim_act=dim_act, dim_obs=dim_obs, act_limit=act_limit, policy_fn=policy_fn, value_fn=value_fn, save_path="./log/ddpg")
+    agent = SAC(dim_act=dim_act, dim_obs=dim_obs, policy_fn=policy_fn, value_fn=value_fn, qvalue_fn=qvalue_fn, save_path="./log/sac")
     replay_buffer = ReplayBuffer(obs_dim=dim_obs, act_dim=dim_act, size=int(1e6))
 
     start_time = time.time()

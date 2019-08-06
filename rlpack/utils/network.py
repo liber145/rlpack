@@ -34,3 +34,36 @@ def mlp_gaussian_policy(x, a, hidden_sizes, activation=tf.nn.relu, output_activa
     logp = gaussian_likelihood(a, mu, log_std)
     logp_pi = gaussian_likelihood(pi, mu, log_std)
     return pi, logp, logp_pi, mu, log_std
+
+
+def mlp_gaussian_policy2(x, a, hidden_sizes, activation=tf.nn.relu, output_activation=None, LOG_STD_MIN=-20, LOG_STD_MAX=2):
+    """高斯分布中的action在负无穷到正无穷之间，而大部分环境的action是有界的。因此，
+    1. 使用tanh将action压缩到有界空间，
+    2. 使用雅克比修改求导规则。
+    """
+    act_dim = a.shape.as_list()[-1]
+    net = mlp(x, list(hidden_sizes), activation, activation)
+    mu = tf.layers.dense(net, act_dim, activation=output_activation)
+    log_std = tf.layers.dense(net, act_dim, activation=tf.tanh)
+    log_std = LOG_STD_MIN + 0.5 * (LOG_STD_MAX - LOG_STD_MIN) * (log_std + 1)
+
+    std = tf.exp(log_std)
+    pi = mu + tf.random_normal(tf.shape(mu)) * std
+    logp_pi = gaussian_likelihood(pi, mu, log_std)
+
+    mu, pi, logp_pi = apply_squashing_func(mu, pi, logp_pi)
+    return mu, pi, logp_pi
+
+
+def clip_but_pass_gradient(x, l=-1., u=1.):
+    clip_up = tf.cast(x > u, tf.float32)
+    clip_low = tf.cast(x < l, tf.float32)
+    return x + tf.stop_gradient((u - x)*clip_up + (l - x)*clip_low)
+
+
+def apply_squashing_func(mu, pi, logp_pi):
+    mu = tf.tanh(mu)
+    pi = tf.tanh(pi)
+    # To avoid evil machine precision error, strictly clip 1-pi**2 to [0,1] range.
+    logp_pi -= tf.reduce_sum(tf.log(clip_but_pass_gradient(1 - pi**2, l=0, u=1) + 1e-6), axis=1)
+    return mu, pi, logp_pi

@@ -9,7 +9,7 @@ import gym
 import numpy as np
 import tensorflow as tf
 
-from rlpack.algos import PPO, TRPO, TD3
+from rlpack.algos import PPO, TRPO
 from rlpack.utils import mlp, mlp_gaussian_policy
 
 parser = argparse.ArgumentParser(description='Process some integers.')
@@ -39,29 +39,21 @@ class Memory(object):
 #     pi, logp, logp_pi, mu, log_std = mlp_gaussian_policy(x, a, hidden_sizes=[64, 64], activation=tf.tanh)
 #     return pi, logp, logp_pi, mu, log_std
 
-# def trpo_value_fn(x):
-#     v = mlp(x, [64, 64, 1])
-#     return tf.squeeze(v, axis=1)
 
-def policy_fn(x):
-    x = tf.layers.dense(x, units=64, activation=tf.nn.relu)
-    x = tf.layers.dense(x, units=64, activation=tf.nn.relu)
-    act = tf.layers.dense(x, units=dim_act, activation=tf.tanh)
-    return act
+def ppo_policy_fn(x, a):
+    pi, logp, logp_pi, mu, log_std = mlp_gaussian_policy(x, a, hidden_sizes=[64, 64], activation=tf.tanh)
+    return pi, logp, logp_pi
 
 
-def value_fn(x, a):
-    y = tf.layers.dense(tf.concat([x, a], axis=-1), units=64, activation=tf.nn.relu)
-    y = tf.layers.dense(y, units=64, activation=tf.nn.relu)
-    v = tf.squeeze(tf.layers.dense(y, units=1, activation=None), axis=1)
-    return v
+def value_fn(x):
+    v = mlp(x, [64, 64, 1])
+    return tf.squeeze(v, axis=1)
 
 
 def run_main():
 
     # agent = TRPO(dim_act=dim_act, dim_obs=dim_obs, policy_fn=trpo_policy_fn, value_fn=trpo_value_fn, delta=0.1, save_path="./log/trpo")
-    # agent = PPO(dim_act=dim_act, dim_obs=dim_obs, policy_fn=ppo_policy_fn, value_fn=value_fn, save_path="./log/ppo")
-    agent = TD3(dim_act=dim_act, dim_obs=dim_obs, act_limit=1, policy_fn=policy_fn, value_fn=value_fn, save_path="./log/td3")
+    agent = PPO(dim_act=dim_act, dim_obs=dim_obs, policy_fn=ppo_policy_fn, value_fn=value_fn, save_path="./log/ppo")
 
     start_time = time.time()
     o, ep_ret, ep_len = env.reset(), 0, 0

@@ -136,6 +136,7 @@ if __name__ == "__main__":
 | PPO  | [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347)                         | on-policy  | &#10004; | &#10005; |
 | TD3  | [Addressing Function Approximation Error in Actor-Critic Methods](https://arxiv.org/abs/1802.09477) | off-policy | &#10004; | &#10005; |
 | DDPG | [Continuous control with deep reinforcement learning](https://arxiv.org/abs/1509.02971)             | off-policy | &#10004; | &#10005; |
+| SAC  | [Soft Actor-Critic](https://arxiv.org/abs/1801.01290)                                               | off-policy | &#10004; | &#10005; |
 
 
 
