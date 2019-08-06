@@ -2,7 +2,7 @@ name: py36
 dependencies:
   - python=3.6
   - pip:
-    - tensorflow-gpu==1.10.0
+    - tensorflow-gpu>=1.10.0
     - gym[atari]
     - tensorboardx
     - tqdm

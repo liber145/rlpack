@@ -1,7 +1,7 @@
 ### 本包简介
+----------------------
 
-**rlpack**是一个直观，灵活，轻量级，基于**tensorflow**的强化学习算法库。
-它集合了一些最新强化学习算法。
+**rlpack**是一个基于**tensorflow**的强化学习算法库，解耦算法和环境，方便调用。
 
 <!--
 is an intuitive, lightweight and flexible reinforcement learning library based on TensorFlow.
@@ -9,14 +9,9 @@ It bundles up-to-date reinforcement learning algorithms.
 -->
 
 
-**特点：**
-
-- 轻量级；
-- 解耦算法和环境，方便调用。
-
-
 ### 使用方法
-
+----------------------
+下面展示如何使用`rlpack`在[`MuJoCo`](https://github.com/openai/mujoco-py)环境中运行`PPO`算法。
 
 ```python
 # -*- coding: utf-8 -*-
@@ -108,28 +103,31 @@ if __name__ == "__main__":
 
 
 ### 安装流程
+----------------------
 
-**需求：** Python3.6.7
+1. 安装依赖包
 
-1. Install the dependencies using `environment.yml`:
+安装所需依赖软件包，请看`environment.yml`.
+建议使用[`Anaconda`](https://www.anaconda.com/distribution/)配置`python`运行环境，可用以下脚本安装。
 
 ```bash
     $ git clone https://github.com/liber145/rlpack
-    $ cd rl-algo
+    $ cd rlpack
     $ conda env create -f environment.yml
     $ conda activate py36
 ```
 
-2. Install `rlpack` by running:
+2. 安装`rlpack`
 
 ```bash
     $ python setup.py install
 ```
 
-It will install a basic learning environment in `gym`.
-To install more environments like mujoco, please refer to https://github.com/openai/gym.
+以上流程会安装一个常用的强化学习运行环境[`gym`](https://github.com/openai/gym).
+该环境还支持一些复杂的强化学习环境，比如[`MuJoCo`](https://github.com/openai/mujoco-py)，具体请看[`gym`](https://github.com/openai/gym)的介绍。
 
 ### 算法列表
+----------------------
 
 
 | 算法  | 论文链接                                                                                             | 类型        | 连续动作  | 离散动作  |
@@ -152,6 +150,7 @@ To install more environments like mujoco, please refer to https://github.com/ope
 
 
 ### 参考代码
+----------------------
 在实现过程中，参考了其他优秀代码，帮助比较大的列举如下：
 - [openai的baselines](https://github.com/openai/baselines)
 - [openai的spinningup](https://github.com/openai/spinningup)
@@ -160,5 +159,6 @@ To install more environments like mujoco, please refer to https://github.com/ope
 
 
 ### 学习资料
+----------------------
 
 - [Introduction to Reinforcement Learning](https://dl.acm.org/citation.cfm?id=551283)
