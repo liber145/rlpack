@@ -41,7 +41,6 @@ class DistDQN(Base):
         """Build networks for algorithm."""
         self._obs = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name="observation")
         self._act = tf.placeholder(tf.int32, [None], name="action")
-        self.target = tf.placeholder(tf.float32, [None], name="target")
         self._new_p_act = tf.placeholder(tf.float32, [None, self._n_histogram], name="next_input")
         self._obs2 = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name="next_observation")
 
@@ -82,28 +81,14 @@ class DistDQN(Base):
         self.init_target_op = _update_target("target", "main")
 
     def get_action(self, obs):
-        """Return actions according to the given observation.
-
-        Parameters:
-            - ob: An ndarray with shape (n, state_dimension).
-
-        Returns:
-            - An ndarray for action with shape (n).
-        """
-        probs = self.sess.run(self._p_act, feed_dict={self._observation: obs})
+        probs = self.sess.run(self._p_act, feed_dict={self._obs: obs})
         qvals = np.sum(probs * self._split_points, axis=-1)
         best_action = np.argmax(qvals, axis=1)
-
-        batch_size = obs.shape[0]
-        global_step = self.sess.run(tf.train.get_global_step())
-        actions = np.random.randint(self._dim_act, size=batch_size)
-        idx = np.random.uniform(size=batch_size) > self._epsilon_schedule(global_step)
-        actions[idx] = best_action[idx]
-        return actions
+        return best_action
 
     def update(self, databatch):
         s_batch, a_batch, r_batch, d_batch, next_s_batch = databatch
-        next_q_probs = self.sess.run(self._target_p_act, feed_dict={self._next_observation: next_s_batch})
+        next_q_probs = self.sess.run(self._p_act_targ, feed_dict={self._obs2: next_s_batch})
         next_q_vals = np.sum(next_q_probs * self._split_points, axis=-1)
         best_action = np.argmax(next_q_vals, axis=1)
 
@@ -124,28 +109,17 @@ class DistDQN(Base):
         new_p_act = np.array(new_p_act)
 
         for _ in range(self._train_epoch):
-            self.sess.run(self._train_op,
+            self.sess.run(self.train_policy_op,
                           feed_dict={
-                              self._observation: s_batch,
-                              self.action: a_batch,
+                              self._obs: s_batch,
+                              self._act: a_batch,
                               self._new_p_act: new_p_act
                           })
+
+        self.sess.run(self.update_target_op)
 
         # Save model.
         global_step, _ = self.sess.run([tf.train.get_global_step(), self.increment_global_step])
 
         if global_step % self._save_model_freq == 0:
             self.save_model()
-
-        # 更新目标策略。
-        if global_step % self._update_target_freq == 0:
-            self.sess.run(self._update_target_op)
-
-        if global_step % self._log_freq == 0:
-            log = self.sess.run(self._log_op,
-                                feed_dict={
-                                    self._observation: s_batch,
-                                    self.action: a_batch,
-                                    self._new_p_act: new_p_act
-                                })
-            self.sw.add_scalars("distdqn", log, global_step=global_step)
