@@ -102,8 +102,8 @@ class SAC(Base):
                 update_ops.append(param1.assign(alpha * param1 + (1-alpha) * param2))
             return update_ops
 
-        with tf.control_dependencies([self.train_value_op]):
-            self._update_target_op = _update_target("target/state_value", "main/state_value", alpha=self._target_update_rate)
+        # with tf.control_dependencies([self.train_value_op]):
+        self._update_target_op = _update_target("target/state_value", "main/state_value", alpha=self._target_update_rate)
         self._init_target_op = _update_target("target/state_value", "main/state_value", alpha=0)
 
     def get_action(self, obs):
@@ -116,6 +116,8 @@ class SAC(Base):
 
         for _ in range(self._train_epoch):
             self.sess.run([self.train_policy_op, self.train_value_op], feed_dict=inputs)
+
+        self.sess.run(self._update_target_op)
 
         # Save model.
         global_step, _ = self.sess.run([tf.train.get_global_step(), self.increment_global_step])

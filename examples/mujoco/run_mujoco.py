@@ -61,18 +61,18 @@ class ReplayBuffer:
 #     return act
 
 def policy_fn(x, a):
-    pi, logp, logp_pi = mlp_gaussian_policy2(x, a, hidden_sizes=[64, 64], activation=tf.tanh)
-    return pi, logp_pi
+    mu, pi, logp_pi = mlp_gaussian_policy2(x, a, hidden_sizes=[300], activation=tf.nn.relu)
+    return mu, logp_pi
 
 
 def value_fn(x):
-    v = mlp(x, [64, 64, 1])
+    v = mlp(x, [300, 1])
     return tf.squeeze(v, axis=1)
 
 
 def qvalue_fn(x, a):
-    y = tf.layers.dense(tf.concat([x, a], axis=-1), units=64, activation=tf.nn.relu)
-    y = tf.layers.dense(y, units=64, activation=tf.nn.relu)
+    y = tf.layers.dense(tf.concat([x, a], axis=-1), units=300, activation=tf.nn.relu)
+    # y = tf.layers.dense(y, units=64, activation=tf.nn.relu)
     v = tf.squeeze(tf.layers.dense(y, units=1, activation=None), axis=1)
     return v
 
