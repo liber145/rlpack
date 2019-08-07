@@ -1,28 +1,20 @@
 import numpy as np
 import tensorflow as tf
 
-from tensorboardX import SummaryWriter
 
 from .base import Base
 
 
 class DistDQN(Base):
     def __init__(self,
-                 obs_fn=None,
+                 rnd=0,
+                 dim_obs=None, n_act=None,
                  policy_fn=None,
-                 dim_act=None,
-                 rnd=1,
                  discount=0.99,
-                 save_path="./log",
-                 save_model_freq=1000,
-                 update_target_freq=10000,
-                 epsilon_schedule=lambda x: max(0.1, (1e4-x) / 1e4),
-                 lr=2.5e-4,
-                 n_histogram=51,
-                 vmax=10,
-                 vmin=-10,
-                 log_freq=10,
-                 train_epoch=1,
+                 update_target_rate=0.9,
+                 train_epoch=1, policy_lr=1e-3,
+                 n_histogram=51, vmax=10, vmin=-10,
+                 save_path="./log", log_freq=10, save_model_freq=1000,
                  ):
 
         self._n_histogram = n_histogram
@@ -31,73 +23,51 @@ class DistDQN(Base):
         self._delta = (self._vmax - self._vmin) / (self._n_histogram - 1)
         self._split_points = np.linspace(self._vmin, self._vmax, self._n_histogram)
 
-        self._obs_fn = obs_fn
+        self._dim_obs = dim_obs
+        self._n_act = n_act
         self._policy_fn = policy_fn
-        self._dim_act = dim_act
         self._discount = discount
-
-        self._lr = lr
-        self._epsilon_schedule = epsilon_schedule
-        self._update_target_freq = update_target_freq
         self._train_epoch = train_epoch
+        self._policy_lr = policy_lr
+        self._update_target_rate = update_target_rate
 
         self._save_model_freq = save_model_freq
         self._log_freq = log_freq
 
         super().__init__(save_path=save_path, rnd=rnd)
+        self.sess.run(self.init_target_op)
 
     def _build_network(self):
         """Build networks for algorithm."""
-        # self._observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.uint8, name="observation")
-        # self._observation = tf.to_float(self._observation) / 256.0
-        # self._observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name="observation")
-        self._observation = self._obs_fn()
-        self.action = tf.placeholder(tf.int32, [None], name="action")
+        self._obs = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name="observation")
+        self._act = tf.placeholder(tf.int32, [None], name="action")
         self.target = tf.placeholder(tf.float32, [None], name="target")
         self._new_p_act = tf.placeholder(tf.float32, [None, self._n_histogram], name="next_input")
-        # self._next_observation = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name="next_observation")
-        self._next_observation = self._obs_fn()
+        self._obs2 = tf.placeholder(shape=[None, *self._dim_obs], dtype=tf.float32, name="next_observation")
 
         with tf.variable_scope("main"):
-            # self._logits = self._dense(self._observation)
-            self._logits = self._policy_fn(self._observation)
+            self.logits = self._policy_fn(self._obs)
 
         with tf.variable_scope("target"):
-            # self._target_logits = tf.stop_gradient(self._dense(self._next_observation))
-            self._target_logits = tf.stop_gradient(self._policy_fn(self._next_observation))
-
-    # def _conv(self, t):
-    #     x = tf.layers.conv2d(t, 32, 8, 4, activation=tf.nn.relu)
-    #     x = tf.layers.conv2d(x, 64, 4, 2, activation=tf.nn.relu)
-    #     x = tf.layers.conv2d(x, 64, 3, 1, activation=tf.nn.relu)
-    #     x = tf.contrib.layers.flatten(x)  # pylint: disable=E1101
-    #     x = tf.layers.dense(x, 512, activation=tf.nn.relu)
-    #     return tf.layers.dense(x, self._dim_act * self._n_histogram)
-
-    # def _dense(self, t):
-    #     x = tf.layers.dense(t, 128, activation=tf.nn.relu)
-    #     x = tf.layers.dense(x, 128, activation=tf.nn.relu)
-    #     x = tf.layers.dense(x, 64, activation=tf.nn.relu)
-    #     return tf.layers.dense(x, self._dim_act * self._n_histogram)
+            self.logits_targ = tf.stop_gradient(self._policy_fn(self._obs2))
 
     def _build_algorithm(self):
         """Build networks for algorithm."""
-        self.optimizer = tf.train.AdamOptimizer(self._lr)
-        trainable_variables = tf.trainable_variables('main')
+        value_vars = tf.trainable_variables('main')
 
-        batch_size = tf.shape(self._observation)[0]
-        self._p_act = tf.nn.softmax(tf.reshape(self._logits, [-1, self._dim_act, self._n_histogram]))
-        self._target_p_act = tf.nn.softmax(tf.reshape(self._target_logits, [-1, self._dim_act, self._n_histogram]))
+        batch_size = tf.shape(self._obs)[0]
+        self._p_act = tf.nn.softmax(tf.reshape(self.logits, [-1, self._n_act, self._n_histogram]))
+        self._p_act_targ = tf.nn.softmax(tf.reshape(self.logits_targ, [-1, self._n_act, self._n_histogram]))
 
-        gather_indices = tf.range(batch_size) * self._dim_act + self.action
-        self.action_probs = tf.gather(tf.reshape(self._p_act, [-1, self._n_histogram]), gather_indices)
+        action_index = tf.stack([tf.range(batch_size), self._act], axis=1)
+        self.action_probs = tf.gather_nd(self._p_act, action_index)
         self.action_probs_clip = tf.clip_by_value(self.action_probs, 0.00001, 0.99999)
 
-        loss = tf.reduce_mean(-tf.reduce_sum(self._new_p_act * tf.log(self.action_probs_clip), axis=-1))
-        self._train_op = self.optimizer.minimize(loss, var_list=trainable_variables)
+        loss = -tf.reduce_mean(tf.reduce_sum(self._new_p_act * tf.log(self.action_probs_clip), axis=-1))
+        self.train_policy_op = tf.train.AdamOptimizer(self._policy_lr).minimize(loss, var_list=value_vars)
 
-        # 更新目标网络。
-        def _update_target(net1, net2):
+        # Update target network.
+        def _update_target(net1, net2, rho=0):
             params1 = tf.trainable_variables(net1)
             params1 = sorted(params1, key=lambda v: v.name)
             params2 = tf.trainable_variables(net2)
@@ -105,12 +75,11 @@ class DistDQN(Base):
             assert len(params1) == len(params2)
             update_ops = []
             for param1, param2 in zip(params1, params2):
-                update_ops.append(param1.assign(param2))
+                update_ops.append(param1.assign(rho*param1 + (1-rho)*param2))
             return update_ops
 
-        self._update_target_op = _update_target("target", "main")
-
-        self._log_op = {"loss": loss}
+        self.update_target_op = _update_target("target", "main", rho=self._update_target_rate)
+        self.init_target_op = _update_target("target", "main")
 
     def get_action(self, obs):
         """Return actions according to the given observation.

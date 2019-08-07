@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+import scipy
 
 
 def assert_shape(tensor: tf.Tensor, expected_shape):
@@ -21,3 +22,11 @@ def exponential_decay(initial_value, rate, decay_step, current_step):
     if current_step > decay_step:
         return initial_value * rate ** decay_step
     return initial_value * rate ** current_step
+
+
+def get_action_boltzman(qvals, alpha=0.01):
+    batchsize, n_act = qvals.shape[1]
+    exp_m = scipy.special.logsumexp(qvals / alpha, axis=1)
+    exp_m = np.exp(qvals / alpha - exp_m)
+    actions = [np.random.choice(n_act, p=exp_m[i]) for i in range(batchsize)]
+    return actions

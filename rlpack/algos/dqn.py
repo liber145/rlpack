@@ -10,9 +10,9 @@ class DQN(Base):
                  rnd=0,
                  dim_obs=None, n_act=None,
                  value_fn=None,
-                 discount=0.99, epsilon=0.1,
-                 train_epoch=5, value_lr=1e-3,
-                 update_target_rate=0.995, max_grad_norm=40,
+                 discount=0.99,
+                 train_epoch=1, value_lr=1e-3,
+                 update_target_rate=0.8, max_grad_norm=40,
                  save_path="./log", log_freq=10, save_model_freq=1000,
                  ):
         self._dim_obs = dim_obs
@@ -20,7 +20,6 @@ class DQN(Base):
         self._value_fn = value_fn
 
         self._discount = discount
-        self._epsilon = epsilon
         self._train_epoch = train_epoch
         self._value_lr = value_lr
         self._update_target_rate = update_target_rate
@@ -79,8 +78,8 @@ class DQN(Base):
                 update_ops.append(param1.assign(rho*param1 + (1-rho)*param2))
             return update_ops
 
-        self.update_target_op = _update_target("target/q", "main/q")
-        self.init_target_op = _update_target("target/q", "main/q", rho=self._update_target_rate)
+        self.update_target_op = _update_target("target/q", "main/q", rho=self._update_target_rate)
+        self.init_target_op = _update_target("target/q", "main/q")
 
     def get_action(self, obs):
         q = self.sess.run(self.q, feed_dict={self._obs: obs})
