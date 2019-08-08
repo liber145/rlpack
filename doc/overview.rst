@@ -1,7 +1,8 @@
+============
 本包简介
 ============
 
-**rlpack**是一个基于**tensorflow**的强化学习算法库，解耦算法和环境，方便调用。
+**rlpack** 是一个基于 **tensorflow** 的强化学习算法库，解耦算法和环境，方便调用。
 
 **特点：**
 
@@ -11,13 +12,11 @@
 
 
 使用方法
-=======
+========
 
-下面展示如何使用`rlpack`在[`MuJoCo`](https://github.com/openai/mujoco-py)环境中运行`PPO`算法。
+下面展示如何使用 `rlpack` 在 `MuJoCo <https://github.com/openai/mujoco-py>`_ 环境中运行 `PPO` 算法。
 
-.. code:: python
-    # -*- coding: utf-8 -*-
-
+.. code-block:: python
 
     import argparse
     import time
@@ -104,6 +103,8 @@
 
 
 
+
+
 安装流程
 ============
 
@@ -111,10 +112,10 @@ Python3.6+ is required.
 
 1. 安装依赖包
 
-安装所需依赖软件包，请看`environment.yml`.
-建议使用[`Anaconda`](https://www.anaconda.com/distribution/)配置`python`运行环境，可用以下脚本安装。
+安装所需依赖软件包，请看 `environment.yml`.
+建议使用 `Anaconda <https://www.anaconda.com/distribution/>`_ 配置 `python` 运行环境，可用以下脚本安装。
 
-.. code:: bash
+.. code-block:: bash
 
     $ git clone https://github.com/liber145/rlpack
     $ cd rlpack
@@ -122,13 +123,13 @@ Python3.6+ is required.
     $ conda activate py36
 
 
-2. 安装`rlpack`
+2. 安装 `rlpack`
 
-.. code:: bash
+.. code-block:: bash
 
     $ python setup.py install
 
 
 
-以上流程会安装一个常用的强化学习运行环境[`gym`](https://github.com/openai/gym).
-该环境还支持一些复杂的强化学习环境，比如[`MuJoCo`](https://github.com/openai/mujoco-py)，具体请看[`gym`](https://github.com/openai/gym)的介绍。
+以上流程会安装一个常用的强化学习运行环境 `gym <https://github.com/openai/gym>`_.
+该环境还支持一些复杂的强化学习环境，比如 `MuJoCo <https://github.com/openai/mujoco-py>`_ ，具体请看 `gym <https://github.com/openai/gym>`_ 的介绍。
