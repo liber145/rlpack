@@ -132,19 +132,22 @@ if __name__ == "__main__":
 
 | 算法       | 论文链接                                                                                             | 类型        | 连续动作  | 离散动作  |
 |-----------|-----------------------------------------------------------------------------------------------------|------------|----------|----------|
+| DQN       | [Playing Atari with Deep Reinforcement Learning](https://arxiv.org/abs/1312.5602)                   | off-policy | &#10008; | &#10004; |
+| DoubleDQN | [Deep Reinforcement Learning with Double Q-learning](https://arxiv.org/abs/1509.06461)              | off-policy | &#10008; | &#10004; |
+| DuelDQN   | [Dueling Network Architectures for Deep Reinforcement Learning](https://arxiv.org/abs/1511.06581)   | off-policy | &#10008; | &#10004; |
+| DistDQN   | [A Distributional Perspective on Reinforcement Learning](https://arxiv.org/abs/1707.06887)          | off-policy | &#10008; | &#10004; |
+| PG        | [Introduction to Reinforcement Learning](https://dl.acm.org/citation.cfm?id=551283)                 | on-policy  | &#10004; | &#10008; |
+| A2C       | [Asynchronous Methods for Deep Reinforcement Learning](https://arxiv.org/abs/1602.01783)            | on-policy  | &#10004; | &#10008; |
 | TRPO      | [Trust Region Policy Optimization](https://arxiv.org/abs/1502.05477)                                | on-policy  | &#10004; | &#10008; |
 | PPO       | [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347)                         | on-policy  | &#10004; | &#10008; |
 | TD3       | [Addressing Function Approximation Error in Actor-Critic Methods](https://arxiv.org/abs/1802.09477) | off-policy | &#10004; | &#10008; |
 | DDPG      | [Continuous control with deep reinforcement learning](https://arxiv.org/abs/1509.02971)             | off-policy | &#10004; | &#10008; |
 | SAC       | [Soft Actor-Critic](https://arxiv.org/abs/1801.01290)                                               | off-policy | &#10004; | &#10008; |
-| A2C       | [Asynchronous Methods for Deep Reinforcement Learning](https://arxiv.org/abs/1602.01783)            | on-policy  | &#10004; | &#10008; |
-| DQN       | [Playing Atari with Deep Reinforcement Learning](https://arxiv.org/abs/1312.5602)                   | off-policy | &#10008; | &#10004; |
-| DoubleDQN | [Deep Reinforcement Learning with Double Q-learning](https://arxiv.org/abs/1509.06461)              | off-policy | &#10008; | &#10004; |
-| DuelDQN   | [Dueling Network Architectures for Deep Reinforcement Learning](https://arxiv.org/abs/1511.06581)   | off-policy | &#10008; | &#10004; |
-| DistDQN   | [A Distributional Perspective on Reinforcement Learning](https://arxiv.org/abs/1707.06887)          | off-policy | &#10008; | &#10004; | 
+ 
 
 
 
+部分算法解释请看[文档](https://rlpack.readthedocs.io/zh/latest/)。
 - [Human-level control through deep reinforcement learning](https://www.nature.com/articles/nature14236)
 
 
