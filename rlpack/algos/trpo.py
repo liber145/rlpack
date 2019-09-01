@@ -2,19 +2,20 @@
 import numpy as np
 import tensorflow as tf
 
-from ..utils import diagonal_gaussian_kl
+from ..utils import diagonal_gaussian_kl, discrete_kl
 from .base import Base
 
 
 class TRPO(Base):
     def __init__(self,
-                 rnd=0,
+                 rnd=0, is_discrete=False, 
                  dim_obs=None, dim_act=None,
                  policy_fn=None, value_fn=None,
                  discount=0.99, gae=0.95, delta=0.01,
                  train_epoch=40, policy_lr=1e-3, value_lr=1e-3, max_grad_norm=40,
                  save_path="./log", log_freq=10, save_model_freq=100,
                  ):
+        self._is_discrete = is_discrete
         self._dim_obs = dim_obs
         self._dim_act = dim_act
         self._policy_fn = policy_fn
@@ -35,16 +36,26 @@ class TRPO(Base):
 
     def _build_network(self):
         self._obs = tf.placeholder(tf.float32, [None, *self._dim_obs], "observation")
-        self._act = tf.placeholder(tf.float32, [None, self._dim_act], "action")
-
-        self._logp_old = tf.placeholder(tf.float32, [None])
+        
         self._adv = tf.placeholder(tf.float32, [None])
         self._ret = tf.placeholder(tf.float32, [None])
-        self._old_mu = tf.placeholder(tf.float32, [None, self._dim_act])
-        self._old_log_std = tf.placeholder(tf.float32, [self._dim_act])
+
+        if self._is_discrete:
+            self._act = tf.placeholder(tf.int32, [None], "action")    
+            self._old_probs = tf.placeholder(tf.float32, [None, self._dim_act])
+            self._old_p = tf.placeholder(tf.float32, [None])
+        else:
+            self._act = tf.placeholder(tf.float32, [None, self._dim_act], "action")
+            self._logp_old = tf.placeholder(tf.float32, [None])
+            self._old_mu = tf.placeholder(tf.float32, [None, self._dim_act])
+            self._old_log_std = tf.placeholder(tf.float32, [self._dim_act])
+            
 
         with tf.variable_scope("pi"):
-            self.pi, self.logp, self.logp_pi, self.mu, self.log_std = self._policy_fn(self._obs, self._act)
+            if self._is_discrete:
+                self.sampled_a, self.probs, self.p = self._policy_fn(self._obs, self._act)
+            else:
+                self.sampled_a, self.logp, self.logp_pi, self.mu, self.log_std = self._policy_fn(self._obs, self._act)
         with tf.variable_scope("value"):
             self.v = self._value_fn(self._obs)
 
@@ -52,18 +63,27 @@ class TRPO(Base):
         size_vec = np.sum([np.prod(x.shape.as_list()) for x in self.policy_vars])
         self.vec = tf.placeholder(tf.float32, [size_vec], "vector")
 
-        self.all_phs = [self._obs, self._act, self._adv, self._ret, self._logp_old, self._old_mu, self._old_log_std]
+        if self._is_discrete:
+            self.all_phs = [self._obs, self._act, self._adv, self._ret, self._old_probs, self._old_p]
+        else:
+            self.all_phs = [self._obs, self._act, self._adv, self._ret, self._logp_old, self._old_mu, self._old_log_std]
 
         for ph in self.all_phs:
             print("??????? ph shape :", ph.shape.as_list())
 
     def _build_algorithm(self):
-        self.d_kl = diagonal_gaussian_kl(self.mu, self.log_std, self._old_mu, self._old_log_std)
+        if self._is_discrete:
+            self.d_kl = discrete_kl(self._old_probs, self.probs)
+        else:
+            self.d_kl = diagonal_gaussian_kl(self.mu, self.log_std, self._old_mu, self._old_log_std)
         g_kl = self._flat_param_list(tf.gradients(self.d_kl, self.policy_vars))
         # Add damping vector.
         self.Hv = self._flat_param_list(tf.gradients(tf.reduce_sum(g_kl * self.vec), self.policy_vars))  # + 0.01 * self.vec
 
-        ratio = tf.exp(self.logp - self._logp_old)
+        if self._is_discrete:
+            ratio = self.p / self._old_p
+        else:
+            ratio = tf.exp(self.logp - self._logp_old)
         self.policy_loss = -tf.reduce_mean(ratio * self._adv)
         value_loss = tf.reduce_mean((self.v - self._ret)**2)
 
@@ -151,8 +171,12 @@ class TRPO(Base):
     def _parse_databatch(self, states, actions, rewards, dones, earlystops, nextstates):
 
         batch_size = len(dones)
-        oldlogproba, values, old_mu, old_log_std = self.sess.run([self.logp, self.v, self.mu, self.log_std],
-                                                                 feed_dict={self._obs: states, self._act: actions})
+        if self._is_discrete:
+            values, old_probs, old_p = self.sess.run([self.v, self.probs, self.p],
+                                                                     feed_dict={self._obs: states, self._act: actions})
+        else:
+            oldlogproba, values, old_mu, old_log_std = self.sess.run([self.logp, self.v, self.mu, self.log_std],
+                                                                     feed_dict={self._obs: states, self._act: actions})
         nextvalues = self.sess.run(self.v, feed_dict={self._obs: nextstates})
 
         returns = np.zeros(batch_size)
@@ -181,10 +205,13 @@ class TRPO(Base):
 
         advantages = (advantages - advantages.mean()) / advantages.std()
 
-        return [states, actions, advantages, returns, oldlogproba, old_mu, old_log_std]
+        if self._is_discrete:
+            return [states, actions, advantages, returns, old_probs, old_p]
+        else:
+            return [states, actions, advantages, returns, oldlogproba, old_mu, old_log_std]
 
     def get_action(self, obs) -> np.ndarray:
         """给定状态，返回动作。状态大小是(batchsize, *obs.dim)
         """
-        a = self.sess.run(self.pi, feed_dict={self._obs: obs})
+        a = self.sess.run(self.sampled_a, feed_dict={self._obs: obs})
         return a

@@ -17,3 +17,5 @@ document/
 *.org
 *.doctree
 run.py
+
+*.sh 
