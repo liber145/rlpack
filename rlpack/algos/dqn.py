@@ -83,6 +83,7 @@ class DQN(Base):
 
     def get_action(self, obs):
         q = self.sess.run(self.q, feed_dict={self._obs: obs})
+        print(">>>>>>>> q:", q)
         max_a = np.argmax(q, axis=1)
         return max_a
 

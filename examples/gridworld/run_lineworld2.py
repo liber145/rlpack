@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
 import argparse
 import time
 from collections import namedtuple
@@ -9,13 +8,15 @@ import gym
 import numpy as np
 import tensorflow as tf
 
-from rlpack.algos import DQN, DoubleDQN, DuelDQN, DistDQN, SparseDQN 
-from rlpack.utils import mlp
+from rlpack.algos import SparseDQN
+from rlpack.utils import mlp, discrete_sparse_policy, discrete_policy
+from lineworld import LineWorld 
 
-parser = argparse.ArgumentParser(description='set parameter.')
-parser.add_argument("--alpha", type=float, default=10)
+parser = argparse.ArgumentParser(description="set parameter.")
 parser.add_argument("--lr", type=float, default=0.0001)
-parser.add_argument('--env',  type=str, default="CartPole-v1")
+parser.add_argument("--alpha", type=float, default=0.1)
+parser.add_argument("--n_action", type=int, default=11)
+parser.add_argument('--n_state',  type=int, default=100)
 args = parser.parse_args()
 
 print("----------------------------")
@@ -24,12 +25,12 @@ for arg in vars(args):
 print("----------------------------")
 
 
-env = gym.make(args.env)
-dim_obs = env.observation_space.shape
-n_act = env.action_space.n
+env = LineWorld(args.n_state, args.n_action)
 epsilon = 0.1
+dim_obs = (args.n_state,)
+n_act = args.n_action
 max_episode_len = env._max_episode_steps
-max_epoch_step  = max_episode_len * 8
+max_epoch_step = max_episode_len * 8
 
 
 
@@ -64,20 +65,12 @@ class ReplayBuffer:
                     done=self.done_buf[idxs])
 
 
-# def duel_value_fn(x):
-#     net = mlp(x, [64, 64], activation=tf.nn.relu)
-#     v = mlp(net, [1], activation=tf.nn.relu)
-#     adv = mlp(net, [n_act], activation=tf.nn.relu)
-#     return v, adv
 
 def value_fn(x):
     v = mlp(x, [64, 64, n_act], activation=tf.nn.relu)
     return v
 
 
-# def distdqn_policy_fn(x):
-#     logit = mlp(x, [64, 64, n_act*51], activation=tf.nn.relu)
-#     return logit
 
 
 def run_main():
@@ -86,8 +79,8 @@ def run_main():
     # agent = DoubleDQN(n_act=n_act, dim_obs=dim_obs, value_fn=value_fn, save_path="./log/classicalcontrol/doubledqn")
     # agent = DuelDQN(n_act=n_act, dim_obs=dim_obs, value_fn=duel_value_fn, save_path="./log/classicalcontrol/dueldqn")
     # agent = DistDQN(n_act=n_act, dim_obs=dim_obs, policy_fn=distdqn_policy_fn, save_path="./log/classicalcontrol/distdqn")
-    agent = SparseDQN(n_act=n_act, dim_obs=dim_obs, alpha=args.alpha, value_fn=value_fn, value_lr=args.lr, save_path=f"./log/classicalcontrol/{args.env}/sparsedqn_{args.alpha}_l{args.lr}")
-    replay_buffer = ReplayBuffer(dim_obs=dim_obs, n_act=n_act, size=int(10000))
+    agent = SparseDQN(n_act=n_act, dim_obs=dim_obs, alpha=args.alpha, value_fn=value_fn, save_path=f"./log/gridworld/lineworld_{args.n_state}_{args.n_action}/sparsedqn_{args.alpha}_l{args.lr}")
+    replay_buffer = ReplayBuffer(dim_obs=dim_obs, n_act=n_act, size=int(1000))
 
     start_time = time.time()
     o, ep_ret, ep_len = env.reset(), 0, 0
@@ -95,8 +88,8 @@ def run_main():
         ep_ret_list, ep_len_list = [], []
         for t in range(max_epoch_step):
             a = agent.get_action(o[np.newaxis, :])[0]
-            # if np.random.rand() < epsilon:
-            #     a = np.random.randint(n_act)
+            if np.random.rand() < epsilon:
+                a = np.random.randint(n_act)
 
             nexto, r, d, _ = env.step(a)
             ep_ret += r
@@ -117,17 +110,16 @@ def run_main():
                     ep_len_list.append(ep_len)
                 o, ep_ret, ep_len = env.reset(), 0, 0
 
-        for _ in range(int(max_epoch_step/512)):
-            batch = replay_buffer.sample_batch(512)
-            agent.update([batch["obs1"], batch["acts"], batch["rews"], batch["done"], batch["obs2"]])
-
         elapsed_time = time.time() - start_time
         print(f"{epoch}th epoch. time={elapsed_time}, average_return={np.mean(ep_ret_list)}, average_len={np.mean(ep_len_list)}")
 
         agent.add_scalar("average_return", np.mean(ep_ret_list), epoch*max_epoch_step)
         agent.add_scalar("average_length", np.mean(ep_len_list), epoch*max_epoch_step)
 
-    
+        for _ in range(int(max_epoch_step/512)):
+            batch = replay_buffer.sample_batch(512)
+            agent.update([batch["obs1"], batch["acts"], batch["rews"], batch["done"], batch["obs2"]])
+
 
 
 if __name__ == "__main__":

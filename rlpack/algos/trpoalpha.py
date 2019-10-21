@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import tensorflow as tf
+from collections import deque
 
 from ..utils import diagonal_gaussian_kl, discrete_alpha
 from .base import Base
@@ -59,11 +60,11 @@ class TRPOAlpha(Base):
             # self.pi, self.logp, self.logp_pi, self.mu, self.log_std = self._policy_fn(self._obs, self._act)
             print("<<<<<<<<", self._obs)
             print("<<<<<<<<", self._act)
-            self.sampled_a, self.probs, self.p = self._policy_fn(self._obs, self._act)
+            self.sampled_a, self.probs, self.p, self.logits = self._policy_fn(self._obs, self._act)
             print("herere !!!!!!!!!!!")
-            print("<<<<<<<<<<<<<<<", self.sampled_a)
-            print("<<<<<<<<<<<<<<<", self.probs)
-            print("<<<<<<<<<<<<<<<", self.p)
+            print("<<<<<<<<<<<<<<< sampled_a", self.sampled_a)
+            print("<<<<<<<<<<<<<<< probs", self.probs)
+            print("<<<<<<<<<<<<<<< p", self.p)
         with tf.variable_scope("value"):
             self.v = self._value_fn(self._obs)
 
@@ -81,8 +82,11 @@ class TRPOAlpha(Base):
         # self.d_kl = diagonal_gaussian_alpha(self.mu, self.log_std, self._old_mu, self._old_log_std, alpha=self._alpha)
         self.d_alpha = discrete_alpha(self._old_probs, self.probs, alpha=self._alpha)
         g_kl = self._flat_param_list(tf.gradients(self.d_alpha, self.policy_vars))
+
+        varsum = tf.reduce_sum([tf.norm(var) for var in self.policy_vars])
+
         # Add damping vector.
-        self.Hv = self._flat_param_list(tf.gradients(tf.reduce_sum(g_kl * self.vec), self.policy_vars))  # + 0.01 * self.vec
+        self.Hv = self._flat_param_list(tf.gradients(tf.reduce_sum(g_kl * self.vec), self.policy_vars)) + 0.01 * self.vec
 
         # ratio = tf.exp(self.logp - self._logp_old)
         ratio = self.p / self._old_p
@@ -92,7 +96,10 @@ class TRPOAlpha(Base):
         self._policy_grad_op = self._flat_param_list(tf.gradients(self.policy_loss, self.policy_vars))
         self._train_value_op = tf.train.AdamOptimizer(self._value_lr).minimize(value_loss)
 
-    def update(self, databatch):
+        self.log = [self.d_alpha, g_kl, varsum, ratio, self.policy_loss, value_loss]
+        self.log_name = ["d_alpha", "gkl", "varsum", "ratio", "policyloss", "valueloss"]
+
+    def update(self, databatch, EPS=1e-8):
         """
         参数:
             databatch：一个列表，分别是state, action, reward, done, early_stop, next_state。每个是矩阵或向量。
@@ -108,11 +115,13 @@ class TRPOAlpha(Base):
         old_policy_vars = self.sess.run(self._flat_param_list(self.policy_vars))
         policy_grad = self.sess.run(self._policy_grad_op, feed_dict=inputs)
         step_direction = self._conjugate_gradient(policy_grad, inputs)
-        max_step_length = np.sqrt(2*self._delta/np.dot(policy_grad, step_direction))
+        max_step_length = np.sqrt(2*self._delta / (np.dot(policy_grad, step_direction))+EPS)
 
         def func(theta):
             self._recover_param_list(theta)
-            return self.sess.run([self.policy_loss, self.d_alpha], feed_dict=inputs)
+            policy_loss, d_alpha = self.sess.run([self.policy_loss, self.d_alpha], feed_dict=inputs)
+            log = self.sess.run(self.log, feed_dict=inputs)
+            return policy_loss, d_alpha, log
 
         self._line_search(old_policy_vars, step_direction, max_step_length, func)
 
@@ -122,17 +131,19 @@ class TRPOAlpha(Base):
             self.save_model()
 
     def _line_search(self, old_theta, step_dir, step_len, target_func, max_backtrack=10):
-        fval, d_alpha = target_func(old_theta)
+        fval, d_alpha, log = target_func(old_theta)
         for i in range(max_backtrack):
             step_frac = 0.5 ** i
             theta = old_theta - step_frac * step_len * step_dir
-            new_fval, new_d_alpha = target_func(theta)
+            new_fval, new_d_alpha, log = target_func(theta)
             if new_d_alpha < self._delta and new_fval < fval:
                 print(f"line search finished in the {i}th backtrack, new_d_alpha={new_d_alpha}")
                 break
             if i == max_backtrack - 1:
-                print("line search failed.")
+                print(f"line search failed. new_d_alpha={new_d_alpha}, {self.log_name[0]}={np.sum(log[0])}, \
+                {self.log_name[1]}={np.sum(log[1])}, {self.log_name[2]}={np.sum(log[2])}, stepdir={step_dir}")
                 self._recover_param_list(old_theta)
+        print(">>>>>><<<<< linesearch:", {x: np.sum(y) for x, y in zip(self.log_name, log)})
 
     def _flat_param_list(self, ts):
         return tf.concat([tf.reshape(t, [-1]) for t in ts], axis=0)
@@ -149,25 +160,43 @@ class TRPOAlpha(Base):
         assign_weight_op = [x.assign(y) for x, y in zip(self.policy_vars, res)]
         self.sess.run(assign_weight_op)
 
-    def _conjugate_gradient(self, g, inputs, residual_tol=1e-8, cg_damping=0.1, epoch=20):
+    def _conjugate_gradient(self, g, inputs, residual_tol=1e-8, cg_damping=0.1, epoch=20, EPS=1e-8):
         """计算H^{-1} g
         """
         x = np.zeros_like(g)
         p = g.copy()
         r = -g.copy()
 
-        for _ in range(epoch):
-            Ap = self.sess.run(self.Hv, feed_dict={**inputs, self.vec: p})
+        queue = deque(maxlen=4)
 
-            alpha = np.dot(r, r) / np.dot(p, Ap)
+        if np.isnan(np.sum(p)):
+            raise RuntimeError(f"nan in gradient. p={np.sum(p)}")
+
+        for i in range(epoch):
+            Ap, log = self.sess.run([self.Hv, self.log], feed_dict={**inputs, self.vec: p})
+
+            alpha = np.dot(r, r) / (np.dot(p, Ap) + EPS)
+
+            queue.append([alpha, r])
+
             x = x + alpha * p
             r_new = r + alpha * Ap
-            beta = np.dot(r_new, r_new) / np.dot(r, r)
+            beta = np.dot(r_new, r_new) / (np.dot(r, r) + EPS)
             p = -r_new + beta * p
             r = r_new
 
+            if np.isnan(np.sum(r)):
+                print(">nan>>>>>>>", {x: np.sum(v) for x, v in zip(self.log_name, log)})
+                print(f">>>>>>>> Ap={np.sum(Ap)}")
+                raise RuntimeError(f"{i}th: nan in oldr={np.sum(queue[-1][1])}, alpha={queue[-1][0]},\
+                p={np.sum(p)}")
+
             if np.dot(r, r) < residual_tol:
                 break
+
+        if np.isnan(np.sum(x)):
+            raise RuntimeError("nan in computing direction.")
+
         return x
 
     def _parse_databatch(self, states, actions, rewards, dones, earlystops, nextstates):
@@ -183,7 +212,6 @@ class TRPOAlpha(Base):
                                                feed_dict={self._obs: states, self._act: actions})
         # print(">>>>>>>> odlprobs:", oldprobs.shape, np.sum(oldprobs))
         # print(">>>>>>>> oldp:", oldp.shape, np.sum(oldp))
-        
 
         nextvalues = self.sess.run(self.v, feed_dict={self._obs: nextstates})
 
@@ -219,5 +247,6 @@ class TRPOAlpha(Base):
     def get_action(self, obs) -> np.ndarray:
         """给定状态，返回动作。状态大小是(batchsize, *obs.dim)
         """
-        a = self.sess.run(self.sampled_a, feed_dict={self._obs: obs})
+        a, probs = self.sess.run([self.sampled_a, self.probs], feed_dict={self._obs: obs})
+        # print(">>>>>>>>>>>> probs:", probs)
         return a

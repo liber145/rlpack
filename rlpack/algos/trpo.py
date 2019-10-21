@@ -213,5 +213,6 @@ class TRPO(Base):
     def get_action(self, obs) -> np.ndarray:
         """给定状态，返回动作。状态大小是(batchsize, *obs.dim)
         """
-        a = self.sess.run(self.sampled_a, feed_dict={self._obs: obs})
+        a, probs = self.sess.run([self.sampled_a, self.probs], feed_dict={self._obs: obs})
+        # print(">>>>>>>>>>>>>>>>>>probs:", probs)
         return a

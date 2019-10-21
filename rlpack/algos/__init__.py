@@ -1,4 +1,5 @@
 from .dqn import DQN
+from .sparse_dqn import SparseDQN 
 from .double_dqn import DoubleDQN
 from .duel_dqn import DuelDQN
 from .dist_dqn import DistDQN

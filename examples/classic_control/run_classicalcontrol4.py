@@ -9,13 +9,16 @@ import gym
 import numpy as np
 import tensorflow as tf
 
-from rlpack.algos import DQN, DoubleDQN, DuelDQN, DistDQN, SparseDQN 
+from rlpack.algos import SparseDQN
 from rlpack.utils import mlp
 
+
 parser = argparse.ArgumentParser(description='set parameter.')
-parser.add_argument("--alpha", type=float, default=10)
+parser.add_argument("--algo", type=str, default="sparsedqn")
 parser.add_argument("--lr", type=float, default=0.0001)
-parser.add_argument('--env',  type=str, default="CartPole-v1")
+parser.add_argument("--alpha", type=float, default=0.5)
+parser.add_argument("--n_act", type=int, default=10)
+parser.add_argument('--env',  type=str, default="Pendulum-v0")
 args = parser.parse_args()
 
 print("----------------------------")
@@ -26,10 +29,19 @@ print("----------------------------")
 
 env = gym.make(args.env)
 dim_obs = env.observation_space.shape
-n_act = env.action_space.n
+n_act = args.n_act 
 epsilon = 0.1
 max_episode_len = env._max_episode_steps
-max_epoch_step  = max_episode_len * 8
+max_epoch_step = max_episode_len * 8
+
+
+envact_high = env.action_space.high[0]
+envact_low = env.action_space.low[0]
+
+
+def get_action(ind: int) -> np.ndarray:
+    act = (envact_high - envact_low) / (n_act-1) * ind + envact_low
+    return np.array([act])
 
 
 
@@ -86,7 +98,7 @@ def run_main():
     # agent = DoubleDQN(n_act=n_act, dim_obs=dim_obs, value_fn=value_fn, save_path="./log/classicalcontrol/doubledqn")
     # agent = DuelDQN(n_act=n_act, dim_obs=dim_obs, value_fn=duel_value_fn, save_path="./log/classicalcontrol/dueldqn")
     # agent = DistDQN(n_act=n_act, dim_obs=dim_obs, policy_fn=distdqn_policy_fn, save_path="./log/classicalcontrol/distdqn")
-    agent = SparseDQN(n_act=n_act, dim_obs=dim_obs, alpha=args.alpha, value_fn=value_fn, value_lr=args.lr, save_path=f"./log/classicalcontrol/{args.env}/sparsedqn_{args.alpha}_l{args.lr}")
+    agent = SparseDQN(n_act=n_act, dim_obs=dim_obs, alpha=args.alpha, value_fn=value_fn, value_lr=args.lr, save_path=f"./log/classicalcontrol/{args.env}_{args.n_act}/sparsedqn_{args.alpha}_l{args.lr}")
     replay_buffer = ReplayBuffer(dim_obs=dim_obs, n_act=n_act, size=int(10000))
 
     start_time = time.time()
@@ -95,10 +107,11 @@ def run_main():
         ep_ret_list, ep_len_list = [], []
         for t in range(max_epoch_step):
             a = agent.get_action(o[np.newaxis, :])[0]
+            real_a = get_action(a)
             # if np.random.rand() < epsilon:
             #     a = np.random.randint(n_act)
 
-            nexto, r, d, _ = env.step(a)
+            nexto, r, d, _ = env.step(real_a)
             ep_ret += r
             ep_len += 1
 
@@ -121,13 +134,13 @@ def run_main():
             batch = replay_buffer.sample_batch(512)
             agent.update([batch["obs1"], batch["acts"], batch["rews"], batch["done"], batch["obs2"]])
 
+
         elapsed_time = time.time() - start_time
         print(f"{epoch}th epoch. time={elapsed_time}, average_return={np.mean(ep_ret_list)}, average_len={np.mean(ep_len_list)}")
 
         agent.add_scalar("average_return", np.mean(ep_ret_list), epoch*max_epoch_step)
         agent.add_scalar("average_length", np.mean(ep_len_list), epoch*max_epoch_step)
 
-    
 
 
 if __name__ == "__main__":

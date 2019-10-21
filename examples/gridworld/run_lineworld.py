@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
 import argparse
 import time
 from collections import namedtuple
@@ -11,13 +10,15 @@ import tensorflow as tf
 
 from rlpack.algos import TRPOAlpha, TRPO 
 from rlpack.utils import mlp, discrete_sparse_policy, discrete_policy
+from lineworld import LineWorld 
 
 parser = argparse.ArgumentParser(description='set parameter.')
 parser.add_argument('--algo', type=str, default="trpo")
 parser.add_argument("--lr", type=float, default=0.0001)
 parser.add_argument("--alpha", type=float, default=0.5)
 parser.add_argument("--delta", type=float, default=0.1)
-parser.add_argument('--env',  type=str, default="CartPole-v1")
+parser.add_argument("--n_action", type=int, default=11)
+parser.add_argument('--n_state',  type=int, default=100)
 args = parser.parse_args()
 
 print("----------------------------")
@@ -25,11 +26,13 @@ for arg in vars(args):
     print(f"{arg}: {getattr(args, arg)}")
 print("----------------------------")
 
-env = gym.make(args.env)
-dim_obs = env.observation_space.shape
-n_act = env.action_space.n
+
+env = LineWorld(args.n_state, args.n_action)
+dim_obs = (args.n_state,)
+n_act = args.n_action
 max_episode_len = env._max_episode_steps
 max_epoch_step = max_episode_len * 8
+
 
 
 Transition = namedtuple('Transition', ('state', 'action', 'reward', 'done', 'early_stop', 'next_state'))
@@ -47,7 +50,7 @@ class Memory(object):
 
 
 def sparse_policy_fn(x, a):
-    sampled_a, probs, p, logits = discrete_sparse_policy(x, a, n_act, hidden_sizes=[64, 64], activation=tf.nn.relu, top=2)
+    sampled_a, probs, p, logits = discrete_sparse_policy(x, a, n_act, hidden_sizes=[64, 64], activation=tf.nn.relu, top=3)
     return sampled_a, probs, p, logits
 
 def policy_fn(x, a):
@@ -61,9 +64,9 @@ def value_fn(x):
 def run_main():
 
     if args.algo == "trpoalpha":
-        agent = TRPOAlpha(dim_obs=dim_obs, dim_act=n_act, alpha=args.alpha, delta=args.delta, policy_fn=sparse_policy_fn, value_fn=value_fn, save_path=f"./log/classicalcontrol/{args.env}/trpoalpha_{args.alpha}_d{args.delta}_l{args.lr}")
+        agent = TRPOAlpha(dim_obs=dim_obs, dim_act=n_act, alpha=args.alpha, delta=args.delta, policy_fn=sparse_policy_fn, value_fn=value_fn, save_path=f"./log/gridworld/lineworld_{args.n_state}_{args.n_action}/trpoalpha_{args.alpha}_d{args.delta}_l{args.lr}")
     elif args.algo == "trpo":    
-        agent = TRPO(dim_obs=dim_obs, dim_act=n_act, is_discrete=True, delta=args.delta, policy_fn=policy_fn, value_fn=value_fn, save_path=f"./log/classicalcontrol/{args.env}/trpo_d{args.delta}_l{args.lr}")
+        agent = TRPO(dim_obs=dim_obs, dim_act=n_act, is_discrete=True, delta=args.delta, policy_fn=policy_fn, value_fn=value_fn, save_path=f"./log/gridworld/lineworld_{args.n_state}_{args.n_action}/trpo_d{args.delta}_l{args.lr}")
     else:
         raise RuntimeError("unknown algorithm.")
 
@@ -90,7 +93,6 @@ def run_main():
                     ep_len_list.append(ep_len)  
                 o, ep_ret, ep_len = env.reset(), 0, 0
 
-
         elapsed_time = time.time() - start_time
         print(f"{epoch}th epoch. time={elapsed_time}, average_return={np.mean(ep_ret_list)}, average_len={np.mean(ep_len_list)}")
 
@@ -101,6 +103,8 @@ def run_main():
         batch = memory.sample() 
         agent.update([np.array(x) for x in batch])
 
+
+    
 
 
 if __name__ == "__main__":
