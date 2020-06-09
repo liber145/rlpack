@@ -48,7 +48,7 @@ class PPO(Base):
         self._logp_old = tf.placeholder(tf.float32, [None])
         self.all_phs = [self._obs, self._act, self._adv, self._ret, self._logp_old]
 
-        self.pi, self.logp, self.logp_pi = self._policy_fn(self._obs, self._act)
+        self.pi, self.logp = self._policy_fn(self._obs, self._act)
         self.v = self._value_fn(self._obs)
 
     def _build_algorithm(self):
