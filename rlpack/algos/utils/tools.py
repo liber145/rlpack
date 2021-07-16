@@ -16,10 +16,18 @@ def pack_info(args):
     net_info = {
         'type': args.net_type,
         'fc_hidden': args.net_fc_hidden,
+        'actor_type': args.actor_net_type,
+        'actor_fc_hidden': args.actor_fc_hidden,
+        'critic_type': args.critic_net_type,
+        'critic_fc_hidden': args.critic_fc_hidden,     
     }
     opt_info = {
         'type': args.opt_type,
         'lr': args.opt_lr,
+        'actor_type': args.actor_opt,
+        'actor_lr': args.actor_lr,
+        'critic_type': args.critic_opt,
+        'critic_lr': args.critic_lr
     }
     return greedy_info, target_info, net_info, opt_info
 

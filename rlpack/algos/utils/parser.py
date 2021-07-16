@@ -34,4 +34,17 @@ class Parser():
         # Double DQN Setting
         parser.add_argument('--double_way', default="min", type=str)
 
+        # Advantage Actor Critic
+        parser.add_argument('--Ntraj', default=500, type=int)
+
+        parser.add_argument('--actor_net_type', default="FC", type=str)
+        parser.add_argument('--critic_net_type', default="FC", type=str)
+        parser.add_argument('--actor_fc_hidden', default=[128, 64], type=list)
+        parser.add_argument('--critic_fc_hidden', default=[128, 64], type=list)
+        
+        parser.add_argument('--actor_opt', default="Adam", type=str)
+        parser.add_argument('--critic_opt', default="Adam", type=str)
+        parser.add_argument('--actor_lr', default=1e-3, type=float)
+        parser.add_argument('--critic_lr', default=1e-3, type=float)
+
         return parser.parse_args()
