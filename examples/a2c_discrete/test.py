@@ -7,7 +7,7 @@ from tensorboardX import SummaryWriter
 
 from rlpack.algos.utils.parser import Parser
 from rlpack.algos.a2c import A2C_discrete
-from rlpack.algos.utils.tools import pack_info
+from rlpack.algos.utils.tools import pack_info, get_opt
 from rlpack.algos.utils.buffer import ReplayBuffer
 from rlpack.envs.classic_control import make_classic_control
 
@@ -26,7 +26,10 @@ if __name__ == "__main__":
 
     A2C = A2C_discrete(
          device, env._dim_obs, env._num_act, args.discount,
-        greedy_info, net_info, opt_info)
+        greedy_info, net_info)
+
+    aopt = get_opt(A2C.parameters[0], {'type': opt_info['actor_type'], 'lr': opt_info['actor_lr']})
+    copt = get_opt(A2C.parameters[1], {'type': opt_info['critic_type'], 'lr': opt_info['critic_lr']})
 
     env.seed(args.seed)
     random.seed(args.seed)
@@ -52,6 +55,14 @@ if __name__ == "__main__":
 
         writer.add_scalar("Epoch Reward", R/10, i)
 
-        aloss, closs, n = A2C.train(traj)
-        writer.add_scalar("Actor Loss", aloss, n)
-        writer.add_scalar("Critic Loss", closs, n)
+        aloss, closs, n = A2C.compute_loss(traj)
+        aopt.zero_grad()
+        aloss.backward()
+        aopt.step()
+
+        copt.zero_grad()
+        closs.backward()
+        copt.step()
+
+        writer.add_scalar("Actor Loss", aloss.item(), n)
+        writer.add_scalar("Critic Loss", closs.item(), n)

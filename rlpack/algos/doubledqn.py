@@ -28,15 +28,13 @@ class DoubleDQN:
         self._aggregate = get_aggregate(double_way)
         self._greedy_select = get_greedy(greedy_info)
         self._tau = target_info['tau']
-        self._nupdate = target_info['nupdate']
+        self.nupdate = target_info['nupdate']
         self._device = device
 
 
         if (type(dim_obs) == int or len(dim_obs.shape) == 1) and (net_info['type'] == 'FC'):
             self._eval, self._target = FC(dim_obs, dim_act, net_info['fc_hidden'], device), FC(dim_obs, dim_act, net_info['fc_hidden'], device)
             self._eval2, self._target2 = FC(dim_obs, dim_act, net_info['fc_hidden'], device), FC(dim_obs, dim_act, net_info['fc_hidden'], device)
-            self._opt = get_opt(self._eval.parameters(), opt_info)
-            self._opt2 = get_opt(self._eval2.parameters(), opt_info)
         else:
             raise NotImplementedError
 
@@ -47,7 +45,11 @@ class DoubleDQN:
         qvals = self._aggregate(self._eval(obs), self._eval2(obs))[0].detach()
         return self._greedy_select(qvals.argmax().item(), self._dim_act, self.n)
         
-    def _compute_loss(self, bs, ba, br, bd, bns):
+    def compute_loss(self, batch):
+        self.n += 1
+        self._train()
+        bs, ba, br, bd, bns = self._parse_batch(batch, self._device)
+
         qcur = self._eval(bs)[np.arange(ba.shape[0]), ba]
         qcur2 = self._eval2(bs)[np.arange(ba.shape[0]), ba]
 
@@ -57,7 +59,7 @@ class DoubleDQN:
         loss = self._loss_fn(qcur, qtarget)
         loss2 = self._loss_fn(qcur2, qtarget)
 
-        return loss, loss2
+        return loss, loss2, self.n
 
     def save_model(self, ckpt_path):
         torch.save({
@@ -73,7 +75,7 @@ class DoubleDQN:
         self._target.load_state_dict(load_dict["target"])
         self._target2.load_state_dict(load_dict["target2"])
     
-    def _update_target(self):
+    def update_target(self):
         for e, t in zip(self._eval.parameters(), self._target.parameters()):
             t.data.copy_(self._tau * e + (1-self._tau) * t)
         for e, t in zip(self._eval2.parameters(), self._target2.parameters()):
@@ -87,26 +89,6 @@ class DoubleDQN:
         br = torch.FloatTensor(br).to(device)
         return bs, ba, br, bd, bns
 
-    def train(self, batch):
-        self._train()
-
-        bs, ba, br, bd, bns = self._parse_batch(batch, self._device)
-        loss, loss2 = self._compute_loss(bs, ba, br, bd, bns)
-
-        self._opt.zero_grad()
-        loss.backward()
-        self._opt.step()
-
-        self._opt2.zero_grad()
-        loss2.backward()
-        self._opt2.step()
-
-        self.n += 1
-        if self.n % self._nupdate == 0:
-            self._update_target()
-        
-        return loss.item(), loss2.item(), self.n
-
     def _evaluate(self):
         self._eval.eval()
         self._eval2.eval()
@@ -118,4 +100,4 @@ class DoubleDQN:
 
     @property
     def parameters(self):
-        pass
+        return [self._eval.parameters(), self._eval2.parameters()]

@@ -18,10 +18,6 @@ class A2C_discrete:
             'actor_type': 'FC', 'actor_fc_hidden': [128, 64],
             'critic_type': 'FC', 'critic_fc_hidden': [128, 64]
         },
-        opt_info = {
-            'actor_type': 'Adam', 'actor_lr': 1e-3,
-            'critic_type': 'Adam', 'critic_lr': 1e-3
-        }
     ):
         self.n = 0
         self._dim_obs = dim_obs
@@ -34,8 +30,6 @@ class A2C_discrete:
         if (type(dim_obs) == int or len(dim_obs.shape) == 1) and (net_info['critic_type'] == 'FC') and (net_info['actor_type']=='FC'):
             self._actor = FC(dim_obs, dim_act, net_info['actor_fc_hidden'], device)
             self._critic = FC(dim_obs, 1, net_info['critic_fc_hidden'], device)
-            self._aopt = get_opt(self._actor.parameters(), {'type': opt_info['actor_type'], 'lr': opt_info['actor_lr']})
-            self._copt = get_opt(self._critic.parameters(), {'type': opt_info['critic_type'], 'lr': opt_info['critic_lr']})
         else:
             raise NotImplementedError
 
@@ -46,7 +40,11 @@ class A2C_discrete:
         qvals = self._actor(obs)[0].detach()
         return self._greedy_select(qvals.argmax().item(), self._dim_act, self.n)
         
-    def _compute_loss(self, s, a, r, d, ns):
+    def compute_loss(self, traj):
+        self.n += 1
+        self._train()
+
+        s, a, r, d, ns = self._parse_traj(traj, self._device)
         adv, ret = np.zeros(len(d)), np.zeros(len(d))
         Vref = self._critic(s).detach()
         
@@ -66,7 +64,7 @@ class A2C_discrete:
         V = self._critic(s).squeeze()
         closs = self._critic_loss(V, ret)
         
-        return aloss, closs
+        return aloss, closs, self.n
 
     def save_model(self, ckpt_path):
         torch.save({
@@ -86,24 +84,6 @@ class A2C_discrete:
         br = torch.FloatTensor(br).to(device)
         return bs, ba, br, bd, bns
 
-    def train(self, traj):
-        self._train()
-
-        bs, ba, br, bd, bns = self._parse_traj(traj, self._device)
-        aloss, closs = self._compute_loss(bs, ba, br, bd, bns)
-
-        self._aopt.zero_grad()
-        aloss.backward()
-        self._aopt.step()
-
-        self._copt.zero_grad()
-        closs.backward()
-        self._copt.step()
-
-        self.n += 1
-        
-        return aloss.item(), closs.item(), self.n
-
     def _evaluate(self):
         self._actor.eval()
         self._critic.eval()
@@ -112,7 +92,6 @@ class A2C_discrete:
         self._actor.train()
         self._critic.train()
 
-
     @property
     def parameters(self):
-        pass
+        return [self._actor.parameters(), self._critic.parameters()]
