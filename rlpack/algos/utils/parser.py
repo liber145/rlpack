@@ -47,4 +47,9 @@ class Parser():
         parser.add_argument('--actor_lr', default=1e-3, type=float)
         parser.add_argument('--critic_lr', default=1e-3, type=float)
 
+        # Categorical distribution
+        parser.add_argument('--dist_Vmin', default=-10, type=int)
+        parser.add_argument('--dist_Vmax', default=10, type=int)
+        parser.add_argument('--dist_n', default=51, type=int)
+
         return parser.parse_args()

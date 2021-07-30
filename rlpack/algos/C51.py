@@ -1,12 +1,13 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from IPython import embed
 
 from .nets.fc import FC
 from .utils.tools import *
 
 
-class DoubleDQN:
+class C51:
     def __init__(
         self,
         device,
@@ -18,7 +19,6 @@ class DoubleDQN:
         target_info = {'tau': 0.01, 'nupdate': 100},
         dist_info = {'Vmin': -10, 'Vmax': 10, 'n': 51},
         net_info = {'type': 'FC', 'fc_hidden': [256, 128, 64, 64]},
-        opt_info = {'type': 'Adam', 'lr': 1e-3},
     ):
         self.n = 0
         self._dim_obs = dim_obs
@@ -43,17 +43,17 @@ class DoubleDQN:
         self._evaluate()
         if len(obs.shape) == 1:
             obs = torch.unsqueeze(torch.FloatTensor(obs), 0).to(self._device)
-        qout = F.softmax(self._eval(obs).view(obs.shape[0], self._dim_act, self._natoms), dim=2).squeeze(0).detach()
-        qvals = torch.sum(qout*self._support, dim=1)
-        return self._greedy_select(qvals.argmax().item(), self._dim_act, self.n)
+        qout = F.softmax(self._eval(obs).view(obs.shape[0], self._dim_act, self._natoms), dim=2).detach().cpu()
+        qvals = torch.sum(qout*self._support, dim=2)
+        return self._greedy_select(qvals[0].argmax().item(), self._dim_act, self.n)
         
     def compute_loss(self, batch):
         self.n += 1
         self._train()
-        bs, ba, br, bd, bns = self._parse_batch(batch, self._device)
+        bs, ba, br, bd, bns = self._parse_batch(batch)
 
-        next_qout = F.softmax(self._target(bns).view(bs.shape[0], self._dim_act, self._natoms), dim=2).detach()
-        next_qvals = torch.sum(next_qout*self._support, dim=1)
+        next_qout = F.softmax(self._target(bns).view(bs.shape[0], self._dim_act, self._natoms), dim=2).detach().cpu()
+        next_qvals = torch.sum(next_qout*self._support, dim=2)
         next_qdist = next_qout[np.arange(bs.shape[0]), next_qvals.max(1)[1]]
 
         cur_qout = F.softmax(self._eval(bs).view(bs.shape[0], self._dim_act, self._natoms), dim=2)
@@ -62,9 +62,9 @@ class DoubleDQN:
         m = torch.zeros(cur_qdist.shape)
         for i in range(bs.shape[0]):
             for j in range(self._natoms):
-                Tzj = (br[i]+self._gamma*next_qdist[i][j]).clamp(self._Vmin, self._Vmax)
+                Tzj = (br[i]+self._discount*next_qdist[i][j]).clamp(self._Vmin, self._Vmax)
                 bj = (Tzj-self._Vmin)/self._dz
-                l, u = bj.floor, bj.ceil()
+                l, u = bj.floor().int(), bj.ceil().int()
                 m[i][l] += (u-bj)*next_qdist[i][j]
                 m[i][u] += (bj-l)*next_qdist[i][j]
         m = m.to(self._device)
@@ -87,12 +87,12 @@ class DoubleDQN:
         for e, t in zip(self._eval.parameters(), self._target.parameters()):
             t.data.copy_(self._tau * e + (1-self._tau) * t)
 
-    def _parse_batch(self, batch, device):
+    def _parse_batch(self, batch):
         bs, ba, br, bns, bd, _ = zip(*batch)
-        bs = torch.FloatTensor(bs).to(device)
-        ba = torch.LongTensor(ba).to(device)
-        bns = torch.FloatTensor(bns).to(device)
-        br = torch.FloatTensor(br).to(device)
+        bs = torch.FloatTensor(bs).to(self._device)
+        ba = torch.LongTensor(ba).to(self._device)
+        bns = torch.FloatTensor(bns).to(self._device)
+        br = torch.FloatTensor(br).to(self._device)
         return bs, ba, br, bd, bns
 
     def _evaluate(self):

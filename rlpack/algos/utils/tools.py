@@ -31,6 +31,14 @@ def pack_info(args):
     }
     return greedy_info, target_info, net_info, opt_info
 
+def pack_dist_info(args):
+    dist_info = {
+        'Vmin': args.dist_Vmin, 
+        'Vmax': args.dist_Vmax,
+        'n': args.dist_n
+    }
+    return dist_info
+
 def get_aggregate(aggregate_way):
     def get_min(a, b):
         return torch.min(a, b)

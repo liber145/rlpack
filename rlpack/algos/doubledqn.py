@@ -18,7 +18,6 @@ class DoubleDQN:
         greedy_info = {'type': "epsilon", 'eps-max': 0.1, 'eps-min': 0.001, 'eps-decay': 0.995},
         target_info = {'tau': 0.01, 'nupdate': 100},
         net_info = {'type': 'FC', 'fc_hidden': [256, 128, 64, 64]},
-        opt_info = {'type': 'Adam', 'lr': 1e-3},
     ):
         self.n = 0
         self._dim_obs = dim_obs
