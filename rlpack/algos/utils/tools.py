@@ -16,10 +16,13 @@ def pack_info(args):
     net_info = {
         'type': args.net_type,
         'fc_hidden': args.net_fc_hidden,
+        'cnn_hidden': args.net_cnn_hidden,
         'actor_type': args.actor_net_type,
         'actor_fc_hidden': args.actor_fc_hidden,
+        'actor_cnn_hidden': args.actor_cnn_hidden,
         'critic_type': args.critic_net_type,
-        'critic_fc_hidden': args.critic_fc_hidden,     
+        'critic_fc_hidden': args.critic_fc_hidden, 
+        'critic_cnn_hidden': args.critic_cnn_hidden    
     }
     opt_info = {
         'type': args.opt_type,
@@ -38,6 +41,16 @@ def pack_dist_info(args):
         'n': args.dist_n
     }
     return dist_info
+
+def pack_env_info(args):
+    env_info = {
+        'noop_max': args.noop_max,
+        'skip': args.env_skip,
+        'stack_frames': True,
+        'clip_rewards': False,
+        'episodic': False
+    }
+    return env_info
 
 def get_aggregate(aggregate_way):
     def get_min(a, b):

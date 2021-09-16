@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from IPython import embed
 
 from .nets.fc import FC
+from .nets.cnn import CNN
 from .utils.tools import *
 
 
@@ -24,7 +25,6 @@ class C51:
         self._dim_obs = dim_obs
         self._dim_act = dim_act
         self._discount = discount
-        self._loss_fn = get_loss(loss_fn)
         self._greedy_select = get_greedy(greedy_info)
         self._tau = target_info['tau']
         self.nupdate = target_info['nupdate']
@@ -33,16 +33,18 @@ class C51:
         self._natoms, self._dz = dist_info['n'], (self._Vmax-self._Vmin)/(dist_info['n']-1)
         self._support = torch.arange(self._Vmin, self._Vmax+self._dz, self._dz)
 
-        if (type(dim_obs) == int or len(dim_obs.shape) == 1) and (net_info['type'] == 'FC'):
+        if (type(dim_obs) == int or len(dim_obs) == 1) and (net_info['type'] == 'FC'):
             self._eval = FC(dim_obs, dim_act*self._natoms, net_info['fc_hidden'], device)
             self._target = FC(dim_obs, dim_act*self._natoms, net_info['fc_hidden'], device) 
+        elif (len(dim_obs)==3) and (net_info['type'] == 'CNN'):
+            self._eval = CNN(dim_obs, dim_act*self._natoms, net_info['cnn_hidden'], device)
+            self._target = CNN(dim_obs, dim_act*self._natoms, net_info['cnn_hidden'], device)
         else:
             raise NotImplementedError
 
     def take_step(self, obs):
         self._evaluate()
-        if len(obs.shape) == 1:
-            obs = torch.unsqueeze(torch.FloatTensor(obs), 0).to(self._device)
+        obs = torch.unsqueeze(torch.FloatTensor(obs), 0).to(self._device)
         qout = F.softmax(self._eval(obs).view(obs.shape[0], self._dim_act, self._natoms), dim=2).detach().cpu()
         qvals = torch.sum(qout*self._support, dim=2)
         return self._greedy_select(qvals[0].argmax().item(), self._dim_act, self.n)
@@ -62,7 +64,7 @@ class C51:
         m = torch.zeros(cur_qdist.shape)
         for i in range(bs.shape[0]):
             for j in range(self._natoms):
-                Tzj = (br[i]+self._discount*next_qdist[i][j]).clamp(self._Vmin, self._Vmax)
+                Tzj = (br[i]+self._discount*self._support[j]).clamp(self._Vmin, self._Vmax)
                 bj = (Tzj-self._Vmin)/self._dz
                 l, u = bj.floor().int(), bj.ceil().int()
                 m[i][l] += (u-bj)*next_qdist[i][j]

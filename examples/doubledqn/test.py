@@ -1,3 +1,4 @@
+import os
 import torch
 import random
 import numpy as np
@@ -7,23 +8,42 @@ from tensorboardX import SummaryWriter
 
 from rlpack.algos.utils.parser import Parser
 from rlpack.algos.doubledqn import DoubleDQN
-from rlpack.algos.utils.tools import pack_info, get_opt
+from rlpack.algos.utils.tools import pack_info, get_opt, pack_env_info
 from rlpack.algos.utils.buffer import ReplayBuffer
 from rlpack.envs.classic_control import make_classic_control
+from rlpack.envs.atari_wrapper import Atari_Env, Atari_Raw_Env
 
 
 if __name__ == "__main__":
     args = Parser().parse()
+    if os.path.exists(f"./default_config/{args.env_name}.jh"):
+        config = torch.load(f"./default_config/{args.env_name}.jh")
+        args = config
+    else:
+        if not os.path.exists(f"./default_config"):
+            os.makedirs(f"./default_config")
+
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    env_info = pack_env_info(args)
+    greedy_info, target_info, net_info, opt_info = pack_info(args)
     
-    env = make_classic_control(args.env_name)
+    if args.env_name in {"Acrobot-v1", "CartPole-v1", "CartPole-v0", "MountainCar-v0"}:
+        env = make_classic_control(args.env_name)
+    elif 'ram' in args.env_name:
+        env = Atari_Raw_Env(args.env_name)
+    else:
+        env = Atari_Env(args.env_name, env_info)
+
     Buffer = ReplayBuffer(args.buffer_size)
     log_dir = f"./log/{args.env_name},dicount:{args.discount}/"
 
-    greedy_info, target_info, net_info, opt_info = pack_info(args)
-    log_dir += f"net:{net_info['type']}-{net_info['fc_hidden']};"
+    if env.use_cnn:
+        log_dir += f"net:{net_info['type']}-{net_info['cnn_hidden']}"
+    else:
+        log_dir += f"net:{net_info['type']}-{net_info['fc_hidden']};"
     log_dir += f"opt:{opt_info['type']}-{opt_info['lr']}"
-    # writer = SummaryWriter(log_dir)
+    writer = SummaryWriter(log_dir)
+
 
     DoubleDQN = DoubleDQN(
          device,env._dim_obs, env._num_act, args.discount, args.loss_fn, args.double_way,
@@ -46,7 +66,7 @@ if __name__ == "__main__":
             R += r
 
             if done:
-                # writer.add_scalar("Epoch Reward", R, i)
+                writer.add_scalar("Epoch Reward", R, i)
                 break
             
             s = ns
@@ -62,7 +82,9 @@ if __name__ == "__main__":
                 loss2.backward()
                 opt2.step()
 
-                # writer.add_scalar("Average Loss", loss1.item()+loss2.item()/2, n)
+                writer.add_scalar("Average Loss", loss1.item()+loss2.item()/2, n)
 
                 if n % DoubleDQN.nupdate == 0:
                     DoubleDQN.update_target()
+
+    torch.save(args, f"./default_config/{args.env_name}.jh")

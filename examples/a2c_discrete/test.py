@@ -1,3 +1,4 @@
+import os
 import torch
 import random
 import numpy as np
@@ -7,21 +8,39 @@ from tensorboardX import SummaryWriter
 
 from rlpack.algos.utils.parser import Parser
 from rlpack.algos.a2c import A2C_discrete
-from rlpack.algos.utils.tools import pack_info, get_opt
+from rlpack.algos.utils.tools import pack_info, get_opt, pack_env_info
 from rlpack.algos.utils.buffer import ReplayBuffer
 from rlpack.envs.classic_control import make_classic_control
 
 
 if __name__ == "__main__":
     args = Parser().parse()
+    if os.path.exists(f"./default_config/{args.env_name}.jh"):
+        config = torch.load(f"./default_config/{args.env_name}.jh")
+        args = config
+    else:
+        if not os.path.exists(f"./default_config"):
+            os.makedirs(f"./default_config")
+
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    env_info = pack_env_info(args)
+    greedy_info, target_info, net_info, opt_info = pack_info(args)
     
-    env = make_classic_control(args.env_name)
+    if args.env_name in {"Acrobot-v1", "CartPole-v1", "CartPole-v0", "MountainCar-v0"}:
+        env = make_classic_control(args.env_name)
+    elif 'ram' in args.env_name:
+        env = Atari_Raw_Env(args.env_name)
+    else:
+        env = Atari_Env(args.env_name, env_info)
+
+    Buffer = ReplayBuffer(args.buffer_size)
     log_dir = f"./log/{args.env_name},dicount:{args.discount}/"
 
-    greedy_info, target_info, net_info, opt_info = pack_info(args)
-    log_dir += f"actor:{net_info['actor_type']}-{net_info['actor_fc_hidden']}-{opt_info['actor_type']}-{opt_info['actor_lr']};"
-    log_dir += f"critic:{net_info['critic_type']}-{net_info['critic_fc_hidden']}-{opt_info['critic_type']}-{opt_info['critic_lr']};"
+    if env.use_cnn:
+        log_dir += f"net:{net_info['type']}-{net_info['cnn_hidden']}"
+    else:
+        log_dir += f"net:{net_info['type']}-{net_info['fc_hidden']};"
+    log_dir += f"opt:{opt_info['type']}-{opt_info['lr']}"
     writer = SummaryWriter(log_dir)
 
     A2C = A2C_discrete(
@@ -36,11 +55,10 @@ if __name__ == "__main__":
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
 
-    epoch_cnt = 0
     for i in tqdm(range(args.Nepoch)):
         s, R, traj = env.reset(), 0, []
 
-        for _ in range(10):
+        for j in range(10):
             while True:
                 a = A2C.take_step(s)
                 ns, r, done, info = env.step(a)
@@ -48,12 +66,11 @@ if __name__ == "__main__":
                 R += r
 
                 if done:
-                    s = env.reset()
+                    writer.add_scalar("Epoch Reward", R, i*10+j)
+                    s, R = env.reset(), 0
                     break
                 
                 s = ns
-
-        writer.add_scalar("Epoch Reward", R/10, i)
 
         aloss, closs, n = A2C.compute_loss(traj)
         aopt.zero_grad()
@@ -66,3 +83,5 @@ if __name__ == "__main__":
 
         writer.add_scalar("Actor Loss", aloss.item(), n)
         writer.add_scalar("Critic Loss", closs.item(), n)
+
+    torch.save(args, f"./default_config/{args.env_name}.jh")

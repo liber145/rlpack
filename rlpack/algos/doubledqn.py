@@ -3,6 +3,7 @@ import torch.nn as nn
 from IPython import embed
 
 from .nets.fc import FC
+from .nets.cnn import CNN
 from .utils.tools import *
 
 
@@ -30,17 +31,18 @@ class DoubleDQN:
         self.nupdate = target_info['nupdate']
         self._device = device
 
-
-        if (type(dim_obs) == int or len(dim_obs.shape) == 1) and (net_info['type'] == 'FC'):
+        if (type(dim_obs) == int or len(dim_obs) == 1) and (net_info['type'] == 'FC'):
             self._eval, self._target = FC(dim_obs, dim_act, net_info['fc_hidden'], device), FC(dim_obs, dim_act, net_info['fc_hidden'], device)
             self._eval2, self._target2 = FC(dim_obs, dim_act, net_info['fc_hidden'], device), FC(dim_obs, dim_act, net_info['fc_hidden'], device)
+        elif (len(dim_obs)==3) and (net_info['type'] == 'CNN'):
+            self._eval, self._target = CNN(dim_obs, dim_act, net_info['cnn_hidden'], device), CNN(dim_obs, dim_act, net_info['cnn_hidden'], device)
+            self._eval2, self._target2 = CNN(dim_obs, dim_act, net_info['cnn_hidden'], device), CNN(dim_obs, dim_act, net_info['cnn_hidden'], device)
         else:
             raise NotImplementedError
 
     def take_step(self, obs):
         self._evaluate()
-        if len(obs.shape) == 1:
-            obs = torch.unsqueeze(torch.FloatTensor(obs), 0).to(self._device)
+        obs = torch.unsqueeze(torch.FloatTensor(obs), 0).to(self._device)
         qvals = self._aggregate(self._eval(obs), self._eval2(obs))[0].detach()
         return self._greedy_select(qvals.argmax().item(), self._dim_act, self.n)
         

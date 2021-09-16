@@ -13,7 +13,7 @@ class A2C_discrete:
         dim_obs = None,
         dim_act = None,
         discount = 0.9,
-        greedy_info = {'type':"epsilon", 'eps-max':0.1, 'eps-min':0.001, 'eps-decay':0.995},
+        greedy_info = {'type':"epsilon", 'eps-max':0.9, 'eps-min':0.001, 'eps-decay':0.995},
         net_info = {
             'actor_type': 'FC', 'actor_fc_hidden': [128, 64],
             'critic_type': 'FC', 'critic_fc_hidden': [128, 64]
@@ -27,16 +27,18 @@ class A2C_discrete:
         self._greedy_select = get_greedy(greedy_info)
         self._device = device
 
-        if (type(dim_obs) == int or len(dim_obs.shape) == 1) and (net_info['critic_type'] == 'FC') and (net_info['actor_type']=='FC'):
+        if (type(dim_obs) == int or len(dim_obs) == 1) and (net_info['critic_type'] == 'FC') and (net_info['actor_type']=='FC'):
             self._actor = FC(dim_obs, dim_act, net_info['actor_fc_hidden'], device)
             self._critic = FC(dim_obs, 1, net_info['critic_fc_hidden'], device)
+        elif (len(dim_obs) == 3) and (net_info['critic_type'] == 'CNN') and (net_info['actor_type'] == 'CNN'):
+            self._actor = CNN(dim_obs, dim_act, net_info['actor_cnn_hidden'], device)
+            self._critic = CNN(dim_obs, dim_act, net_info['critic_cnn_hidden'], device)
         else:
             raise NotImplementedError
 
     def take_step(self, obs):
         self._evaluate()
-        if len(obs.shape) == 1:
-            obs = torch.unsqueeze(torch.FloatTensor(obs), 0).to(self._device)
+        obs = torch.unsqueeze(torch.FloatTensor(obs), 0).to(self._device)
         qvals = self._actor(obs)[0].detach()
         return self._greedy_select(qvals.argmax().item(), self._dim_act, self.n)
         
