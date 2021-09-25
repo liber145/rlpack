@@ -6,9 +6,9 @@ class MujocoControl(object):
         assert env_name in {'Hopper-v2', 'Ant-v2', 'HalfCheetah-v2', 'Humanoid-v2', 'Reacher-v2'}
         self.env = gym.make(env_name)
         self.use_cnn = False
-        self._dim_obs = self.env.observation_space.shape
-        self._dim_act = self.env.action_space.shape
-        self._range_act = {'low':self.env.action_space.low, 'high':self.env.action_space.high}
+        self._dim_obs = self.env.observation_space.shape[0]
+        self._dim_act = self.env.action_space.shape[0]
+        self._range_act = {'low':-3.14/4, 'high':3.14/4}
         self._traj_len = 0
         self._traj_rew = 0
 
@@ -23,6 +23,7 @@ class MujocoControl(object):
         self._traj_rew += r 
 
         if d is True:
+            r = -1
             info["episode_reward"] = self._traj_rew
             info["episode_length"] = self._traj_len
             s = self.env.reset()

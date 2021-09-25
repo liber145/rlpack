@@ -8,6 +8,9 @@ def pack_info(args):
         'eps-max': args.greedy_eps_max,
         'eps-min': args.greedy_eps_min,
         'eps-decay': args.greedy_eps_decay,
+        'delta': args.greedy_delta,
+        'delta-min': args.greedy_delta_min,
+        'delta-decay': args.greedy_delta_decay,
     }
     target_info = {
         'tau': args.target_tau,
@@ -89,8 +92,23 @@ def get_greedy(greedy_info):
             return np.random.randint(n)
         else:
             return target
+    
+    def gaussian_random(a, t):
+        delta = greedy_info['delta'] * np.power(greedy_info['delta-decay'], t)
+        delta = max(delta, greedy_info['delta-min'])
+        eps = torch.normal(a, delta)
+        return a+eps
 
     if greedy_info['type'] == 'epsilon':
         return epsilon_greedy
+    elif greedy_info['type'] == 'gaussian':
+        return gaussian_random
     else:
         raise NotImplementedError
+
+def clip_w_range(crange):
+    def clip(target):
+        target = target*(target>crange['low'])+crange['low']*(target<=crange['low'])
+        target = target*(target<crange['high'])+crange['high']*(target>=crange['high'])
+        return target
+    return clip
