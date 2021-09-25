@@ -7,6 +7,7 @@ class ClassicControl(object):
 
         assert env_name in {"Acrobot-v1", "CartPole-v1", "CartPole-v0", "MountainCar-v0"}
         self.env = gym.make(env_name)
+        self.use_cnn = False
         self._dim_obs = self.env.observation_space.shape[0]
         self._num_act = self.env.action_space.n
         self._traj_len = 0
