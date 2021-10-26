@@ -2,6 +2,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+def weights_init_(m):
+    if isinstance(m, nn.Linear):
+        nn.init.xavier_uniform_(m.weight, gain=1)
+        nn.init.constant_(m.bias, 0)
+
 class FC(nn.Module):
     def __init__(self, idim, odim, hidden_list, device, activation=None):
         super(FC, self).__init__()
@@ -15,6 +20,8 @@ class FC(nn.Module):
             self.out = nn.Linear(idim, odim).to(device)
         self.linears = self.linears.to(device)
         self.output_act = activation
+
+        self.apply(weights_init_)
 
     def forward(self, x):
         for fc in self.linears:
